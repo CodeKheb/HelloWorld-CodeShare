@@ -1,14 +1,16 @@
 import express from 'express'
 import path from "path";
 import { fileURLToPath } from "url";
+import session from 'express-session';
+import passport from "passport";
 
-import authRouter from '../routes/auth.js';
-
-const app = express()
+export const app = express()
 const port = process.env.PORT || 3000
 
 const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+export const __dirname = path.dirname(__filename)
+
+import authRouter from '../routes/auth.js';
 
 console.log(port);
 
@@ -18,7 +20,18 @@ app.use(express.urlencoded({ extended: true })); //Used to read and understand d
 app.use(express.static(path.join(__dirname, "../../frontend"), { index: false })) //Serve static frontend files
 app.use(express.json())
 
-app.use("/api/auth", authRouter)
+app.use(session({
+  secret: 'TRIAL', // Use a strong secret in production
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // Set to true if using HTTPS
+}));
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
+
+app.use(passport.initialize())
+app.use(passport.session())
 
 app.get('/', (req, res) => {
     if (authenticated) {
@@ -32,8 +45,16 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, "../../frontend", 'login.html'));
 })
 
+app.get('/messages', (req, res) => {
+  res.sendFile(path.join(__dirname, "../../frontend", 'messages.html'));
+})
+
+app.get('/messages', (req, res) => {
+  res.sendFile(path.join(__dirname, "../../frontend", 'groups.html'));
+})
+
 app.get("/hello", (req, res) => {
     res.send({message: "hello"})
 })
 
-export default app;
+app.use("/api/auth", authRouter)
