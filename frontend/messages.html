@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeShare - Chat View</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/messages.css">
+</head>
+<body class="messages-page">
+    <div class="chat-layout">
+        <nav class="sidebar" aria-label="Primary">
+            <div class="sidebar-brand">
+                <div class="avatar avatar--brand" aria-hidden="true">
+                    <img alt="User Avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrtiGWKWhKS5h5FkGUb_SrhSpcp9rNaRsyaeo8I0fEsGXqd5_KUo4xy0n5UGlMXsJw52DUEaCEzT0Lyk4v9rDNaRXeSdQJ40tu7RSFaFq_UwM6e-JXaHk7n8YNeMJfxr-hnTLvlaztHklS449Kqjw8Kvl1ipCp9mbm0dq_G2NdXL2M3C7pV-XMW47wmCf-8KlSWQwrCCEE91Rnh92jUOqqORglJTBSuMB2ydeuwYl2UqFFuR4ymmha3371lZpkMHegvWxP8m29s70">
+                </div>
+                <div>
+                    <h1>CodeShare</h1>
+                    <span>Engineering Team</span>
+                </div>
+            </div>
+
+            <ul class="sidebar-nav">
+                <li><a class="sidebar-link" href="/frontend/index.html"><span class="material-symbols-outlined">home</span><span>Home</span></a></li>
+                <li><a class="sidebar-link sidebar-link--active" href="/messages" data-route="messages"><span class="material-symbols-outlined">chat_bubble</span><span>Direct Messages</span></a></li>
+                <li><a class="sidebar-link" href="/frontend/groups.html" data-route="groups"><span class="material-symbols-outlined icon-filled">groups</span><span>Groups</span></a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button class="primary-button" type="button">New Repository</button>
+            </div>
+        </nav>
+
+        <div class="chat-main-shell">
+            <main class="chat-main" aria-label="Group conversation">
+                <header class="chat-header">
+                    <div class="chat-header__group">
+                        <h2 class="chat-channel">
+                            <span class="material-symbols-outlined" aria-hidden="true">tag</span>
+                            frontend-architecture
+                        </h2>
+                        <div class="avatar-stack" aria-label="Group members">
+                            <img alt="User" class="avatar avatar--stacked" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVb9lYE7wLif9Wr66X5dCt7N6wQsGmIgFOKae9rfB0pr-OF3MSv1A30RD8Za7qlK-EdgEek2cocVK2INQRPc1Rd7ecQdLEA-DSDV7n6t7zV4NTD-ou0ZnThoeuxi-8LPItqcek_DqVN8H3m_c2NhcIKV5GJw50G8b6zfsvkJoaISt0OI2vUJlCTMnL8m-QDtQXTk_op6UP30K2aMW5vt70c_-Z4HZjieuep8THCKMrNhbJif042ZqEafhPSnWiE4MT5lHDPZej2IY">
+                            <img alt="User" class="avatar avatar--stacked" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuirEXs_MY0nZFC3DzxEsDhKTgnTQENPkhnOKkZkhyVh2pgsIzTy6D-2Ww_pwDWcarcZRvNT5y2I38p0grZay3jfFBE4Dm27ME9qKySQ2zVINKvzrMx1OnwSeiMHzhTTJRHAGIzhTScro2i2YK2Cq_F3ZKW_MKOdSMmfuVlBOqQkQbVZSU6tNWqdQr-YLlk0OJF9qOALN5DXk8Vga-3qA0_YPjke7vIB7jRhwLC8ij7IUzuBppQILfUAN0jRm88E-OyFFjNnlh1m4">
+                            <img alt="User" class="avatar avatar--stacked" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYrrMrc2ttheGySJTqVOCyYlh0wF3oUN2uqEMEDSXwsU4bTSsAAUHQprOnKuM8vzPXI5L55nS3Tz7Vil61_GBA9tj8olimXUZC6tWfweMGXvzpn36PY0N1wOcEghDp1ooWXmvfbWvzfmgQCaocpc_PFNxrTf4i9DubS--KtMWo7EDzMjBqHlRy89jO_7sHGLasFHrhnV5o_j7Rhxz3LL2YgsSCMKXfI9zfrVcHME7eT9dlj2fnmtOrFRM3MyGo1Myy00gJ7sOCUE4">
+                        </div>
+                        <span class="member-count">12 members</span>
+                    </div>
+
+                    <div class="chat-header__actions">
+                        <button class="secondary-button action-button" type="button">
+                            <span class="material-symbols-outlined" aria-hidden="true">link</span>
+                            Attach Repo
+                        </button>
+                        <button class="primary-button action-button" type="button">
+                            <span class="material-symbols-outlined icon-filled" aria-hidden="true">auto_awesome</span>
+                            Summarize
+                        </button>
+                    </div>
+                </header>
+
+                <section class="message-feed" aria-label="Messages">
+                    <div class="system-message">
+                        <span class="material-symbols-outlined system-message__icon" aria-hidden="true">commit</span>
+                        <span class="system-message__author">sarah_dev</span>
+                        <span>pushed 3 commits to</span>
+                        <span class="system-message__branch">main</span>
+                    </div>
+
+                    <article class="message message--standard">
+                        <img alt="Alex" class="avatar avatar--message" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvqqMUn7Vtv3KgaBnKEXhtgd1PM4v3KUBSAOZlx9avJQycgBSGQLWvXrgGmXYhKyi7tN5y4y-tbIKeyYc2mIj0ieeoNhT2zXGH72dzKONaUk-5BHMcu0uRMPaeVUTbhKY3Cy0XtbuhKB5LPSSRsGQ5u81BYZZSLAUOTtjK4gLqOwWkyNHhaIsOIOQEPKsasifK-jX8V4v8fDupPO_CqKhRybCZAdYWAwVMdkhQbq2gAupnLPtb2pzZrkZ8xba7atBaIeP-hkSNcQE">
+                        <div class="message__body">
+                            <div class="message__meta">
+                                <span class="message__author">Alex Chen</span>
+                                <span class="message__time">10:42 AM</span>
+                            </div>
+                            <p class="message__text">I've reviewed the new component structure. The shared state logic in the SideNavBar looks solid, but we might want to abstract the active state evaluation into a custom hook before merging.</p>
+                        </div>
+                    </article>
+
+                    <article class="summary-card" aria-label="AI summary">
+                        <div class="summary-card__badge">
+                            <span class="material-symbols-outlined icon-filled" aria-hidden="true">auto_awesome</span>
+                            <span>AI Summary: Component Architecture Discussion</span>
+                        </div>
+                        <p class="summary-card__text">The team has agreed on implementing a unified context provider for navigation state. Pending actions include writing unit tests for the active route matcher and updating the documentation for the SideNavBar component to reflect the new strict JSON payload structure.</p>
+                        <div class="summary-card__tags">
+                            <span class="chip">Action Required</span>
+                            <span class="chip">Architecture</span>
+                        </div>
+                    </article>
+
+                    <article class="message message--standard">
+                        <img alt="Maya" class="avatar avatar--message" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC83y8BZLJ71SePYUVEGlq9naVM-Tncns7N7WvJSW1tu3qSSySGq-KxAm9v56ckZL1dYwWI1Darl-HIYF4ebgpoXAs2NZLSVcMovoi1gikvJOklkBPLuIMpr-CtBhUnToXaZGJiLMxJK1mhyUsUZIRDlMIWFVWtJTJHNkRp8hrgSMGLvrdXiw4yGnTBh_n6VsO__FZ3G5rMTdv-sLVPFA3o-RqkkN9GoXxCVW4ZB--R_Oi4rl5Or5QIXWpYjyzD8Ot6uI62QDiaKWY">
+                        <div class="message__body">
+                            <div class="message__meta">
+                                <span class="message__author">Maya Patel</span>
+                                <span class="message__time">11:15 AM</span>
+                            </div>
+                            <p class="message__text">Agreed. I'll take a pass at the context provider this afternoon. Can someone verify the latest Tailwind config tokens are correctly synced in the main repo?</p>
+                        </div>
+                    </article>
+                </section>
+
+                <footer class="composer" aria-label="Message composer">
+                    <button class="icon-button" type="button" aria-label="Add attachment">
+                        <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
+                    </button>
+                    <textarea class="composer__input" rows="1" placeholder="Message #frontend-architecture..."></textarea>
+                    <div class="composer__actions">
+                        <button class="icon-button" type="button" aria-label="Insert emoji">
+                            <span class="material-symbols-outlined" aria-hidden="true">mood</span>
+                        </button>
+                        <button class="primary-button composer__send" type="button" aria-label="Send message">
+                            <span class="material-symbols-outlined icon-filled" aria-hidden="true">send</span>
+                        </button>
+                    </div>
+                </footer>
+            </main>
+
+            <aside class="group-panel" aria-label="Group information">
+                <section class="group-panel__intro">
+                    <div class="section-label">Group Info</div>
+                    <h3>frontend-architecture</h3>
+                    <p>Core discussion channel for UI layer patterns, component libraries, and client-side state management.</p>
+                </section>
+
+                <div class="group-panel__body">
+                    <section class="panel-section">
+                        <div class="panel-section__header">
+                            <h4>Members</h4>
+                            <button class="text-button" type="button">View All</button>
+                        </div>
+
+                        <ul class="member-list">
+                            <li class="member-item">
+                                <div class="status-avatar">
+                                    <img alt="Alex" class="avatar avatar--small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSp9Jxkj77ORjzVshfbYE9WD0_PZV59V7Pks20hW4xqsr4BtR0SDcKsdIui6kK5OxgO6sOOWksXjwrjHOvUYDo2l-On87g1ItYd1uV-woZtaQxjnm5j0fzf76VfYJ7T9Xmf8R0pPPE44MNeeXMVH0YM4Dwf0UIavYbZPhu9-pfmOf-aig27rkt8N3C3LqnrlXpOjQFdTBkxDd8pHHypED2y6FRWjU5xVvbkfTSlZEY0tZd7MoxdkqP6oO73Z8BRPt8eiuSskwjRNI">
+                                    <span class="presence-dot presence-dot--online"></span>
+                                </div>
+                                <span>Alex Chen</span>
+                            </li>
+                            <li class="member-item">
+                                <div class="status-avatar">
+                                    <img alt="Maya" class="avatar avatar--small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3dXRrfff0EfnFmzK8MRRscQZi8EKH9CIxN91yeWfQQB3f-ep6l_S6_JKbE_7S_STRnDyWy29PdMjyzDIlNp-moakKkor9Qc28g57KqW-jdyIkHoTzVaI0y40DbEPGpCXyRc7qUR619O3nmIHCRX_yvsuZS-ClYSxenk_cejwgTRxM9PaY0UV1Opk9UurqNcDlbNZO7oRrsmjLqHTsZOGxd0COuCH1oy6sRucFB5a5Ziq_vzPz0FFYIYpltxBezCMHrWQbTKHrMWg">
+                                    <span class="presence-dot presence-dot--online"></span>
+                                </div>
+                                <span>Maya Patel</span>
+                            </li>
+                            <li class="member-item">
+                                <div class="status-avatar">
+                                    <img alt="David" class="avatar avatar--small avatar--dimmed" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAF1yGQj9z4cRa0WIq27KzvTgkvY3qLntoRPHTmu3vIXkdmgIGfShR_Us1LeC0Suwq0PG4ihZd23f_eOPAFSKhZby6obtUXqAlwlznGUAsPGgInO_6XF5KcGWTgxgFECZZHNsKntLgSSxh6fsaIVnwSSE7XojD0Vp6fnWabtSdXCt8Cu0C1vlpDZ62FS6BkAomf7wRSIziaKdQwx9P9NhnkwfBN4QwYz7wZQWu1qVf-g8CrrK39kMJEvIMYOSSy_VZl8AN_KQ13oVE">
+                                    <span class="presence-dot presence-dot--away"></span>
+                                </div>
+                                <span class="member-muted">David Kim</span>
+                            </li>
+                        </ul>
+
+                        <button class="secondary-button panel-action" type="button">
+                            <span class="material-symbols-outlined" aria-hidden="true">person_add</span>
+                            Add Member
+                        </button>
+                    </section>
+
+                    <section class="panel-section">
+                        <h4>Attached Repos</h4>
+                        <div class="repo-list">
+                            <article class="repo-card">
+                                <div class="repo-card__title">
+                                    <span class="material-symbols-outlined" aria-hidden="true">folder</span>
+                                    <span>ui-components</span>
+                                </div>
+                                <div class="repo-card__meta">Updated 2h ago</div>
+                            </article>
+
+                            <article class="repo-card">
+                                <div class="repo-card__title">
+                                    <span class="material-symbols-outlined" aria-hidden="true">folder</span>
+                                    <span>webapp-client</span>
+                                </div>
+                                <div class="repo-card__meta">Updated 1d ago</div>
+                            </article>
+                        </div>
+                    </section>
+                </div>
+            </aside>
+        </div>
+    </div>
+</body>
+</html>
