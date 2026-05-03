@@ -49,7 +49,7 @@ app.get('/messages', (req, res) => {
   res.sendFile(path.join(__dirname, "../../frontend", 'messages.html'));
 })
 
-app.get('/messages', (req, res) => {
+app.get('/groups', (req, res) => {
   res.sendFile(path.join(__dirname, "../../frontend", 'groups.html'));
 })
 
