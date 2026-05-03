@@ -1,6 +1,6 @@
 import { Server } from "socket.io"
 import app from "./express/express.js"
-
+import chatHandler from "./socket/chat.js"
 
 const port = process.env.PORT || 3000
 
@@ -8,7 +8,7 @@ const expressEndpoint = app.listen(port, () => {
     console.log(`Listening at port ${port}`);
 })
 
-const io = new Server(expressEndpoint, {
+export const io = new Server(expressEndpoint, {
     cors: {
          origin: "*", 
         methods: ["GET", "POST"],
@@ -16,7 +16,7 @@ const io = new Server(expressEndpoint, {
 })
 
 io.on("connection", (socket) => {
-    
+    chatHandler(socket)
 })
 
 
