@@ -2,6 +2,8 @@ import express from 'express'
 import path from "path";
 import { fileURLToPath } from "url";
 
+import authRouter from '../routes/auth.js';
+
 const app = express()
 const port = process.env.PORT || 3000
 
@@ -14,9 +16,12 @@ app.use(express.urlencoded({ extended: true })); //Used to read and understand d
 app.use(express.static(path.join(__dirname, "../../frontend"))) //Serve static frontend files
 app.use(express.json())
 
+app.use("/api/auth", authRouter)
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, "../../frontend", 'index.html'));
 })
+
 
 app.get("/hello", (req, res) => {
     res.send({message: "hello"})
