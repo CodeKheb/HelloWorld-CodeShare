@@ -1,20 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My App</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CodeShare Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
-  <div class="container">
-    <h1>My App</h1>
-    <input type="text" id="messageInput" placeholder="Type something...">
-    <button id="sendBtn">Send</button>
-    <ul id="messagesList"></ul>
-  </div>
+<div class="dashboard-shell">
+<nav class="sidebar" aria-label="Primary">
+<div class="sidebar-brand">
+<div class="avatar avatar--brand" aria-hidden="true">
+<img alt="User Avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgt-MNsXZsG0V_vOCHYdjQ3JZBVUYWy7uETnuIk3mV2J3FJDtkxoIImLchceuZNKwlThlBaKjDNBMoUoVEYCAjyBWokqPSugs-ph3rHxjrHRWDQ9iKRS1fspvqUvVrbvBz-bgfKTWege6-YJIQ5x5fLOkdfjX8akvOhT4TLM6QKXYJo8qFPQuoLFQo41jG8NhfeqrLZnqADIJWHSVq_-DDbLmXPk9OpD9nogMvqwjF-LqK5LSKy9y0sxA8NtDA7flCzPoLtKSvomc"/>
+</div>
+<div>
+<h1>CodeShare</h1>
+<span>Engineering Team</span>
+</div>
+</div>
+<ul class="sidebar-nav">
+<li><a class="sidebar-link sidebar-link--active" href="#"><span class="material-symbols-outlined icon-filled">home</span><span>Home</span></a></li>
+<li><a class="sidebar-link" href="#"><span class="material-symbols-outlined">chat_bubble</span><span>Direct Messages</span></a></li>
+<li><a class="sidebar-link" href="#"><span class="material-symbols-outlined">groups</span><span>Groups</span></a></li>
+</ul>
+<div class="sidebar-footer">
+<button class="primary-button" type="button">New Repository</button>
+</div>
+</nav>
 
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-  <script src="js/app.js"></script>
+<div class="dashboard-main">
+<header class="topbar">
+<nav class="topbar-tabs" aria-label="Dashboard">
+<a class="topbar-tab topbar-tab--active" href="#">Dashboard</a>
+<a class="topbar-tab" href="#">Pull Requests</a>
+<a class="topbar-tab" href="#">Issues</a>
+<a class="topbar-tab" href="#">Wiki</a>
+</nav>
+<div class="topbar-actions">
+<button class="icon-button" type="button" aria-label="Notifications"><span class="material-symbols-outlined">notifications</span></button>
+<button class="icon-button" type="button" aria-label="Settings"><span class="material-symbols-outlined">settings</span></button>
+<button class="secondary-button" type="button">Create Group</button>
+</div>
+</header>
+
+<main class="content">
+<section class="section-block">
+<div class="section-heading">
+<h2>Your Groups</h2>
+<a href="#">View all</a>
+</div>
+<div class="group-grid">
+<article class="group-card">
+<div class="group-card__header">
+<div class="group-title-row">
+<span class="material-symbols-outlined group-icon">folder</span>
+<h3>Frontend Core</h3>
+</div>
+<span class="badge">Private</span>
+</div>
+<p class="group-card__description">Core UI components, design system implementation, and shared frontend utilities for the main application platform.</p>
+<div class="group-card__footer">
+<div class="avatar-stack" aria-label="Group members">
+<div class="avatar avatar--small"><img alt="Team member avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCn7yrY-1r30S-KACDmHyNNnrb0HtS6CPHFX9fD_oKNPovco9qhPaqGVi5xg5r4Q8z2nj4X2MpPslDLHg7fzu4ROa8xdIBiGlhGo1pKRXM6d6eZNUA4ZlUgl6JPvZHmjr85QWn2KxCwVqSLB0DW5WNoXnxKm0GZr46wKaAxeqpYfMeBRrkdNs_TWq7w8O6lAC36ZkpL1gJynxpE3EwnpXDdVTDFB6WQ2YMzBnOIEQvSf8Ma_LkeHY2dh0nGw1ZBWufatmoV9hHwDg"/></div>
+<div class="avatar avatar--small"><img alt="Team member avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAC4k7k7xH5tT0KGJAlWz1BgB376uja4RU4EkheS8YeVlFG2VUPm7PrQ2MOgeRy0RNiRTqS7tZB6PAaNvSEvb3JNBNnAJorjWWoSahMwYMo41BYcImbDfLaaafrQ4Cuu6tC3z1s45adwF1cRUq-j_C1lue8htpHiCWY13uCmvRPERM7R_gsje-jTH3xrG5MTvwndPDGzpx-awZfR7479vZR7KK86pG9Vttdm897cNl3XPBlxXBwNWy2o5X3v3ea-Pr1mei6S_4gblw"/></div>
+<div class="avatar avatar--small avatar--more">+4</div>
+</div>
+<div class="meta-row">
+<span class="meta-stat"><span class="material-symbols-outlined meta-icon">book</span>12</span>
+<span>2h ago</span>
+</div>
+</div>
+</article>
+
+<article class="group-card">
+<div class="group-card__header">
+<div class="group-title-row">
+<span class="material-symbols-outlined group-icon">folder</span>
+<h3>Data Science</h3>
+</div>
+<span class="badge badge--public">Public</span>
+</div>
+<p class="group-card__description">Machine learning models, data pipelines, and analytics reporting tools for user behavior tracking.</p>
+<div class="group-card__footer">
+<div class="avatar-stack" aria-label="Group members">
+<div class="avatar avatar--small"><img alt="Team member avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3PPUvc-c8D7MxSB8obEJ7x4Ix7XZh6Vy5oN5Mz2mBYljcHuTB0k0oEzi8WFqax5hL9CZd4rRGyQ2qfwOR0h-lztMd3Fw2_FEfr04f3bYHqXelziOk2DI7B_FYaOYEMDWs0bbZaqnsFFQBkS3VRl7IZphcmJeieCkDFyBNQ5fUmFJu-GHCrugOMdKxgYW1Qa3XzERexK3tIH4AVBiawZH5L3ZyQHJJ78unvls2gvR_eAnCtvkR6RuZEcQ3iF1_HsmGZO-SoQXgadI"/></div>
+<div class="avatar avatar--small avatar--more">+1</div>
+</div>
+<div class="meta-row">
+<span class="meta-stat"><span class="material-symbols-outlined meta-icon">book</span>4</span>
+<span>1d ago</span>
+</div>
+</div>
+</article>
+
+<article class="group-card">
+<div class="group-card__header">
+<div class="group-title-row">
+<span class="material-symbols-outlined group-icon">folder</span>
+<h3>Infrastructure</h3>
+</div>
+<span class="badge">Private</span>
+</div>
+<p class="group-card__description">Terraform configurations, Kubernetes manifests, and general cloud architecture documentation.</p>
+<div class="group-card__footer">
+<div class="avatar-stack" aria-label="Group members">
+<div class="avatar avatar--small"><img alt="Team member avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDQKkFPnl2HGdt_Ny8u9TOSG4izcvnPfyhjBWHT1S2jmRlcHBuJgPErdfWEaRbLJn60FB8jp-lPJ_7AMgYKl_fae86qdCqYSY_RG9YM7uj8j-J2e_Tr8q9yA1KBQZF_5q9sOQr3g-kgphBOkW81Ua7mqsEEJd9kAYhat4HHLGlWWKrS7YcaGZdpvDnZuDkrrcBBDo0X17oKYXkiCTNjCSvo-YGri_71jD40MNlDVcU35ObeTVRxzLhyVY--QiAdt16ZpsGFfTqrq0"/></div>
+<div class="avatar avatar--small"><img alt="Team member avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTEBSqSQsUAtfNpFk9o7TUdufps4eo-Nz5yQZu96u3n8ulzAwbIPoRGMlnvAgW5IMpOFOuzt5gso2kwZFMeXiQaRkQUSrdUKxKCQuUvJAI6YdZZDtTnx92TXyRnrDrbsqvJoblvIBzBIIwBK3uvOsnyq3dlsUT4HRrr3rooeq5yx4guweMCbyoz53P3tOWA8udJOfnZUTYJXYtpQ8q1CxzO0Qhl-JUEf_y2uolc6o7ULXCxPYZGiCY8Ddc2hOLWGiahrLEWE2XWHY"/></div>
+<div class="avatar avatar--small"><img alt="Team member avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA38BXQ586XQwbgk6C9x_JTcci4hL8oNl-y5ATsIE0mDhEodavqnHiV5RAKqJo6daYuLdXLb-97fG83HbUrx7STlwScVwN9dJbs8Z2qMY0fQe82LD92p6o97f0YJ62MBeQzKT9hu-d1NQWB7-eJN6Zq0RUiH_f-lgV0TykbV6BFUSvDHGlvdBC06WE-5wKBXgf3mFeDhePT2DIylzVWOAxPbU8yBt1c3sehY0HZOowHW2Cr8e1EcW8bpR3FURTbVnZwpZoFYm4wrmA"/></div>
+<div class="avatar avatar--small avatar--more">+8</div>
+</div>
+<div class="meta-row">
+<span class="meta-stat"><span class="material-symbols-outlined meta-icon">book</span>21</span>
+<span>5m ago</span>
+</div>
+</div>
+</article>
+</div>
+</section>
+
+<section class="section-block">
+<h2 class="section-title">Recent Activity</h2>
+<div class="activity-list">
+<article class="activity-card">
+<div class="activity-icon-wrap">
+<span class="material-symbols-outlined">commit</span>
+</div>
+<div class="activity-body">
+<div class="activity-line">
+<span class="activity-user">alex-dev</span>
+<span>pushed 3 commits to</span>
+<span class="branch-pill">feature/dark-mode-toggle</span>
+</div>
+<div class="commit-box">
+<p>feat: implement theme switcher logic via localstorage</p>
+</div>
+<span class="activity-time">2 hours ago</span>
+</div>
+</article>
+
+<article class="activity-card">
+<div class="activity-icon-wrap activity-icon-wrap--merge">
+<span class="material-symbols-outlined">merge</span>
+</div>
+<div class="activity-body">
+<div class="activity-line">
+<span class="activity-user">sarah-eng</span>
+<span>merged PR</span>
+<span class="pull-request-link">#492</span>
+</div>
+<h3 class="activity-title">Update dependency resolving mechanism</h3>
+<p class="activity-summary">Resolves build caching issues on CI environments by enforcing strict lockfile evaluation.</p>
+<span class="activity-time">Yesterday at 4:30 PM</span>
+</div>
+</article>
+
+<article class="activity-card">
+<div class="activity-icon-wrap">
+<span class="material-symbols-outlined">commit</span>
+</div>
+<div class="activity-body">
+<div class="activity-line">
+<span class="activity-user">ci-bot</span>
+<span>pushed 1 commit to</span>
+<span class="branch-pill">main</span>
+</div>
+<div class="commit-box">
+<p>chore(release): version bump 2.4.1</p>
+</div>
+<span class="activity-time">Yesterday at 5:00 PM</span>
+</div>
+</article>
+</div>
+</section>
+</main>
+</div>
 </body>
 </html>
