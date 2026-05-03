@@ -1,0 +1,76 @@
+# =========================
+# ENV FILES (SECRETS)
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# NODE MODULES
+# =========================
+node_modules/
+**/node_modules/
+
+# =========================
+# BUILD OUTPUTS
+# =========================
+dist/
+build/
+.out/
+coverage/
+
+# =========================
+# LOGS
+# =========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# EDITOR / IDE
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# VITE / FRONTEND
+# =========================
+frontend/dist/
+frontend/.vite/
+frontend/node_modules/
+
+# =========================
+# BACKEND
+# =========================
+backend/node_modules/
+
+# =========================
+# CACHE
+# =========================
+.cache/
+.temp/
+.tmp/
+
+# =========================
+# TEST / COVERAGE
+# =========================
+coverage/
+*.lcov
+
+# =========================
+# MISC
+# =========================
+*.tgz
+*.zip
+*.tar.gz
