@@ -11,15 +11,15 @@ const __dirname = path.join(__filename)
 console.log(port);
 
 app.use(express.urlencoded({ extended: true })); //Used to read and understand data sent from HTML forms
-app.use(express.static(path.join(__dirname, "../frontend"))) //Serve static frontend files
+app.use(express.static(path.join(__dirname, "../../frontend"))) //Serve static frontend files
 app.use(express.json())
 
 const server = app.listen(port, () => 
     console.log(`Listening to port ${port}`)
 )
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend", 'index.html'));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, "../../frontend", 'index.html'));
 })
 
 app.get("/hello", (req, res) => {
