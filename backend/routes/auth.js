@@ -1,7 +1,7 @@
 import { Router } from "express";
 import cookieParser from "cookie-parser";
 import passport from "passport";
-import { prototype } from "passport-github";
+//import GitHubStrategy from "passport-github";
 
 const authRouter = Router();
 
@@ -9,11 +9,15 @@ authRouter.use(cookieParser)
 authRouter.use(passport.initialize())
 authRouter.use(passport.session())
 
-passport.use(new prototype({
-    clientID: process.env.GITHUB_CLIENT_ID,
-    clientSecret: process.env.GITHUB_SECRET,
-    callbackURL: process.env.GITHUB_AUTH_CALLBACK
-}))
+// passport.use(new GitHubStrategy({
+//     clientID: process.env.GITHUB_CLIENT_ID,
+//     clientSecret: process.env.GITHUB_SECRET,
+//     callbackURL: process.env.GITHUB_AUTH_CALLBACK,
+//     scope: ["repo", "repo_deployment"],
+// }, (accessToken, refreshToken, profile, done) => {
+    
+// }
+// ))
 
 authRouter.get("/auth", async (req, res) => {
     try {
