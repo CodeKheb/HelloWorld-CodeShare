@@ -15,6 +15,13 @@ import authRouter from '../routes/auth.js';
 
 console.log(port);
 
+const requireAuth = (req, res, next) => {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    res.redirect('/login');
+};
+
 let authenticated = true;
 
 app.use(express.urlencoded({ extended: true })); //Used to read and understand data sent from HTML forms
@@ -34,24 +41,26 @@ app.use(passport.session())
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
+app.get('/', requireAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, "../../frontend", 'index.html'))
+})
 
-app.get('/', (req, res) => {
-    if (authenticated) {
-        res.sendFile(path.join(__dirname, "../../frontend", 'index.html'))
-    } else {
-        res.sendFile(path.join(__dirname, "../../frontend", 'login.html'));
-    }
+app.get('/login', (req, res) => {
+  if (req.isAuthenticated()) {
+    return res.redirect('/'); // already logged in
+  }
+  res.sendFile(path.join(__dirname, "../../frontend", 'login.html'));
 })
 
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, "../../frontend", 'login.html'));
 })
 
-app.get('/messages', (req, res) => {
+app.get('/messages', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "../../frontend", 'messages.html'));
 })
 
-app.get('/groups', (req, res) => {
+app.get('/groups', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "../../frontend", 'groups.html'));
 })
 
