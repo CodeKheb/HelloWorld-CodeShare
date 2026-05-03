@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import session from 'express-session';
 import passport from "passport";
 
+
 export const app = express()
 const port = process.env.PORT || 3000
 
@@ -17,21 +18,22 @@ console.log(port);
 let authenticated = true;
 
 app.use(express.urlencoded({ extended: true })); //Used to read and understand data sent from HTML forms
+app.use(express.json()) // order matters 
 app.use(express.static(path.join(__dirname, "../../frontend"), { index: false })) //Serve static frontend files
-app.use(express.json())
 
 app.use(session({
-  secret: 'TRIAL', // Use a strong secret in production
+  secret: process.env.SESSION_SECRET || 'TRIAL', // Use env variable
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false } // Set to true if using HTTPS
+  cookie: { secure: false, httpOnly: true } // httpOnly is important for security
 }));
+
+app.use(passport.initialize())
+app.use(passport.session())
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
-app.use(passport.initialize())
-app.use(passport.session())
 
 app.get('/', (req, res) => {
     if (authenticated) {
