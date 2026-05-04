@@ -15,6 +15,7 @@ export const __dirname = path.dirname(__filename)
 import authRouter from '../routes/auth.js';
 import groupsRouter from '../routes/groups.js';
 import reposRouter from '../routes/repos.js';
+import messagesRouter from '../routes/messages.js';
 
 const requireAuth = (req, res, next) => {
     if (req.isAuthenticated()) {
@@ -128,3 +129,4 @@ app.post("/api/webhooks/github", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/groups", groupsRouter);
 app.use("/api/repos", reposRouter);
+app.use("/api/messages", messagesRouter);
