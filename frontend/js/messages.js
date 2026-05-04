@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeResizablePanel();
     initializeMessagesView();
     initializeMessageComposer();
+    initializeSidebar();
 
     // Allow inline HTML script to refresh panel after attach-repo modal submit
     window.refreshCurrentGroupDetails = async () => {
@@ -438,4 +439,42 @@ function getReceiverSocketId() {
 
 function initializeResizablePanel() {
     // Intentionally left empty; resizing is handled in-page (messages.html) to keep behavior local to the document.
+}
+
+function initializeSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    if (!sidebar || !toggleBtn) {
+        console.warn('Sidebar or toggle button not found');
+        return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+
+    const openSidebar = () => {
+        sidebar.classList.add('active');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+
+    const closeSidebar = () => {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    };
+
+    toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sidebar.classList.contains('active') ? closeSidebar() : openSidebar();
+    });
+
+    overlay.addEventListener('click', closeSidebar);
+
+    sidebar.querySelectorAll('.sidebar-link').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) closeSidebar();
+        });
+    });
 }

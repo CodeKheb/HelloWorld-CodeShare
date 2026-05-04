@@ -1,9 +1,15 @@
+/* =============================================
+   MESSAGES PAGE — FULL STYLESHEET
+   ============================================= */
+
 :root {
 	--panel-width: 20rem;
 	--messages-bg-soft: #1c2128;
 	--messages-bg-low: #181c22;
 	--messages-accent: #d29922;
 }
+
+/* ── Base (all screen sizes) ───────────────── */
 
 body.messages-page {
 	overflow: hidden;
@@ -67,7 +73,6 @@ body.messages-page {
 	display: flex;
 	align-items: center;
 	margin-left: 4px;
-	gap: -8px;
 }
 
 .messages-page .avatar--stacked {
@@ -105,9 +110,9 @@ body.messages-page {
 	flex: 1;
 	overflow-y: auto;
 	padding: 24px;
-	display: flex;          /* Changed from grid */
-	flex-direction: column; /* Stack vertically */
-	gap: 0;                 /* Remove grid gap */
+	display: flex;
+	flex-direction: column;
+	gap: 0;
 }
 
 .messages-page .system-message,
@@ -295,7 +300,8 @@ body.messages-page {
 	padding: 0;
 }
 
-/* Resizable Panel Styles */
+/* ── Group Panel (desktop) ─────────────────── */
+
 .messages-page .group-panel {
 	width: var(--panel-width, 320px);
 	min-width: 250px;
@@ -398,7 +404,6 @@ body.messages-page {
 	cursor: pointer;
 }
 
-/* Make Attach Repo button slightly wider for better affordance */
 .messages-page #openAttachRepoModal {
 	min-width: 160px;
 	padding: 10px 20px;
@@ -448,13 +453,8 @@ body.messages-page {
 	border-radius: 999px;
 }
 
-.messages-page .presence-dot--online {
-	background: var(--brand);
-}
-
-.messages-page .presence-dot--away {
-	background: var(--muted);
-}
+.messages-page .presence-dot--online { background: var(--brand); }
+.messages-page .presence-dot--away   { background: var(--muted); }
 
 .messages-page .member-muted {
 	color: var(--muted);
@@ -532,7 +532,6 @@ body.messages-page {
 	display: inline-grid;
 	place-items: center;
 	border-radius: var(--radius-md);
-	border: 1px;	
 	background: rgba(82, 82, 82, 0.1);
 	color: white;
 	cursor: pointer;
@@ -544,93 +543,222 @@ body.messages-page {
 	transform: translateY(-1px);
 }
 
-@media (max-width: 1200px) {
+/* ── Hamburger: hidden on desktop ──────────── */
+
+.sidebar-toggle {
+	display: none;
+}
+
+/* Overlay: hidden until active */
+.sidebar-overlay {
+	display: none;
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.55);
+	z-index: 999;
+	backdrop-filter: blur(2px);
+	-webkit-backdrop-filter: blur(2px);
+}
+
+.sidebar-overlay.active {
+	display: block;
+	animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+	from { opacity: 0; }
+	to   { opacity: 1; }
+}
+
+/* ── Mobile (≤ 768px) — single clean block ─── */
+
+@media (max-width: 768px) {
+  .mobile-hide {
+        display: none;
+    }
+
+	/* Lock the whole page to viewport, no scroll bounce */
 	body.messages-page {
-		overflow: auto;
+		overflow: hidden;
 	}
 
 	.messages-page .chat-layout {
-		flex-direction: column;
+		height: 100dvh;
+		min-height: unset;
+		overflow: hidden;
+		flex-direction: row; /* keep row so panel sits beside if needed */
 	}
 
-	.messages-page .sidebar {
-		position: static;
-		width: 100%;
-		min-height: auto;
-	}
-
+	/* Shell fills width, stacks chat + panel vertically */
 	.messages-page .chat-main-shell {
-		margin-left: 0;
+		margin-left: 0 !important;
 		flex-direction: column;
-		height: auto;
+		flex: 1;
+		width: 100%;
+		height: 100dvh;
+		overflow: hidden;
 	}
 
+	/* Chat takes all remaining vertical space */
 	.messages-page .chat-main {
-		min-height: 42rem;
+		flex: 1;
+		min-height: 0;       /* critical — lets flex shrink */
+		overflow: hidden;
+		border-right: none;
+		display: flex;
+		flex-direction: column;
 	}
 
+	/* ── Header: single compact row ── */
+	.messages-page .chat-header {
+		min-height: 3.25rem;
+		padding: 0 12px;
+		gap: 8px;
+		flex-wrap: nowrap;
+		flex-shrink: 0;
+	}
+
+	.messages-page .chat-header__group {
+		flex: 1;
+		gap: 8px;
+		min-width: 0;
+		overflow: hidden;
+	}
+
+	.messages-page .chat-channel {
+		font-size: 16px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	/* Hide noisy elements */
+	.messages-page .avatar-stack,
+	.messages-page .member-count {
+		display: none;
+	}
+
+    /* Action buttons → icon-only squares */
+    .messages-page .chat-header__actions .action-button {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+        min-width: 2.25rem !important;
+        max-width: 2.25rem !important;
+        padding: 0 !important;
+        overflow: hidden;
+    }
+
+    .messages-page .chat-header__actions .action-button span:not(.material-symbols-outlined) {
+        display: none !important;
+    }
+
+    .messages-page #openAttachRepoModal {
+        width: 2.25rem !important;
+        min-width: 2.25rem !important;
+        padding: 0 !important;
+    }
+
+/* ── Message feed scrolls freely ── */
+.messages-page .message-feed {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		overflow-x: hidden;
+		padding: 16px 14px;
+		-webkit-overflow-scrolling: touch;
+		overscroll-behavior: contain;
+	}
+
+	.messages-page .message {
+		gap: 10px;
+		margin-bottom: 16px;
+	}
+
+	.messages-page .avatar--message {
+		width: 32px;
+		height: 32px;
+	}
+
+	/* ── Composer pinned at bottom ── */
+	.messages-page .composer {
+		flex-shrink: 0;
+		padding: 10px 12px 14px;
+		gap: 6px;
+	}
+
+	.messages-page .composer__input {
+		font-size: 16px; /* prevents iOS auto-zoom */
+		padding: 10px 12px;
+		background: var(--messages-bg-soft);
+		border-radius: 20px;
+		border: 1px solid var(--border);
+	}
+
+    /* Sidebar inner content padding */
+    .messages-page .sidebar {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 1000;
+        width: min(280px, 85vw);
+        transform: translateX(-100%);   /* ← same as dashboard */
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #0d1117 !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.7);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .messages-page .sidebar.active {
+        transform: translateX(0);       /* ← slides in */
+    }
+
+
+    /* Fix resize handle still showing */
+    .messages-page .resize-handle {
+        display: none !important;
+    }	
+
+    /* ── Hamburger: visible on mobile ── */
+	.sidebar-toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: 2.25rem;
+		height: 2.25rem;
+		padding: 0;
+		background: none;
+		border: none;
+		border-radius: var(--radius-md, 6px);
+		color: var(--text);
+		cursor: pointer;
+		transition: background 160ms ease;
+	}
+
+	.sidebar-toggle:hover,
+	.sidebar-toggle:focus-visible {
+		background: rgba(255, 255, 255, 0.06);
+	}
+
+	/* ── Group panel: scrollable section below chat ── */
 	.messages-page .group-panel {
 		width: 100%;
+		min-width: 0;
 		max-width: none;
+		max-height: 40dvh;    /* takes up at most 40% of screen */
+		overflow-y: auto;
+		flex-shrink: 0;
+		border-top: 1px solid var(--border);
 	}
 
 	.messages-page .resize-handle {
 		display: none;
 	}
-}
-
-@media (max-width: 900px) {
-	.messages-page .chat-header,
-	.messages-page .composer {
-		padding-left: 16px;
-		padding-right: 16px;
-	}
-
-	.messages-page .chat-header,
-	.messages-page .chat-header__group,
-	.messages-page .chat-header__actions,
-	.messages-page .composer {
-		flex-wrap: wrap;
-	}
-
-	.messages-page .message-feed {
-		padding: 16px;
-	}
 
 	.messages-page .panel-section,
 	.messages-page .group-panel__intro {
 		padding: 16px;
-	}
-}
-
-@media (max-width: 640px) {
-	.messages-page .sidebar {
-		padding: 12px;
-	}
-
-	.messages-page .sidebar-brand {
-		margin-bottom: 20px;
-	}
-
-	.messages-page .chat-channel {
-		font-size: 18px;
-	}
-
-	.messages-page .chat-header__group {
-		gap: 12px;
-	}
-
-	.messages-page .action-button,
-	.messages-page .panel-action {
-		width: 100%;
-	}
-
-	.messages-page .chat-header__actions {
-		width: 100%;
-	}
-
-	.messages-page .composer__actions {
-		width: 100%;
-		justify-content: flex-end;
 	}
 }
