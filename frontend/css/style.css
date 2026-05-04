@@ -747,3 +747,26 @@ a {
 .hidden {
 	display: none !important;
 }
+
+.checkbox-group {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-start; /* Keeps everything to the left */
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; /* Space between box and text */
+    cursor: pointer;
+    width: auto;  /* Prevents the label from stretching across the modal */
+    font-size: 0.9rem;
+    color: #adbac7; /* Matches your screenshot's text color */
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
