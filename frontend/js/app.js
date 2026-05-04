@@ -147,9 +147,13 @@ function getLangColor(lang) {
     return colors[lang] || '#8b949e';
 }
 
+// ============================================
+// MODAL MANAGEMENT (GROUP & REPO)
+// ============================================
+
 // Modal show/hide with simple animation
-function showModal() {
-  const overlay = document.getElementById('modalOverlay');
+function showModal(modalId) {
+  const overlay = document.getElementById(modalId);
   if (!overlay) return;
   const modal = overlay.querySelector('.modal');
   overlay.classList.remove('hidden');
@@ -160,8 +164,8 @@ function showModal() {
   });
 }
 
-function hideModal() {
-  const overlay = document.getElementById('modalOverlay');
+function hideModal(modalId) {
+  const overlay = document.getElementById(modalId);
   if (!overlay) return;
   const modal = overlay.querySelector('.modal');
   if (modal) modal.classList.remove('open');
@@ -175,34 +179,38 @@ function hideModal() {
   overlay.addEventListener('transitionend', onEnd);
 }
 
+// ============================================
+// CREATE GROUP MODAL
+// ============================================
+
 // Open modal - select the "Create Group" button in the topbar
 const createGroupBtn = document.querySelector('.topbar-actions .secondary-button');
 if (createGroupBtn) {
   createGroupBtn.addEventListener('click', () => {
-    showModal();
+    showModal('modalOverlay');
   });
 }
 
 // Close modal function
-function closeModal() {
+function closeGroupModal() {
   document.getElementById('groupName').value = '';
   document.getElementById('repoName').value = '';
-  hideModal();
+  hideModal('modalOverlay');
 }
 
 document.getElementById('closeModal')
-  .addEventListener('click', closeModal);
+  .addEventListener('click', closeGroupModal);
   
 document.getElementById('cancelBtn')
-  .addEventListener('click', closeModal);
+  .addEventListener('click', closeGroupModal);
 
 // Close when clicking outside
 document.getElementById('modalOverlay')
   .addEventListener('click', (e) => {
-    if (e.target.id === 'modalOverlay') closeModal();
+    if (e.target.id === 'modalOverlay') closeGroupModal();
   });
 
-// Submit
+// Submit Group
 document.getElementById('submitGroup')
   .addEventListener('click', async () => {
     const submitBtn = document.getElementById('submitGroup');
@@ -235,7 +243,7 @@ document.getElementById('submitGroup')
       if (response.ok) {
         console.log('Group created:', data.group);
         alert('Group created successfully!');
-        closeModal();
+        closeGroupModal();
       } else {
         alert('Error: ' + (data.error || 'Failed to create group'));
       }
@@ -248,5 +256,110 @@ document.getElementById('submitGroup')
       submitBtn.textContent = originalText;
     }
   });
+
+// ============================================
+// CREATE REPOSITORY MODAL
+// ============================================
+
+// Open "New Repository" modal - select the button in the sidebar
+const newRepoBtn = document.querySelector('.sidebar-footer .primary-button');
+if (newRepoBtn) {
+  newRepoBtn.addEventListener('click', () => {
+    showModal('repoModalOverlay');
+  });
+}
+
+// Close repo modal function
+function closeRepoModal() {
+  document.getElementById('newRepoName').value = '';
+  document.getElementById('newRepoDescription').value = '';
+  document.getElementById('newRepoPrivate').checked = false;
+  document.getElementById('newRepoAutoInit').checked = true;
+  document.getElementById('newRepoGitignore').value = '';
+  document.getElementById('newRepoLicense').value = '';
+  hideModal('repoModalOverlay');
+}
+
+const closeRepoModalBtn = document.getElementById('closeRepoModal');
+if (closeRepoModalBtn) {
+  closeRepoModalBtn.addEventListener('click', closeRepoModal);
+}
+
+const cancelRepoBtn = document.getElementById('cancelRepoBtn');
+if (cancelRepoBtn) {
+  cancelRepoBtn.addEventListener('click', closeRepoModal);
+}
+
+// Close when clicking outside
+const repoModalOverlay = document.getElementById('repoModalOverlay');
+if (repoModalOverlay) {
+  repoModalOverlay.addEventListener('click', (e) => {
+    if (e.target.id === 'repoModalOverlay') closeRepoModal();
+  });
+}
+
+// Submit New Repository
+const submitRepoBtn = document.getElementById('submitRepo');
+if (submitRepoBtn) {
+  submitRepoBtn.addEventListener('click', async () => {
+    const name = document.getElementById('newRepoName').value.trim();
+    const description = document.getElementById('newRepoDescription').value.trim();
+    const isPrivate = document.getElementById('newRepoPrivate').checked;
+    const autoInit = document.getElementById('newRepoAutoInit').checked;
+    const gitignoreTemplate = document.getElementById('newRepoGitignore').value;
+    const licenseTemplate = document.getElementById('newRepoLicense').value;
+
+    if (!name) {
+      alert('Repository name is required');
+      return;
+    }
+
+    // Disable button to prevent double-submit
+    submitRepoBtn.disabled = true;
+    const originalText = submitRepoBtn.textContent;
+    submitRepoBtn.textContent = 'Creating...';
+
+    try {
+      const response = await fetch('/api/repos/create', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name,
+          description: description || undefined,
+          private: isPrivate,
+          auto_init: autoInit,
+          gitignore_template: gitignoreTemplate || undefined,
+          license_template: licenseTemplate || undefined
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Repository created:', data.repository);
+        alert('Repository created successfully!');
+        closeRepoModal();
+        
+        // Refresh the repositories list
+        const repoRes = await fetch('/api/repos');
+        allRepos = await repoRes.json();
+        renderRepos(showingAll);
+        
+        // Optionally redirect to the new repo
+        // window.open(data.repository.html_url, '_blank');
+      } else {
+        alert('Error: ' + (data.error || 'Failed to create repository'));
+      }
+    } catch (error) {
+      console.error('Error creating repository:', error);
+      alert('Error: ' + error.message);
+    } finally {
+      // Re-enable button
+      submitRepoBtn.disabled = false;
+      submitRepoBtn.textContent = originalText;
+    }
+  });
+}
 
 initializeDashboard();

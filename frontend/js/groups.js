@@ -49,6 +49,34 @@ async function loadGroups() {
     data.groups.forEach(group => {
       const card = document.createElement('article');
       card.className = 'group-card';
+
+      // Build member avatars markup (show up to 3 avatars, plus a +N if more)
+      let membersHtml = '';
+      const currentAvatar = document.getElementById('user-avatar')?.src || '';
+      const currentName = document.getElementById('user-name')?.textContent || 'You';
+
+      if (group.members && Array.isArray(group.members) && group.members.length > 0) {
+        const show = group.members.slice(0, 3);
+        show.forEach((m, idx) => {
+          const imgSrc = m.avatar_url || currentAvatar || '/images/default-avatar.png';
+          const title = m.username || currentName;
+          membersHtml += `<div class="member-avatar" title="${title}"><img src="${imgSrc}" alt="${title}"/></div>`;
+        });
+        if (group.member_count > show.length) {
+          membersHtml += `<div class="member-more">+${group.member_count - show.length}</div>`;
+        }
+      } else {
+        // No members array returned yet — show current user avatar if available, otherwise show count
+        if (currentAvatar) {
+          membersHtml = `<div class="member-avatar" title="${currentName}"><img src="${currentAvatar}" alt="${currentName}"/></div>`;
+          if (group.member_count > 1) {
+            membersHtml += `<div class="member-more">+${group.member_count - 1}</div>`;
+          }
+        } else {
+          membersHtml = `<div class="member-more">${group.member_count}</div>`;
+        }
+      }
+
       card.innerHTML = `
         <div class="card-header">
           <div class="card-title">
@@ -62,7 +90,7 @@ async function loadGroups() {
         <p class="card-description">Created on ${new Date(group.created_at).toLocaleDateString()}</p>
         <div class="card-footer">
           <div class="member-avatars">
-            <div class="member-more">${group.member_count}</div>
+            ${membersHtml}
           </div>
           <div class="card-stats">
             <div class="stat">

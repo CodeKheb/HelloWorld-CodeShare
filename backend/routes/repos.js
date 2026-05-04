@@ -91,6 +91,107 @@ router.get("/:owner/:repo/download", async (req, res) => {
     }
 });
 
+/**
+ * CREATE NEW REPOSITORY
+ * Creates a new GitHub repository using OAuth2 authenticated user's token
+ */
+router.post('/create', async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const { 
+    name,
+    description = "",
+    private: isPrivate = false,
+    auto_init = true,
+    gitignore_template = null,
+    license_template = null
+  } = req.body;
+
+  // Validate required fields
+  if (!name) {
+    return res.status(400).json({ error: "Repository name is required" });
+  }
+
+  try {
+    const response = await axios.post(
+      'https://api.github.com/user/repos',
+      {
+        name,
+        description,
+        private: isPrivate,
+        auto_init, // Initialize with README
+        gitignore_template, // e.g., "Node", "Python", "Java"
+        license_template // e.g., "mit", "apache-2.0"
+      },
+      {
+        headers: {
+          Authorization: `token ${req.user.accessToken}`,
+          "User-Agent": "CodeShare-App",
+          Accept: "application/vnd.github.v3+json"
+        }
+      }
+    );
+
+    res.status(201).json({
+      message: "Repository created successfully",
+      repository: {
+        id: response.data.id,
+        name: response.data.name,
+        full_name: response.data.full_name,
+        html_url: response.data.html_url,
+        clone_url: response.data.clone_url,
+        ssh_url: response.data.ssh_url,
+        private: response.data.private,
+        description: response.data.description
+      }
+    });
+  } catch (error) {
+    console.error('Create Repository Error:', error.response?.data || error.message);
+    
+    // Handle specific GitHub API errors
+    if (error.response?.status === 422) {
+      return res.status(422).json({ 
+        error: "Repository name already exists or is invalid" 
+      });
+    }
+    
+    res.status(error.response?.status || 500).json({ 
+      error: error.response?.data?.message || "Failed to create repository" 
+    });
+  }
+});
+
+router.get("/:owner/:repo/download", async (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    const { owner, repo } = req.params;
+    try {
+        const zipUrl = `https://api.github.com/repos/${owner}/${repo}/zipball`;
+        const response = await axios.get(zipUrl, {
+            responseType: "stream",
+            headers: {
+                // Ensure req.user.accessToken exists from your passport deserializer
+                Authorization: `token ${req.user.accessToken}`,
+                "User-Agent": "CodeShare-App",
+                Accept: "application/vnd.github.v3+json"
+            }
+        });
+        // Set headers for file download
+        res.setHeader("Content-Disposition", `attachment; filename=${repo}.zip`);
+        res.setHeader("Content-Type", "application/zip");
+        // Pipe the GitHub stream directly to the client response
+        response.data.pipe(res);
+    } catch (err) {
+        console.error("Download Error:", err.response?.data || err.message);
+        res.status(err.response?.status || 500).json({ 
+            error: "Failed to download repository from GitHub" 
+        });
+    }
+});
+
 // routes/repos.js
 router.get("/", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");

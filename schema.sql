@@ -20,10 +20,11 @@ CREATE TABLE users (
 -- Stores group chat information such as chat name, who and when it was created, and when it was last summarized by AI
 CREATE TABLE group_chats (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
+  name VARCHAR(255),
   created_by INTEGER REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
-  last_summarized_at TIMESTAMP
+  last_summarized_at TIMESTAMP,
+  is_direct BOOLEAN DEFAULT FALSE  -- checks if the conversation will be a DM or a Group (group as default)
 );
 
 -- Stores infromation in regards about the group members

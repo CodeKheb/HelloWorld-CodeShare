@@ -399,6 +399,22 @@ a {
 	margin-left: 0;
 }
 
+.avatar-more {
+	width: 24px;
+	height: 24px;
+	border-radius: 999px;
+	overflow: hidden;
+	border: 1px solid var(--bg-panel);
+	background: var(--bg-card);
+	display: grid;
+	place-items: center;
+	font-size: 10px;
+	color: var(--text);
+	font-weight: 500;
+	flex: 0 0 auto;
+	margin-left: -8px;
+}
+
 .avatar--more {
 	font-size: 10px;
 	line-height: 1;
@@ -409,6 +425,21 @@ a {
 	color: var(--muted);
 	font-size: 12px;
 	line-height: 1.3;
+}
+
+/* Sidebar section header: align title and action button */
+.section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.section-header strong {
+	font-size: 13px;
+	line-height: 1;
+	color: var(--text);
+	font-weight: 700;
 }
 
 .meta-stat {
@@ -746,4 +777,27 @@ a {
 /* Utility: hide elements (used by modal overlays and other UI) */
 .hidden {
 	display: none !important;
+}
+
+.checkbox-group {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-start; /* Keeps everything to the left */
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; /* Space between box and text */
+    cursor: pointer;
+    width: auto;  /* Prevents the label from stretching across the modal */
+    font-size: 0.9rem;
+    color: #adbac7; /* Matches your screenshot's text color */
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
 }

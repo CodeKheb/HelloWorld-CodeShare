@@ -1,98 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8"/>
-        <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-        <title>CodeShare Dashboard</title>
-        <link href="https://fonts.googleapis.com" rel="preconnect"/>
-        <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
-        <link rel="stylesheet" href="css/style.css"/>
-    </head>
-    <body>
-        <div class="dashboard-shell">
-            <nav class="sidebar" aria-label="Primary">
-                <div class="sidebar-brand">
-                    <div class="avatar avatar--brand" aria-hidden="true">
-                        <img id="user-avatar" alt="User Avatar" src=""/>
-                    </div>
-                    <div>
-                        <h1 id="user-name">Loading...</h1>
-                        <span id="user-login">@username</span>
-                    </div>
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>CodeShare Dashboard</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+    <div class="dashboard-shell">
+        <nav class="sidebar" aria-label="Primary">
+            <div class="sidebar-brand">
+                <div class="avatar avatar--brand" aria-hidden="true">
+                    <img id="user-avatar" alt="User Avatar" src="" />
                 </div>
-                <ul class="sidebar-nav">
-                    <li><a class="sidebar-link sidebar-link--active" href="#"><span class="material-symbols-outlined icon-filled ">home</span><span>Home</span></a></li>
-                    <li><a class="sidebar-link" href="/messages" data-route="messages"><span class="material-symbols-outlined">chat_bubble</span><span>Direct Messages</span></a></li>
-                    <li><a class="sidebar-link" href="/groups" data-route="groups"><span class="material-symbols-outlined">groups</span><span>Groups</span></a></li>
-                </ul>
-                <div class="sidebar-footer">
-                    <button class="primary-button" type="button">New Repository</button>
+                <div>
+                    <h1 id="user-name">Loading...</h1>
+                    <span id="user-login">@username</span>
                 </div>
-            </nav>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a class="sidebar-link sidebar-link--active" href="#"><span class="material-symbols-outlined icon-filled">home</span><span>Home</span></a></li>
+                <li><a class="sidebar-link" href="/messages" data-route="messages"><span class="material-symbols-outlined">chat_bubble</span><span>Direct Messages</span></a></li>
+                <li><a class="sidebar-link" href="/groups" data-route="groups"><span class="material-symbols-outlined">groups</span><span>People and Groups</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button class="primary-button" type="button">New Repository</button>
+            </div>
+        </nav>
 
-            <div class="dashboard-main">
-                <header class="topbar">
-                    <nav class="topbar-tabs" aria-label="Dashboard">
-                        <a class="topbar-tab topbar-tab--active" href="#">Dashboard</a>
-                        <a class="topbar-tab" href="#">Pull Requests</a>
-                        <a class="topbar-tab" href="#">Issues</a>
-                        <a class="topbar-tab" href="#">Wiki</a>
-                    </nav>
-                    <div class="topbar-actions">
-                        <button class="icon-button" type="button" aria-label="Notifications"><span class="material-symbols-outlined">notifications</span></button>
-                        <button class="icon-button" type="button" aria-label="Settings"><span class="material-symbols-outlined">settings</span></button>
-                        <button class="secondary-button" type="button">Create Group</button>
+        <div class="dashboard-main">
+            <header class="topbar">
+                <nav class="topbar-tabs" aria-label="Dashboard">
+                    <a class="topbar-tab topbar-tab--active" href="#">Dashboard</a>
+                    <a class="topbar-tab" href="#">Pull Requests</a>
+                    <a class="topbar-tab" href="#">Issues</a>
+                    <a class="topbar-tab" href="#">Wiki</a>
+                </nav>
+                <div class="topbar-actions">
+                    <button class="icon-button" type="button" aria-label="Notifications"><span class="material-symbols-outlined">notifications</span></button>
+                    <button class="icon-button" type="button" aria-label="Settings"><span class="material-symbols-outlined">settings</span></button>
+                    <button class="secondary-button" type="button">Create Group</button>
+                </div>
+            </header>
+
+            <main class="content">
+                <section class="section-block">
+                    <div class="section-heading">
+                        <h2>Your Repositories</h2>
+                        <a href="#">View all</a>
                     </div>
-                </header>
-
-                <main class="content">
-                    <section class="section-block">
-                        <div class="section-heading">
-                            <h2>Your Repositories</h2>
-                            <a href="#">View all</a>
-                        </div>
-                        
-                        <div class="group-grid" id="repo-grid">
-                            <p>Fetching repositories...</p>
-                        </div>
-                    </section>
-
-                    <section class="section-block">
-                        <h2 class="section-title">Recent Activity</h2>
-                        <div class="activity-list" id="activity-list">
-                            </div>
-                        </section>
-                    </main>
-
-                    <!-- Modal Overlay -->
-                    <div id="modalOverlay" class="modal-overlay hidden">
-                        <div class="modal">
-                            <div class="modal-header">
-                                <h2>Create Group</h2>
-                                <button id="closeModal">&times;</button>
-                            </div>
-
-                            <div class="modal-body">
-                                <label>GROUP NAME <span class="required">*</span></label>
-                                <input type="text" id="groupName" placeholder="e.g. Frontend Architecture" />
-                                <small>This will be the display name for your new team.</small>
-
-                                <label>ATTACH A REPO <span class="optional">(Optional)</span></label>
-                                <div class="repo-input-wrapper">
-                                    <span class="repo-icon">🔗</span>
-                                    <input type="text" id="repoName" placeholder="owner/repo-name" />
-                                </div>
-                                <small>Link an initial repository to kickstart discussions.</small>
-                            </div>
-
-                            <div class="modal-footer">
-                                <button id="submitGroup" class="btn-primary">CREATE GROUP</button>
-                                <button id="cancelBtn" class="btn-cancel">Cancel</button>
-                            </div>
-                        </div>
+                    <div class="group-grid" id="repo-grid">
+                        <p>Fetching repositories...</p>
                     </div>
-            <script src="/js/app.js"></script>
-    </body>
+                </section>
+
+                <section class="section-block">
+                    <h2 class="section-title">Recent Activity</h2>
+                    <div class="activity-list" id="activity-list">
+                        </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Create Group</h2>
+                <button id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>GROUP NAME <span class="required">*</span></label>
+                <input type="text" id="groupName" placeholder="e.g. Frontend Architecture" />
+                <small>This will be the display name for your new team.</small>
+
+                <label>ATTACH A REPO <span class="optional">(Optional)</span></label>
+                <div class="repo-input-wrapper">
+                    <span class="repo-icon">🔗</span>
+                    <input type="text" id="repoName" placeholder="owner/repo-name" />
+                </div>
+                <small>Link an initial repository to kickstart discussions.</small>
+            </div>
+            <div class="modal-footer">
+                <button id="submitGroup" class="btn-primary">CREATE GROUP</button>
+                <button id="cancelBtn" class="btn-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="repoModalOverlay" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Create New Repository</h2>
+                <button id="closeRepoModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>REPOSITORY NAME <span class="required">*</span></label>
+                <input type="text" id="newRepoName" placeholder="e.g. my-awesome-project" />
+                <small>Choose a unique name for your repository.</small>
+
+                <label>DESCRIPTION <span class="optional">(Optional)</span></label>
+                <input type="text" id="newRepoDescription" placeholder="A brief description of your project" />
+                <small>Help others understand what your project is about.</small>
+
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="newRepoPrivate" />
+                        <span>Make this repository private</span>
+                    </label>
+                </div>
+
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="newRepoAutoInit" checked />
+                        <span>Initialize with README</span>
+                    </label>
+                </div>
+
+                <label style="margin-top: 1rem;">GITIGNORE TEMPLATE <span class="optional">(Optional)</span></label>
+                <input type="text" id="newRepoGitignore" placeholder="e.g. Node, Python, Java" />
+                <small>Add a .gitignore file to exclude common files.</small>
+
+                <label>LICENSE <span class="optional">(Optional)</span></label>
+                <input type="text" id="newRepoLicense" placeholder="e.g. mit, apache-2.0" />
+                <small>Choose a license for your project.</small>
+            </div>
+            <div class="modal-footer">
+                <button id="submitRepo" class="btn-primary">CREATE REPOSITORY</button>
+                <button id="cancelRepoBtn" class="btn-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
 </html>

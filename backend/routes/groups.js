@@ -85,12 +85,18 @@ groupsRouter.get("/", async (req, res) => {
 
         const userId = req.user.id;
 
-        // Get all groups the user is a member of
+        // Get all groups the user is a member of, including a small members array
         const result = await pool.query(
-            `SELECT gc.id, gc.name, gc.created_by, gc.created_at, gc.last_summarized_at,
-                    COUNT(gm.user_id) as member_count
+            `SELECT gc.id,
+                    gc.name,
+                    gc.created_by,
+                    gc.created_at,
+                    gc.last_summarized_at,
+                    COUNT(gm.user_id) AS member_count,
+                    COALESCE(json_agg(json_build_object('id', u.id, 'username', u.username, 'avatar_url', u.avatar_url) ORDER BY gm.joined_at) FILTER (WHERE u.id IS NOT NULL), '[]') AS members
              FROM group_chats gc
              LEFT JOIN group_members gm ON gc.id = gm.group_id
+             LEFT JOIN users u ON gm.user_id = u.id
              WHERE gc.id IN (
                  SELECT group_id FROM group_members WHERE user_id = $1
              )
