@@ -4,7 +4,6 @@ import { fileURLToPath } from "url";
 import session from 'express-session';
 import passport from "passport";
 
-
 export const app = express()
 const port = process.env.PORT || 3000
 
@@ -22,50 +21,39 @@ const requireAuth = (req, res, next) => {
     res.redirect('/login');
 };
 
-let authenticated = true;
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "../../frontend"), { index: false }));
 
-app.use(express.urlencoded({ extended: true })); //Used to read and understand data sent from HTML forms
-app.use(express.json()) // order matters 
-app.use(express.static(path.join(__dirname, "../../frontend"), { index: false })) //Serve static frontend files
+app.use(sessionMiddleware);
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'TRIAL', // Use env variable
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, httpOnly: true } // httpOnly is important for security
-}));
-
-app.use(passport.initialize())
-app.use(passport.session())
+app.use(passport.initialize());
+app.use(passport.session());
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
 app.get('/', requireAuth, (req, res) => {
-    res.sendFile(path.join(__dirname, "../../frontend", 'index.html'))
-})
+    res.sendFile(path.join(__dirname, "../../frontend", 'index.html'));
+});
 
 app.get('/login', (req, res) => {
-  if (req.isAuthenticated()) {
-    return res.redirect('/'); // already logged in
-  }
-  res.sendFile(path.join(__dirname, "../../frontend", 'login.html'));
-})
-
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, "../../frontend", 'login.html'));
-})
+    if (req.isAuthenticated()) {
+        return res.redirect('/');
+    }
+    res.sendFile(path.join(__dirname, "../../frontend", 'login.html'));
+});
 
 app.get('/messages', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "../../frontend", 'messages.html'));
-})
+    res.sendFile(path.join(__dirname, "../../frontend", 'messages.html'));
+});
 
 app.get('/groups', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "../../frontend", 'groups.html'));
-})
+    res.sendFile(path.join(__dirname, "../../frontend", 'groups.html'));
+});
 
 app.get("/hello", (req, res) => {
-    res.send({message: "hello"})
-})
+    res.send({ message: "hello" });
+});
 
-app.use("/api/auth", authRouter)
+app.use("/api/auth", authRouter);

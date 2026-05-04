@@ -6,69 +6,60 @@ import cookieParser from "cookie-parser";
 import passport from "passport";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import axios from 'axios';
+import { userAuthenticated } from "../socket/activeSockets";
+import { io } from "../server.js";
 
 const authRouter = Router();
 
-authRouter.use(cookieParser())
-authRouter.use(passport.initialize())
-authRouter.use(passport.session())
-
+authRouter.use(cookieParser());
 
 passport.use(new GitHubStrategy(
-{
-    clientID: process.env.GITHUB_CLIENT_ID,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: process.env.GITHUB_CALLBACK,
-},
-
-(accessToken, refreshToken, profile, done) => {
-    // You can save user to DB here later
-    return done(null, {
-        id: profile.id,
-        username: profile.username,
-        displayName: profile.displayName,
-        avatar: profile.photos?.[0]?.value,
-        accessToken
-    });
-}
+    {
+        clientID: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        callbackURL: process.env.GITHUB_CALLBACK,
+    },
+    (accessToken, refreshToken, profile, done) => {
+        return done(null, {
+            id: profile.id,
+            username: profile.username,
+            displayName: profile.displayName,
+            avatar: profile.photos?.[0]?.value,
+            accessToken
+        });
+    }
 ));
 
 authRouter.get("/auth", async (req, res) => {
     try {
-        res.send("/auth")
+        res.send("/auth");
     } catch (error) {
-        return res.json({error})
+        return res.json({ error });
     }
-})
+});
 
 authRouter.get("/success", async (req, res) => {
     try {
-        res.send("/success!")
+        res.send("/success!");
     } catch (error) {
-        return res.json({error})
+        return res.json({ error });
     }
-})
+});
 
 authRouter.get("/user", async (req, res) => {
-    // changed this to passport auth
     if (!req.isAuthenticated()) {
         return res.status(401).json({ authenticated: false });
     }
     return res.json({ authenticated: true, user: req.user });
 });
 
-// Redirect to GitHub
 authRouter.get("/github",
     passport.authenticate("github", { scope: ["user:email", "repo"] })
 );
 
-// Callback URL
 authRouter.get("/github/callback",
-    passport.authenticate("github", {
-        failureRedirect: "/login",
-    }),
+    passport.authenticate("github", { failureRedirect: "/login" }),
     (req, res) => {
-        // success login
         res.redirect("/");
     }
 );
@@ -87,24 +78,21 @@ authRouter.get("/repos", async (req, res) => {
                 "User-Agent": "My-App"
             },
             params: {
-                visibility: "all", // "all", "public", or "private"
+                visibility: "all",
                 sort: "updated",
                 per_page: 20
             }
         });
 
-        // PARSING LOGIC: Map through the raw data
-        const simplifiedRepos = response.data.map(repo => {
-            return {
-                name: repo.name,
-                description: repo.description,
-                private: repo.private,
-                stargazers_count: repo.stargazers_count,
-                language: repo.language,
-                updated_at: repo.updated_at,
-                html_url: repo.html_url
-            };
-        });
+        const simplifiedRepos = response.data.map(repo => ({
+            name: repo.name,
+            description: repo.description,
+            private: repo.private,
+            stargazers_count: repo.stargazers_count,
+            language: repo.language,
+            updated_at: repo.updated_at,
+            html_url: repo.html_url
+        }));
 
         res.json(simplifiedRepos);
     } catch (error) {

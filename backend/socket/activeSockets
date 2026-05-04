@@ -1,0 +1,12 @@
+export const socketMapList = new Map ()
+
+export function userInit(socketId) {
+    socketMapList.set(socketId, {
+        authenticated: true,
+        github_id: user.id,
+        username: user.username,
+        avatar_url: user.avatar,
+        access_token: user.accessToken
+    });
+}
+

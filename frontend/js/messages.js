@@ -1,3 +1,9 @@
+const socket = io("http://localhost:3000")
+
+socket.on("connect", () => {
+    socket.emit("client_ID", socket.id)
+})
+
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-route]').forEach(link => {
         link.addEventListener('click', (e) => {
