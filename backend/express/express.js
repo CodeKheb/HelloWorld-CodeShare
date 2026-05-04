@@ -12,6 +12,7 @@ export const __dirname = path.dirname(__filename)
 
 import authRouter from '../routes/auth.js';
 import groupsRouter from '../routes/groups.js';
+import reposRouter from '../routes/repos.js';
 
 const requireAuth = (req, res, next) => {
     if (req.isAuthenticated()) {
@@ -106,3 +107,4 @@ app.get('/api/user', requireAuth, (req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/groups", groupsRouter);
+app.use("/api/repos", reposRouter);
