@@ -6,8 +6,8 @@
         <title>CodeShare - Chat View</title>
         <link href="https://fonts.googleapis.com" rel="preconnect"/>
         <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-        <script defer src="/socket.io/socket.io.js"></script>
-        <script defer type="module" src="js/messages.js"></script>
+        <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+        <script type="module" src="js/messages.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
         <link rel="stylesheet" href="css/style.css"/>
@@ -65,48 +65,7 @@
                         </div>
                     </header>
 
-                    <section class="message-feed" aria-label="Messages">
-                        <div class="system-message">
-                            <span class="material-symbols-outlined system-message__icon" aria-hidden="true">commit</span>
-                            <span class="system-message__author">sarah_dev</span>
-                            <span>pushed 3 commits to</span>
-                            <span class="system-message__branch">main</span>
-                        </div>
-
-                        <article class="message message--standard">
-                            <img alt="Alex" class="avatar avatar--message" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvqqMUn7Vtv3KgaBnKEXhtgd1PM4v3KUBSAOZlx9avJQycgBSGQLWvXrgGmXYhKyi7tN5y4y-tbIKeyYc2mIj0ieeoNhT2zXGH72dzKONaUk-5BHMcu0uRMPaeVUTbhKY3Cy0XtbuhKB5LPSSRsGQ5u81BYZZSLAUOTtjK4gLqOwWkyNHhaIsOIOQEPKsasifK-jX8V4v8fDupPO_CqKhRybCZAdYWAwVMdkhQbq2gAupnLPtb2pzZrkZ8xba7atBaIeP-hkSNcQE"/>
-                            <div class="message__body">
-                                <div class="message__meta">
-                                    <span class="message__author">Alex Chen</span>
-                                    <span class="message__time">10:42 AM</span>
-                                </div>
-                                <p class="message__text">I've reviewed the new component structure. The shared state logic in the SideNavBar looks solid, but we might want to abstract the active state evaluation into a custom hook before merging.</p>
-                            </div>
-                        </article>
-
-                        <article class="summary-card" aria-label="AI summary">
-                            <div class="summary-card__badge">
-                                <span class="material-symbols-outlined icon-filled" aria-hidden="true">auto_awesome</span>
-                                <span>AI Summary: Component Architecture Discussion</span>
-                            </div>
-                            <p class="summary-card__text">The team has agreed on implementing a unified context provider for navigation state. Pending actions include writing unit tests for the active route matcher and updating the documentation for the SideNavBar component to reflect the new strict JSON payload structure.</p>
-                            <div class="summary-card__tags">
-                                <span class="chip">Action Required</span>
-                                <span class="chip">Architecture</span>
-                            </div>
-                        </article>
-
-                        <article class="message message--standard">
-                            <img alt="Maya" class="avatar avatar--message" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC83y8BZLJ71SePYUVEGlq9naVM-Tncns7N7WvJSW1tu3qSSySGq-KxAm9v56ckZL1dYwWI1Darl-HIYF4ebgpoXAs2NZLSVcMovoi1gikvJOklkBPLuIMpr-CtBhUnToXaZGJiLMxJK1mhyUsUZIRDlMIWFVWtJTJHNkRp8hrgSMGLvrdXiw4yGnTBh_n6VsO__FZ3G5rMTdv-sLVPFA3o-RqkkN9GoXxCVW4ZB--R_Oi4rl5Or5QIXWpYjyzD8Ot6uI62QDiaKWY"/>
-                            <div class="message__body">
-                                <div class="message__meta">
-                                    <span class="message__author">Maya Patel</span>
-                                    <span class="message__time">11:15 AM</span>
-                                </div>
-                                <p class="message__text">Agreed. I'll take a pass at the context provider this afternoon. Can someone verify the latest Tailwind config tokens are correctly synced in the main repo?</p>
-                            </div>
-                        </article>
-                    </section>
+                    <section class="message-feed" aria-label="Messages"></section>
 
                     <footer class="composer" aria-label="Message composer">
                         <button class="icon-button" type="button" aria-label="Add attachment">
@@ -123,6 +82,8 @@
                         </div>
                     </footer>
                 </main>
+
+                <div class="resize-handle" aria-hidden="true"></div>
 
                 <aside class="group-panel" aria-label="Group information">
                     <section class="group-panel__intro">

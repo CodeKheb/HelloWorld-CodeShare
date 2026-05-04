@@ -6,14 +6,11 @@ import passport from "passport";
 import pool from "../db/pool.js";
 
 export const app = express()
-const port = process.env.PORT || 3000
 
 const __filename = fileURLToPath(import.meta.url)
 export const __dirname = path.dirname(__filename)
 
 import authRouter from '../routes/auth.js';
-
-console.log(port);
 
 const requireAuth = (req, res, next) => {
     if (req.isAuthenticated()) {
@@ -26,15 +23,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../../frontend"), { index: false }));
 
-app.use(session({
+
+export const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET || "trial-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: false
+        secure: false,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
-}));
+});
+
+app.use(sessionMiddleware);
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -87,6 +88,19 @@ app.get('/groups', requireAuth, (req, res) => {
 
 app.get("/hello", (req, res) => {
     res.send({ message: "hello" });
+});
+
+app.get('/api/user', requireAuth, (req, res) => {
+    res.json({
+        authenticated: true,
+        user: {
+            id: req.user.id,
+            github_id: req.user.github_id,
+            username: req.user.username,
+            displayName: req.user.username, 
+            avatar: req.user.avatar_url
+        }
+    });
 });
 
 app.use("/api/auth", authRouter);
