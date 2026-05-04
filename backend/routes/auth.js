@@ -6,7 +6,6 @@ import cookieParser from "cookie-parser";
 import passport from "passport";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import axios from 'axios';
-import { userAuthenticated } from "../socket/activeSockets";
 import { io } from "../server.js";
 
 const authRouter = Router();

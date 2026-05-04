@@ -25,7 +25,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../../frontend"), { index: false }));
 
-app.use(sessionMiddleware);
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'TRIAL', // Use env variable
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, httpOnly: true } // httpOnly is important for security
+}));
 
 app.use(passport.initialize());
 app.use(passport.session());
