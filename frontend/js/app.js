@@ -147,4 +147,106 @@ function getLangColor(lang) {
     return colors[lang] || '#8b949e';
 }
 
+// Modal show/hide with simple animation
+function showModal() {
+  const overlay = document.getElementById('modalOverlay');
+  if (!overlay) return;
+  const modal = overlay.querySelector('.modal');
+  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
+  requestAnimationFrame(() => {
+    overlay.classList.add('anim-open');
+    if (modal) modal.classList.add('open');
+  });
+}
+
+function hideModal() {
+  const overlay = document.getElementById('modalOverlay');
+  if (!overlay) return;
+  const modal = overlay.querySelector('.modal');
+  if (modal) modal.classList.remove('open');
+  overlay.classList.remove('anim-open');
+  const onEnd = (e) => {
+    if (e.target !== overlay) return;
+    overlay.style.display = '';
+    overlay.classList.add('hidden');
+    overlay.removeEventListener('transitionend', onEnd);
+  };
+  overlay.addEventListener('transitionend', onEnd);
+}
+
+// Open modal - select the "Create Group" button in the topbar
+const createGroupBtn = document.querySelector('.topbar-actions .secondary-button');
+if (createGroupBtn) {
+  createGroupBtn.addEventListener('click', () => {
+    showModal();
+  });
+}
+
+// Close modal function
+function closeModal() {
+  document.getElementById('groupName').value = '';
+  document.getElementById('repoName').value = '';
+  hideModal();
+}
+
+document.getElementById('closeModal')
+  .addEventListener('click', closeModal);
+  
+document.getElementById('cancelBtn')
+  .addEventListener('click', closeModal);
+
+// Close when clicking outside
+document.getElementById('modalOverlay')
+  .addEventListener('click', (e) => {
+    if (e.target.id === 'modalOverlay') closeModal();
+  });
+
+// Submit
+document.getElementById('submitGroup')
+  .addEventListener('click', async () => {
+    const submitBtn = document.getElementById('submitGroup');
+    const name = document.getElementById('groupName').value.trim();
+    const repoFullName = document.getElementById('repoName').value.trim();
+
+    if (!name) {
+      alert('Group name is required');
+      return;
+    }
+
+    // Disable button to prevent double-submit
+    submitBtn.disabled = true;
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Creating...';
+
+    try {
+      const response = await fetch('/api/groups/create', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name, 
+          repoFullName: repoFullName || null 
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Group created:', data.group);
+        alert('Group created successfully!');
+        closeModal();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to create group'));
+      }
+    } catch (error) {
+      console.error('Error creating group:', error);
+      alert('Error: ' + error.message);
+    } finally {
+      // Re-enable button
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
+
 initializeDashboard();

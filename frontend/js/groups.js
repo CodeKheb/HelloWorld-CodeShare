@@ -82,19 +82,50 @@ async function loadGroups() {
 // Load groups on page load
 loadGroups();
 
+// Modal show/hide with simple animation
+function showModal() {
+  const overlay = document.getElementById('modalOverlay');
+  if (!overlay) return;
+  const modal = overlay.querySelector('.modal');
+  // remove initial hidden state
+  overlay.classList.remove('hidden');
+  // ensure it's visible for animation
+  overlay.style.display = 'flex';
+  requestAnimationFrame(() => {
+    overlay.classList.add('anim-open');
+    if (modal) modal.classList.add('open');
+  });
+}
+
+function hideModal() {
+  const overlay = document.getElementById('modalOverlay');
+  if (!overlay) return;
+  const modal = overlay.querySelector('.modal');
+  if (modal) modal.classList.remove('open');
+  overlay.classList.remove('anim-open');
+  const onEnd = (e) => {
+    if (e.target !== overlay) return;
+    overlay.style.display = '';
+    overlay.classList.add('hidden');
+    overlay.removeEventListener('transitionend', onEnd);
+  };
+  overlay.addEventListener('transitionend', onEnd);
+}
+
 // Open modal - select the "Create Group" button in the topbar
 const createGroupBtn = document.querySelector('.topbar-actions .secondary-button');
 if (createGroupBtn) {
   createGroupBtn.addEventListener('click', () => {
-    document.getElementById('modalOverlay').classList.remove('hidden');
+    showModal();
   });
 }
 
 // Close modal function
 function closeModal() {
-  document.getElementById('modalOverlay').classList.add('hidden');
+  // clear inputs immediately
   document.getElementById('groupName').value = '';
   document.getElementById('repoName').value = '';
+  hideModal();
 }
 
 document.getElementById('closeModal')
