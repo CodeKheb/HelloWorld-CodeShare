@@ -3,6 +3,59 @@ import axios from "axios";
 
 const router = express.Router();
 
+/**
+ * ATTACH REPO LOGIC
+ * This route calls GitHub to create a webhook and tells the DB to link it to a group.
+ */
+router.post('/attach', async (req, res) => {
+  const { repoFullName, groupId, userAccessToken } = req.body;
+  
+  // We assume you've attached your teammate's pool/controller to the req object
+  // or imported it directly at the top of the file.
+  const { dbController } = req; 
+
+  try {
+    // 1. Request GitHub to create a Webhook for this specific repository
+    const githubResponse = await fetch(`https://api.github.com/repos/${repoFullName}/hooks`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `token ${userAccessToken}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: 'web',
+        active: true,
+        events: ['push', 'pull_request'],
+        config: {
+          url: `${process.env.APP_URL}/api/webhooks/github`, // Your ngrok/production URL
+          content_type: 'json',
+          secret: process.env.GITHUB_WEBHOOK_SECRET // Shared secret for security
+        }
+      })
+    });
+
+    const hookData = await githubResponse.json();
+
+    if (!githubResponse.ok) {
+      throw new Error(`GitHub API Error: ${hookData.message}`);
+    }
+
+    // 2. Database Hand-off (The part your teammate manages)
+    // We pass the webhook_id so it can be stored in the 'group_repos' table
+    await dbController.linkRepoToGroup(groupId, repoFullName, hookData.id);
+
+    res.status(201).json({
+      message: 'Successfully attached repo and registered webhook',
+      webhook_id: hookData.id
+    });
+
+  } catch (error) {
+    console.error('Attach Repo Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get("/:owner/:repo/download", async (req, res) => {
     if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Unauthorized" });
@@ -54,5 +107,12 @@ router.get("/", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch repos from GitHub" });
     }
 });
+
+//Make sure frontend uses "/search?repo_name=value"
+router.get("/search", (req, res) => {
+    const repoName = req.query.repo_name
+    //TODO: Search in database fo specific reponame
+
+})
 
 export default router;
