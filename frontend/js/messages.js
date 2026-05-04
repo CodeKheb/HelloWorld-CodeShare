@@ -17,7 +17,7 @@ socket.on("server-group-text", (message) => {
 
 // incoming messages
 socket.on("server-direct-text", (message) => {
-    console.log("Received group message:", message);
+    console.log("Received direct message:", message);
     displayMessage(message);
 });
 
@@ -111,7 +111,7 @@ function initializeMessageComposer() {
         console.log('Sending message:', messageData);
 
         // Send to group
-        socket.emit("group-message", groupId, messageData);
+        socket.emit("client-message", messageData);
 
         displayMessage(messageData);
 

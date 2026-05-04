@@ -63,9 +63,36 @@
                         <h2 class="section-title">Recent Activity</h2>
                         <div class="activity-list" id="activity-list">
                             </div>
-                    </section>
-                </main>
-            </div>
+                        </section>
+                    </main>
+
+                    <!-- Modal Overlay -->
+                    <div id="modalOverlay" class="modal-overlay hidden">
+                        <div class="modal">
+                            <div class="modal-header">
+                                <h2>Create Group</h2>
+                                <button id="closeModal">&times;</button>
+                            </div>
+
+                            <div class="modal-body">
+                                <label>GROUP NAME <span class="required">*</span></label>
+                                <input type="text" id="groupName" placeholder="e.g. Frontend Architecture" />
+                                <small>This will be the display name for your new team.</small>
+
+                                <label>ATTACH A REPO <span class="optional">(Optional)</span></label>
+                                <div class="repo-input-wrapper">
+                                    <span class="repo-icon">🔗</span>
+                                    <input type="text" id="repoName" placeholder="owner/repo-name" />
+                                </div>
+                                <small>Link an initial repository to kickstart discussions.</small>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button id="submitGroup" class="btn-primary">CREATE GROUP</button>
+                                <button id="cancelBtn" class="btn-cancel">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
             <script src="/js/app.js"></script>
     </body>
 </html>
