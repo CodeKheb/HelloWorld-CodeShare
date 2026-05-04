@@ -39,6 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeResizablePanel();
     initializeMessagesView();
     initializeMessageComposer();
+
+    // Allow inline HTML script to refresh panel after attach-repo modal submit
+    window.refreshCurrentGroupDetails = async () => {
+        if (window.currentGroupId) {
+            await loadGroupDetails(window.currentGroupId);
+        }
+    };
 });
 
 async function initializeMessagesView() {
@@ -180,7 +187,99 @@ async function selectGroup(group) {
     socket.emit('join-group', group.id);
 
     // Load persisted history for this group
-    await loadGroupMessages(group.id);
+    await Promise.all([
+        loadGroupMessages(group.id),
+        loadGroupDetails(group.id)
+    ]);
+}
+
+async function loadGroupDetails(groupId) {
+    try {
+        const response = await fetch(`/api/groups/${encodeURIComponent(groupId)}`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            console.error('Failed to load group details');
+            return;
+        }
+
+        const payload = await response.json();
+        const group = payload?.group;
+        if (!group) return;
+
+        const members = Array.isArray(group.members) ? group.members : [];
+        const repos = Array.isArray(group.repos) ? group.repos : [];
+
+        // Keep header in sync with full group details
+        updateGroupHeaderFromMembers({ ...group, members });
+
+        const introTitle = document.querySelector('.group-panel__intro h3');
+        if (introTitle) introTitle.textContent = group.name || 'Group';
+
+        const introText = document.querySelector('.group-panel__intro p');
+        if (introText) {
+            introText.textContent = repos.length > 0
+                ? `${repos.length} ${repos.length === 1 ? 'repository' : 'repositories'} linked to this group.`
+                : 'No repository linked yet. Attach one to start receiving repository updates.';
+        }
+
+        renderMemberList(members);
+        renderRepoList(repos);
+    } catch (error) {
+        console.error('Error loading group details:', error);
+    }
+}
+
+function renderMemberList(members) {
+    const list = document.getElementById('group-member-list') || document.querySelector('.member-list');
+    if (!list) return;
+
+    list.innerHTML = '';
+
+    if (!members || members.length === 0) {
+        list.innerHTML = '<li class="member-item"><span class="member-muted">No members found.</span></li>';
+        return;
+    }
+
+    members.forEach((m) => {
+        const li = document.createElement('li');
+        li.className = 'member-item';
+        li.innerHTML = `
+            <div class="status-avatar">
+                <img alt="${escapeAttr(m.username || 'Member')}" class="avatar avatar--small" src="${escapeAttr(m.avatar_url || '/default-avatar.png')}"/>
+                <span class="presence-dot presence-dot--online"></span>
+            </div>
+            <span>${escapeHtml(m.username || 'Unknown')}</span>
+        `;
+        list.appendChild(li);
+    });
+}
+
+function renderRepoList(repos) {
+    const list = document.getElementById('group-repo-list') || document.querySelector('.repo-list');
+    if (!list) return;
+
+    list.innerHTML = '';
+
+    if (!repos || repos.length === 0) {
+        list.innerHTML = '<article class="repo-card"><div class="repo-card__title"><span class="material-symbols-outlined" aria-hidden="true">folder_off</span><span>No attached repositories</span></div><div class="repo-card__meta">Attach one from the header button</div></article>';
+        return;
+    }
+
+    repos.forEach((repo) => {
+        const card = document.createElement('article');
+        card.className = 'repo-card';
+        const addedAt = repo.added_at ? new Date(repo.added_at).toLocaleDateString() : 'Recently';
+        card.innerHTML = `
+            <div class="repo-card__title">
+                <span class="material-symbols-outlined" aria-hidden="true">folder</span>
+                <span>${escapeHtml(repo.repo_full_name)}</span>
+            </div>
+            <div class="repo-card__meta">Added ${escapeHtml(addedAt)}</div>
+        `;
+        list.appendChild(card);
+    });
 }
 
 // small helpers for escaping attributes

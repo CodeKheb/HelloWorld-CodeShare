@@ -398,6 +398,13 @@ body.messages-page {
 	cursor: pointer;
 }
 
+/* Make Attach Repo button slightly wider for better affordance */
+.messages-page #openAttachRepoModal {
+	min-width: 160px;
+	padding: 10px 20px;
+	justify-content: center;
+}
+
 .messages-page .member-list {
 	list-style: none;
 	padding: 0;

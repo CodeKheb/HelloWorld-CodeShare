@@ -77,7 +77,7 @@
                         </div>
 
                         <div class="chat-header__actions">
-                            <button class="secondary-button action-button" type="button">
+                            <button id="openAttachRepoModal" class="secondary-button action-button" type="button">
                                 <span class="material-symbols-outlined" aria-hidden="true">link</span>
                                 Attach Repo
                             </button>
@@ -122,7 +122,7 @@
                                 <button class="text-button" type="button">View All</button>
                             </div>
 
-                            <ul class="member-list">
+                            <ul id="group-member-list" class="member-list">
                                 <li class="member-item">
                                     <div class="status-avatar">
                                         <img alt="Alex" class="avatar avatar--small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSp9Jxkj77ORjzVshfbYE9WD0_PZV59V7Pks20hW4xqsr4BtR0SDcKsdIui6kK5OxgO6sOOWksXjwrjHOvUYDo2l-On87g1ItYd1uV-woZtaQxjnm5j0fzf76VfYJ7T9Xmf8R0pPPE44MNeeXMVH0YM4Dwf0UIavYbZPhu9-pfmOf-aig27rkt8N3C3LqnrlXpOjQFdTBkxDd8pHHypED2y6FRWjU5xVvbkfTSlZEY0tZd7MoxdkqP6oO73Z8BRPt8eiuSskwjRNI"/>
@@ -154,7 +154,7 @@
 
                         <section class="panel-section">
                             <h4>Attached Repos</h4>
-                            <div class="repo-list">
+                            <div id="group-repo-list" class="repo-list">
                                 <article class="repo-card">
                                     <div class="repo-card__title">
                                         <span class="material-symbols-outlined" aria-hidden="true">folder</span>
@@ -201,6 +201,28 @@
                                         <button id="cancelBtn" class="btn-cancel">Cancel</button>
                                 </div>
                         </div>
+                </div>
+
+                <!-- Attach Repo Modal -->
+                <div id="attachRepoOverlay" class="modal-overlay hidden">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2>Attach Repository</h2>
+                            <button id="closeAttachRepo">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <label>REPOSITORY <span class="required">*</span></label>
+                            <div class="repo-input-wrapper">
+                                <span class="repo-icon">🔗</span>
+                                <input type="text" id="attachRepoName" placeholder="owner/repo-name" />
+                            </div>
+                            <small>Attach a GitHub repository to this group.</small>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="submitAttachRepo" class="btn-primary">ATTACH REPO</button>
+                            <button id="cancelAttachRepo" class="btn-cancel">Cancel</button>
+                        </div>
+                    </div>
                 </div>
 
                 <script>
@@ -261,6 +283,93 @@
                         }
                     } catch (err) { console.error(err); alert('Error: ' + err.message); }
                     finally { btn.disabled = false; btn.textContent = orig; }
+                });
+
+                function showAttachRepoModal() {
+                    const overlay = document.getElementById('attachRepoOverlay');
+                    if (!overlay) return;
+                    const modal = overlay.querySelector('.modal');
+                    overlay.classList.remove('hidden');
+                    overlay.style.display = 'flex';
+                    requestAnimationFrame(() => {
+                        overlay.classList.add('anim-open');
+                        if (modal) modal.classList.add('open');
+                    });
+                }
+
+                function hideAttachRepoModal() {
+                    const overlay = document.getElementById('attachRepoOverlay');
+                    if (!overlay) return;
+                    const modal = overlay.querySelector('.modal');
+                    if (modal) modal.classList.remove('open');
+                    overlay.classList.remove('anim-open');
+                    const onEnd = (e) => {
+                        if (e.target !== overlay) return;
+                        overlay.style.display = '';
+                        overlay.classList.add('hidden');
+                        overlay.removeEventListener('transitionend', onEnd);
+                    };
+                    overlay.addEventListener('transitionend', onEnd);
+                }
+
+                document.getElementById('openAttachRepoModal')?.addEventListener('click', () => {
+                    if (!window.currentGroupId) {
+                        alert('Select a group first');
+                        return;
+                    }
+                    showAttachRepoModal();
+                });
+
+                document.getElementById('closeAttachRepo')?.addEventListener('click', hideAttachRepoModal);
+                document.getElementById('cancelAttachRepo')?.addEventListener('click', hideAttachRepoModal);
+                document.getElementById('attachRepoOverlay')?.addEventListener('click', (e) => {
+                    if (e.target.id === 'attachRepoOverlay') hideAttachRepoModal();
+                });
+
+                document.getElementById('submitAttachRepo')?.addEventListener('click', async () => {
+                    const btn = document.getElementById('submitAttachRepo');
+                    const repoFullName = document.getElementById('attachRepoName').value.trim();
+
+                    if (!window.currentGroupId) {
+                        alert('Select a group first');
+                        return;
+                    }
+
+                    if (!repoFullName) {
+                        alert('Repository is required');
+                        return;
+                    }
+
+                    btn.disabled = true;
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Attaching...';
+
+                    try {
+                        const response = await fetch(`/api/groups/${encodeURIComponent(window.currentGroupId)}/repos`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ repoFullName })
+                        });
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            alert('Error: ' + (data.error || 'Failed to attach repository'));
+                            return;
+                        }
+
+                        document.getElementById('attachRepoName').value = '';
+                        hideAttachRepoModal();
+                        if (typeof window.refreshCurrentGroupDetails === 'function') {
+                            await window.refreshCurrentGroupDetails();
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('Error: ' + err.message);
+                    } finally {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
                 });
 
                 // Resizable group panel: implement drag-to-resize here (keeps behavior local to page)

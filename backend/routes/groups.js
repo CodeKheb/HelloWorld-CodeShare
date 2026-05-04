@@ -174,4 +174,57 @@ groupsRouter.get("/:groupId", async (req, res) => {
     }
 });
 
+// POST /api/groups/:groupId/repos - Attach a repository to a group
+groupsRouter.post("/:groupId/repos", async (req, res) => {
+    try {
+        if (!req.isAuthenticated()) {
+            return res.status(401).json({ error: "User not authenticated" });
+        }
+
+        const { groupId } = req.params;
+        const { repoFullName } = req.body;
+        const userId = req.user.id;
+
+        if (!repoFullName || repoFullName.trim() === "") {
+            return res.status(400).json({ error: "Repository name is required (owner/repo)" });
+        }
+
+        // Ensure the user is a member of this group
+        const memberCheck = await pool.query(
+            `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`,
+            [groupId, userId]
+        );
+
+        if (memberCheck.rows.length === 0) {
+            return res.status(403).json({ error: "You are not a member of this group" });
+        }
+
+        // Insert repo relation (idempotent per UNIQUE(group_id, repo_full_name))
+        const insertResult = await pool.query(
+            `INSERT INTO group_repos (group_id, repo_full_name)
+             VALUES ($1, $2)
+             ON CONFLICT (group_id, repo_full_name) DO NOTHING
+             RETURNING id, group_id, repo_full_name, webhook_id, added_at`,
+            [groupId, repoFullName.trim()]
+        );
+
+        // If conflict happened, fetch existing row so frontend still receives repo payload
+        let repoRow = insertResult.rows[0];
+        if (!repoRow) {
+            const existing = await pool.query(
+                `SELECT id, group_id, repo_full_name, webhook_id, added_at
+                 FROM group_repos
+                 WHERE group_id = $1 AND repo_full_name = $2`,
+                [groupId, repoFullName.trim()]
+            );
+            repoRow = existing.rows[0] || null;
+        }
+
+        return res.status(201).json({ success: true, repo: repoRow });
+    } catch (error) {
+        console.error("Error attaching repo to group:", error);
+        return res.status(500).json({ error: "Failed to attach repository", details: error.message });
+    }
+});
+
 export default groupsRouter;
