@@ -16,7 +16,7 @@ async function initializeDashboard() {
         const userData = await userRes.json();
 
         if (userData.authenticated) {
-            document.getElementById('user-avatar').src = userData.user.avatar;
+            document.getElementById('user-avatar').src = userData.user.avatar || userData.user.avatar_url || '';
             document.getElementById('user-name').innerText = userData.user.displayName || userData.user.username;
             document.getElementById('user-login').innerText = `@${userData.user.username}`;
         }

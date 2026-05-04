@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import session from 'express-session';
 import passport from "passport";
+import pool from "../db/pool.js";
 
 export const app = express()
 const port = process.env.PORT || 3000
@@ -26,17 +27,44 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "../../frontend"), { index: false }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'TRIAL', // Use env variable
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, httpOnly: true } // httpOnly is important for security
+    secret: process.env.SESSION_SECRET || "trial-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        secure: false
+    }
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
+passport.serializeUser((user, done) => done(null, user.id));
+
+passport.deserializeUser(async (id, done) => {
+    try {
+        const result = await pool.query(
+            "SELECT id, github_id, username, avatar_url, access_token FROM users WHERE id = $1",
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return done(null, false);
+        }
+
+        const userRow = result.rows[0];
+
+        return done(null, {
+            id: userRow.id,
+            github_id: userRow.github_id,
+            username: userRow.username,
+            avatar_url: userRow.avatar_url,
+            accessToken: userRow.access_token
+        });
+    } catch (error) {
+        return done(error);
+    }
+});
 
 app.get('/', requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, "../../frontend", 'index.html'));
