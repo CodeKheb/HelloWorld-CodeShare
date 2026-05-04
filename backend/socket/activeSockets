@@ -8,7 +8,9 @@ export function userInit(socketId) {
         github_id: null,
         username: null,
         avatar_url: null,
-        access_token: null
+        access_token: null,
+        active_group: null,
+        active_directed_recieverId: null
     });
 }
 

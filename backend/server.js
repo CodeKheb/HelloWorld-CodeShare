@@ -47,14 +47,12 @@ io.on("connection", (socket) => {
             username: user.username,
             avatar_url: user.avatar_url,
             access_token: user.accessToken,
-            display_name: user.username
+            display_name: user.username,
+            active_group: null
         });
 
         socket.userId = user.github_id;
         socket.username = user.username;
-
-        // Direct messages
-        socket.join(`user:${user.github_id}`);
 
         console.log(`User ${user.username} connected with socket ${socket.id}`);
     } else {
@@ -64,7 +62,8 @@ io.on("connection", (socket) => {
             github_id: null,
             username: null,
             avatar_url: null,
-            access_token: null
+            access_token: null,
+            active_group: null
         });
 
         console.log('Unauthenticated socket connected:', socket.id);
