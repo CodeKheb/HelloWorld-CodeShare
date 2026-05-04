@@ -56,10 +56,8 @@ async function initializeMessagesView() {
             // Store user data
             window.currentUser = userData.user;
 
-            // Join the current group/channel
-            // TODO: CHANGE THIS LOGIC groupId from db
-            const groupId = 'frontend-architecture'; 
-            socket.emit('join-group', groupId);
+            // Load sidebar groups and contacts from the server
+            await fetchAndRenderSidebar();
 
             console.log('User initialized:', window.currentUser);
         }
@@ -67,6 +65,128 @@ async function initializeMessagesView() {
         console.error("Messages view load failed:", error);
         window.location.href = '/login';
     }
+}
+
+// Fetch groups from backend and render up to 5 groups and 5 contacts
+async function fetchAndRenderSidebar() {
+    try {
+        const res = await fetch('/api/groups', { credentials: 'include' });
+        if (!res.ok) return console.error('Failed to load groups for sidebar');
+        const payload = await res.json();
+        const groups = (payload && payload.groups) || [];
+
+        // Render up to 4 groups
+        const groupsList = document.getElementById('sidebar-groups');
+        if (groupsList) {
+            groupsList.innerHTML = '';
+            groups.slice(0,4).forEach((g, idx) => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.className = 'sidebar-link';
+                a.href = '#';
+                a.dataset.groupId = g.id;
+                a.innerHTML = `<span class="material-symbols-outlined">tag</span><span>${escapeHtml(g.name)}</span>`;
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // Update header quickly from the list data (if available)
+                    updateGroupHeaderFromMembers(g);
+                    selectGroup(g);
+                });
+                li.appendChild(a);
+                groupsList.appendChild(li);
+                // Auto-select the first group if none selected yet
+                if (idx === 0 && !window.currentGroupId) {
+                  // Pre-fill header from fetched list to avoid temporary empty state
+                  updateGroupHeaderFromMembers(g);
+                  selectGroup(g);
+                }
+            });
+            if (groups.length === 0) {
+                groupsList.innerHTML = '<li class="muted" style="padding:8px 12px;color:#8b949e">No groups yet</li>';
+            }
+        }
+
+        // Build contacts by aggregating members across groups, dedupe by id
+        const contactsMap = new Map();
+        groups.forEach(g => {
+            if (Array.isArray(g.members)) {
+                g.members.forEach(m => {
+                    if (!m || !m.id) return;
+                    if (m.id === window.currentUser.id) return; // skip self
+                    if (!contactsMap.has(m.id)) contactsMap.set(m.id, m);
+                });
+            }
+        });
+
+        const contacts = Array.from(contactsMap.values()).slice(0,4);
+        const contactsList = document.getElementById('sidebar-contacts');
+        if (contactsList) {
+            contactsList.innerHTML = '';
+            contacts.forEach(c => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.className = 'sidebar-link';
+                a.href = '#';
+                const avatar = `<div class="avatar avatar--small"><img src="${escapeAttr(c.avatar_url || '/default-avatar.png')}" alt="${escapeAttr(c.username)}"/></div>`;
+                a.innerHTML = `${avatar}<span>${escapeHtml(c.username)}</span>`;
+                li.appendChild(a);
+                contactsList.appendChild(li);
+            });
+            if (contacts.length === 0) contactsList.innerHTML = '<li class="muted" style="padding:8px 12px;color:#8b949e">No contacts yet</li>';
+        }
+    } catch (err) {
+        console.error('Error populating sidebar:', err);
+    }
+}
+
+// Update the header avatar stack and member count using available group data
+function updateGroupHeaderFromMembers(group) {
+    if (!group) return;
+    const members = Array.isArray(group.members) ? group.members : [];
+    const stack = document.querySelector('.avatar-stack');
+    if (stack) {
+        stack.innerHTML = '';
+        const show = members.slice(0,3);
+        show.forEach(m => {
+            const img = document.createElement('img');
+            img.className = 'avatar avatar--stacked';
+            img.alt = m.username || m.id || 'member';
+            img.src = m.avatar_url || '/default-avatar.png';
+            stack.appendChild(img);
+        });
+        if (members.length > show.length) {
+            const more = document.createElement('div');
+            more.className = 'avatar avatar-more';
+            more.textContent = `+${members.length - show.length}`;
+            stack.appendChild(more);
+        }
+    }
+    const countEl = document.querySelector('.member-count');
+    if (countEl) {
+        const count = members.length || (group.member_count ? Number(group.member_count) : 0);
+        countEl.textContent = `${count} members`;
+    }
+}
+
+async function selectGroup(group) {
+    if (!group) return;
+    // Leave previous group if set
+    if (window.currentGroupId) socket.emit('leave-group', window.currentGroupId);
+    window.currentGroupId = group.id;
+    // Update header UI
+    const titleEl = document.querySelector('.chat-channel');
+    if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> ${escapeHtml(group.name)}`;
+    // Emit join
+    socket.emit('join-group', group.id);
+
+    // Load persisted history for this group
+    await loadGroupMessages(group.id);
+}
+
+// small helpers for escaping attributes
+function escapeAttr(s) {
+    if (!s) return '';
+    return String(s).replace(/"/g, '&quot;');
 }
 
 function initializeMessageComposer() {
@@ -77,9 +197,6 @@ function initializeMessageComposer() {
         console.error('Composer elements not found');
         return;
     }
-
-    // Get current group/channel ID from page context
-    const groupId = 'frontend-architecture'; // TODO: Get this dynamically
 
     sendButton.addEventListener('click', () => {
         sendMessage(messageInput.value);
@@ -95,29 +212,61 @@ function initializeMessageComposer() {
     function sendMessage(text) {
         if (!text.trim()) return;
 
+        if (!window.currentGroupId) {
+            alert('Please select a group first');
+            return;
+        }
+
         if (!window.currentUser) {
             alert('Please log in to send messages');
             return;
         }
 
-        const messageData = {
+        // Send to active group. The server persists and broadcasts the saved message.
+        socket.emit("client-message", {
             text: text.trim(),
-            author: window.currentUser.username,
-            authorName: window.currentUser.displayName || window.currentUser.username,
-            avatar: window.currentUser.avatar,
-            timestamp: new Date().toISOString()
-        };
-
-        console.log('Sending message:', messageData);
-
-        // Send to group
-        socket.emit("client-message", messageData);
-
-        displayMessage(messageData);
+            groupId: window.currentGroupId
+        });
 
         // Clear input
         messageInput.value = '';
         messageInput.style.height = 'auto';
+    }
+}
+
+async function loadGroupMessages(groupId) {
+    try {
+        const messageFeed = document.querySelector('.message-feed');
+        if (!messageFeed) return;
+
+        messageFeed.innerHTML = '';
+
+        const response = await fetch(`/api/messages/group/${encodeURIComponent(groupId)}?limit=100`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            console.error('Failed to load group messages');
+            return;
+        }
+
+        const payload = await response.json();
+        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+
+        messages.forEach((m) => {
+            displayMessage({
+                id: m.id,
+                text: m.content,
+                type: m.type,
+                timestamp: m.created_at,
+                author: m.sender_username || 'Unknown',
+                authorName: m.sender_username || 'Unknown',
+                avatar: m.sender_avatar_url || '/default-avatar.png',
+                senderId: m.sender_id
+            });
+        });
+    } catch (error) {
+        console.error('Error loading persisted messages:', error);
     }
 }
 
@@ -172,54 +321,5 @@ function getReceiverSocketId() {
 }
 
 function initializeResizablePanel() {
-    const resizeHandle = document.querySelector('.resize-handle');
-    const panel = document.querySelector('.group-panel');
-
-    if (!resizeHandle || !panel) return;
-
-    let isResizing = false;
-    let lastMouseX = 0;
-
-    const savedWidth = localStorage.getItem('groupPanelWidth');
-    if (savedWidth) {
-        panel.style.setProperty('--panel-width', `${savedWidth}px`);
-    }
-
-    resizeHandle.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        resizeHandle.classList.add('dragging');
-        document.body.style.cursor = 'col-resize';
-        // Prevent text selection while dragging
-        document.body.style.userSelect = 'none';
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isResizing) return;
-
-        const deltaX = e.clientX - lastMouseX;
-        const newWidth = parseInt(panel.style.getPropertyValue('--panel-width'), 10) + deltaX;
-
-        // Constraints
-        if (newWidth >= 250 && newWidth <= 600) {
-            panel.style.setProperty('--panel-width', `${newWidth}px`);
-        }
-
-        lastMouseX = e.clientX;
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (!isResizing) return;
-
-        isResizing = false;
-        resizeHandle.classList.remove('dragging');
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-
-        // Save the exact computed width
-        const finalWidth = panel.offsetWidth;
-        localStorage.setItem('groupPanelWidth', finalWidth);
-
-        // Smooth scroll to bottom when resizing
-        panel.scrollTop = panel.scrollHeight;
-    });
+    // Intentionally left empty; resizing is handled in-page (messages.html) to keep behavior local to the document.
 }
