@@ -272,12 +272,29 @@ function renderRepoList(repos) {
         card.className = 'repo-card';
         const addedAt = repo.added_at ? new Date(repo.added_at).toLocaleDateString() : 'Recently';
         card.innerHTML = `
-            <div class="repo-card__title">
-                <span class="material-symbols-outlined" aria-hidden="true">folder</span>
-                <span>${escapeHtml(repo.repo_full_name)}</span>
+            <div class="repo-card__content">
+                <div class="repo-card__title">
+                    <span class="material-symbols-outlined" aria-hidden="true">folder</span>
+                    <span>${escapeHtml(repo.repo_full_name)}</span>
+                </div>
+                <div class="repo-card__meta">Added ${escapeHtml(addedAt)}</div>
             </div>
-            <div class="repo-card__meta">Added ${escapeHtml(addedAt)}</div>
+            <div class="repo-card__actions">
+                <button class="repo-card__download" aria-label="Download repository" title="Download as ZIP">
+                    <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                </button>
+            </div>
         `;
+        const downloadBtn = card.querySelector('.repo-card__download');
+        downloadBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const [owner, repoName] = repo.repo_full_name.split('/');
+            const downloadUrl = `https://github.com/${owner}/${repoName}/archive/HEAD.zip`;
+            window.location.href = downloadUrl;
+        });
+        card.addEventListener('click', () => {
+            window.open(`https://github.com/${escapeHtml(repo.repo_full_name)}`, '_blank');
+        });
         list.appendChild(card);
     });
 }
