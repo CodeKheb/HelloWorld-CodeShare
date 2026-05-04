@@ -6,7 +6,7 @@ import cookieParser from "cookie-parser";
 import passport from "passport";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import axios from 'axios';
-import { userAuthenticated } from "../activeSockets.js";
+import { userAuthenticated } from "../socket/activeSockets";
 import { io } from "../server.js";
 
 const authRouter = Router();
@@ -60,13 +60,6 @@ authRouter.get("/github",
 authRouter.get("/github/callback",
     passport.authenticate("github", { failureRedirect: "/login" }),
     (req, res) => {
-        const socketId = req.session.socketId;
-
-        if (socketId) {
-            userAuthenticated(socketId, req.user);
-            io.to(socketId).emit("authenticated", { user: req.user });
-        }
-
         res.redirect("/");
     }
 );

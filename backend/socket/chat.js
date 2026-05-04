@@ -5,5 +5,8 @@ import { io } from "../server.js";
 //  } from "./activeSockets.js";
 
 export default function chatHandler(socket) {
-    userInit(socket)
+    socket.on("client_ID", (socketId) => {
+        console.log(socketId);
+        
+    })
 }

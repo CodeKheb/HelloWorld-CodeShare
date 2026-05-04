@@ -7,9 +7,9 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
 
 import { Server } from "socket.io";
-import { app, sessionMiddleware } from "./express/express.js";
+import { app } from "./express/express.js";
 import chatHandler from "./socket/chat.js";
-import { socketMapList, userInit } from "./socket/activeSockets.js";
+import { socketMapList, userInit } from "./socket/activeSockets";
 
 const port = process.env.PORT || 3000;
 
@@ -24,15 +24,8 @@ export const io = new Server(expressEndpoint, {
     },
 });
 
-// Share session middleware with Socket.IO
-io.use((socket, next) => sessionMiddleware(socket.request, {}, next));
-
 io.on("connection", (socket) => {
     userInit(socket.id);
-
-    // Store socket ID in session so auth route can find it
-    socket.request.session.socketId = socket.id;
-    socket.request.session.save();
 
     socket.on("disconnect", () => {
         socketMapList.delete(socket.id);
