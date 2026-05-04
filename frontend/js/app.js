@@ -363,3 +363,29 @@ if (submitRepoBtn) {
 }
 
 initializeDashboard();
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const openBtn = document.getElementById('mobileMenuOpen');
+
+    // Function to toggle sidebar
+    const toggleSidebar = () => {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        // Prevent body scrolling when menu is open
+        document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+    };
+
+    // Event Listeners
+    openBtn.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+
+    // Close sidebar if a link is clicked (useful for Single Page Apps)
+    const navLinks = document.querySelectorAll('.sidebar-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 900) toggleSidebar();
+        });
+    });
+});

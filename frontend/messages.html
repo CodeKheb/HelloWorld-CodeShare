@@ -64,6 +64,9 @@
                 <main class="chat-main" aria-label="Group conversation">
                     <header class="chat-header">
                         <div class="chat-header__group">
+                            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Open sidebar">
+                                <span class="material-symbols-outlined">menu</span>
+                            </button>
                             <h2 class="chat-channel">
                                 <span class="material-symbols-outlined" aria-hidden="true">tag</span>
                                 frontend-architecture
@@ -79,12 +82,12 @@
                         <div class="chat-header__actions">
                             <button id="openAttachRepoModal" class="secondary-button action-button" type="button">
                                 <span class="material-symbols-outlined" aria-hidden="true">link</span>
-                                Attach Repo
+                                <span class="mobile-hide">Attach Repo</span>
                             </button>
                             <button class="primary-button action-button" type="button">
                                 <span class="material-symbols-outlined icon-filled" aria-hidden="true">auto_awesome</span>
-                                Summarize
-                            </button>
+                                <span class="mobile-hide">Summarize</span>
+                            </button>                        
                         </div>
                     </header>
 
