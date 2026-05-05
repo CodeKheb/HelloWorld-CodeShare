@@ -12,42 +12,70 @@ export default function chatHandler(socket) {
 
     socket.on("client-message", async (message) => {
         try {
+           // 1. Basic Content Validation
             if (!message || !message.text || !String(message.text).trim()) {
-                socket.emit("server-error", { err: "error", reason: "No-message-recieved" });
-                return;
+                return socket.emit("server-error", { err: "error", reason: "No-message-recieved" });
             }
 
-            const activeGroupId = clientState?.active_group;
-            if (!activeGroupId) {
-                socket.emit("server-error", { err: "error", reason: "No active group selected" });
-                return;
-            }
-
+            // 2. Auth Check
             const authUser = socket.request.user;
             if (!authUser || !authUser.id) {
-                socket.emit("server-error", { err: "auth", reason: "Not authenticated" });
-                return;
+                return socket.emit("server-error", { err: "auth", reason: "Not authenticated" });
             }
 
-            // Ensure sender is still a member of the room they are posting to.
+            const cleanText = String(message.text).trim();
+            const isDM = !!clientState?.active_directed_recieverId;
+
+            // --- BRANCH A: DIRECT MESSAGE LOGIC ---
+            if (isDM) {
+                const receiverId = clientState.active_directed_recieverId;
+                
+                // Construct a unique room ID based on the two User IDs (sorted to ensure consistency)
+                const dmRoom = `dm_${[authUser.id, receiverId].sort().join("_")}`;
+
+                // TODO: Coordinate with DB team for direct_messages table
+                // Example: const saved = await pool.query(`INSERT INTO direct_messages...`);
+
+                const outbound = {
+                    senderId: authUser.id,
+                    receiverId,
+                    text: cleanText,
+                    type: "text",
+                    timestamp: new Date(),
+                    author: authUser.username,
+                    avatar: authUser.avatar_url
+                };
+
+                io.to(dmRoom).emit("server-direct-text", outbound);
+                return; // Exit handler
+            }
+
+            // --- BRANCH B: GROUP MESSAGE LOGIC ---
+            const activeGroupId = clientState?.active_group;
+            if (!activeGroupId) {
+                return socket.emit("server-error", { err: "error", reason: "No active group selected" });
+            }
+
+            // Verify membership before allowing the post
             const membership = await pool.query(
                 `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 LIMIT 1`,
                 [activeGroupId, authUser.id]
             );
+
             if (membership.rows.length === 0) {
-                socket.emit("server-error", { err: "forbidden", reason: "You are not a member of this group" });
-                return;
+                return socket.emit("server-error", { err: "forbidden", reason: "You are not a member of this group" });
             }
 
+            // Persist Group Message
             const insertResult = await pool.query(
                 `INSERT INTO messages (group_id, sender_id, content, type)
                  VALUES ($1, $2, $3, 'text')
                  RETURNING id, group_id, sender_id, content, type, created_at`,
-                [activeGroupId, authUser.id, String(message.text).trim()]
+                [activeGroupId, authUser.id, cleanText]
             );
 
             const saved = insertResult.rows[0];
-            const outbound = {
+            const groupOutbound = {
                 id: saved.id,
                 groupId: saved.group_id,
                 senderId: saved.sender_id,
@@ -59,8 +87,7 @@ export default function chatHandler(socket) {
                 avatar: authUser.avatar_url
             };
 
-            // Broadcast to everyone in group, including sender, to keep UI/state consistent.
-            io.to(String(activeGroupId)).emit("server-group-text", outbound);
+            io.to(String(activeGroupId)).emit("server-group-text", groupOutbound);
         } catch (error) {
             console.error("Error handling client-message:", error);
             socket.emit("server-error", { err: "server", reason: "Failed to send message" });
@@ -84,15 +111,8 @@ export default function chatHandler(socket) {
                 return;
             }
 
-            if (clientState?.active_directed_recieverId) {
-                socket.leave(clientState.active_directed_recieverId);
-                clientState.active_directed_recieverId = null;
-            }
-
-            if (clientState?.active_group) {
-                socket.leave(String(clientState.active_group));
-            }
-
+            // Just update the cursor, no leaving
+            clientState.active_directed_recieverId = null;
             clientState.active_group = groupId;
             socket.join(String(groupId));
 
@@ -104,16 +124,17 @@ export default function chatHandler(socket) {
         }
     });
 
-    socket.on("direct-connect", (recieverId) => {
-        socket.leave(clientState.active_group)
-        clientState.active_group = null
+    socket.on("direct-connect", (receiverId) => {
+        const authUser = socket.request.user;
+        if (!authUser) return;
 
-        clientState.active_directed_recieverId = recieverId
-        socket.join(recieverId)
+        // Just update the cursor, no leaving
+        clientState.active_group = null;
+        clientState.active_directed_recieverId = receiverId;
 
-        console.log(socket.rooms);
+        const dmRoom = `dm_${[authUser.id, receiverId].sort().join("_")}`;
+        socket.join(dmRoom);
 
-        console.log(clientState);
-        
-    })
+        console.log(`User ${authUser.id} joined DM room: ${dmRoom}`);
+    });
 }

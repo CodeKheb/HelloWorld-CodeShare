@@ -13,6 +13,7 @@ import { app, sessionMiddleware } from "./express/express.js";
 import passport from "passport";
 import chatHandler from "./socket/chat.js";
 import { socketMapList, userInit } from "./socket/activeSockets";
+import { pollAllReposWithoutWebhooks } from "./webhooks/polling.js";
 
 const port = process.env.PORT || 3000;
 
@@ -25,6 +26,8 @@ export const io = new Server(httpServer, {
         credentials: true
     }
 });
+
+app.set("io", io);
 
 // Wrap middleware to use with socket.io
 const wrap = middleware => (socket, next) => middleware(socket.request, {}, next);
@@ -80,6 +83,21 @@ io.on("connection", (socket) => {
 
     chatHandler(socket);
 });
+
+// Start background polling job for repos without webhooks
+// Polls every 5 minutes
+setInterval(() => {
+    pollAllReposWithoutWebhooks(io).catch(err => {
+        console.error("Polling job error:", err);
+    });
+}, 5 * 60 * 1000); // 5 minutes
+
+// Also run once on startup (delayed by 10 seconds to let server stabilize)
+setTimeout(() => {
+    pollAllReposWithoutWebhooks(io).catch(err => {
+        console.error("Initial polling job error:", err);
+    });
+}, 10 * 1000);
 
 // start server
 httpServer.listen(port, () => {

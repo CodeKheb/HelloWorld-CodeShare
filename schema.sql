@@ -42,6 +42,8 @@ CREATE TABLE group_repos (
   repo_full_name VARCHAR(255) NOT NULL,
   webhook_id BIGINT,
   added_at TIMESTAMP DEFAULT NOW(),
+  last_checked_at TIMESTAMP,
+  last_commit_sha VARCHAR(40),
   UNIQUE (group_id, repo_full_name)
 );
 
@@ -53,5 +55,18 @@ CREATE TABLE messages (
   content TEXT NOT NULL,
   type VARCHAR(20) DEFAULT 'text'
     CHECK (type IN ('text', 'system', 'ai_summary')),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Stores webhook delivery metadata linked to system messages
+CREATE TABLE webhook_events (
+  id SERIAL PRIMARY KEY,
+  message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
+  group_id INTEGER REFERENCES group_chats(id) ON DELETE CASCADE,
+  repo_full_name VARCHAR(255) NOT NULL,
+  webhook_id BIGINT,
+  github_event VARCHAR(64),
+  delivery_id VARCHAR(128),
+  payload JSONB,
   created_at TIMESTAMP DEFAULT NOW()
 );

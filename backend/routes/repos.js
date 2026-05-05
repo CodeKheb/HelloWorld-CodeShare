@@ -216,4 +216,179 @@ router.get("/search", (req, res) => {
 
 })
 
+/**
+ * GET REPOSITORY COMMITS
+ * Fetches commits from a specific repository using GitHub's API
+ */
+router.get("/:owner/:repo/commits", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const { owner, repo } = req.params;
+  
+  // Optional query parameters for filtering commits
+  const {
+    sha = null,        // Branch/SHA to start listing commits from
+    path = null,         // Only commits containing this file path
+    author = null,       // GitHub login or email address
+    since = null,        // ISO 8601 date - only commits after this date
+    until = null,        // ISO 8601 date - only commits before this date
+    per_page = 30,       // Results per page (max 100)
+    page = 1             // Page number
+  } = req.query;
+
+  try {
+    // Build the query parameters
+    const params = new URLSearchParams({
+      per_page: Math.min(parseInt(per_page), 100),
+      page: parseInt(page)
+    });
+
+    if (sha) params.append('sha', sha); 
+    if (path) params.append('path', path);
+    if (author) params.append('author', author);
+    if (since) params.append('since', since);
+    if (until) params.append('until', until);
+
+    const response = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/commits?${params.toString()}`,
+      {
+        headers: {
+          Authorization: `token ${req.user.accessToken}`,
+          "User-Agent": "CodeShare-App",
+          Accept: "application/vnd.github.v3+json"
+        }
+      }
+    );
+
+    // Format the response to include relevant commit information
+    const commits = response.data.map(commit => ({
+      sha: commit.sha,
+      message: commit.commit.message,
+      author: {
+        name: commit.commit.author.name,
+        email: commit.commit.author.email,
+        date: commit.commit.author.date,
+        username: commit.author?.login || null,
+        avatar_url: commit.author?.avatar_url || null
+      },
+      committer: {
+        name: commit.commit.committer.name,
+        email: commit.commit.committer.email,
+        date: commit.commit.committer.date
+      },
+      html_url: commit.html_url,
+      parents: commit.parents.map(p => p.sha),
+      stats: commit.stats || null // Only available if you fetch individual commits
+    }));
+
+    res.json({
+      repository: `${owner}/${repo}`,
+      branch: sha || 'default',
+      commits,
+      pagination: {
+        current_page: parseInt(page),
+        per_page: parseInt(per_page),
+        total_commits: commits.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Fetch Commits Error:', error.response?.data || error.message);
+    
+    // Handle specific errors
+    if (error.response?.status === 404) {
+      return res.status(404).json({ 
+        error: "Repository not found or you don't have access" 
+      });
+    }
+    
+    if (error.response?.status === 409) {
+      return res.status(409).json({ 
+        error: "Repository is empty (no commits yet)" 
+      });
+    }
+
+    res.status(error.response?.status || 500).json({ 
+      error: error.response?.data?.message || "Failed to fetch commits from GitHub" 
+    });
+  }
+});
+
+/**
+ * GET SINGLE COMMIT DETAILS
+ * Fetches detailed information about a specific commit including file changes
+ */
+router.get("/:owner/:repo/commits/:sha", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const { owner, repo, sha } = req.params;
+
+  try {
+    const response = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/commits/${sha}`,
+      {
+        headers: {
+          Authorization: `token ${req.user.accessToken}`,
+          "User-Agent": "CodeShare-App",
+          Accept: "application/vnd.github.v3+json"
+        }
+      }
+    );
+
+    const commit = response.data;
+
+    res.json({
+      sha: commit.sha,
+      message: commit.commit.message,
+      author: {
+        name: commit.commit.author.name,
+        email: commit.commit.author.email,
+        date: commit.commit.author.date,
+        username: commit.author?.login || null,
+        avatar_url: commit.author?.avatar_url || null
+      },
+      committer: {
+        name: commit.commit.committer.name,
+        email: commit.commit.committer.email,
+        date: commit.commit.committer.date
+      },
+      stats: {
+        additions: commit.stats.additions,
+        deletions: commit.stats.deletions,
+        total: commit.stats.total
+      },
+      files: commit.files.map(file => ({
+        filename: file.filename,
+        status: file.status, // "added", "removed", "modified", "renamed"
+        additions: file.additions,
+        deletions: file.deletions,
+        changes: file.changes,
+        patch: file.patch, // The actual diff
+        previous_filename: file.previous_filename || null
+      })),
+      html_url: commit.html_url,
+      parents: commit.parents.map(p => ({
+        sha: p.sha,
+        url: p.url
+      }))
+    });
+
+  } catch (error) {
+    console.error('Fetch Commit Error:', error.response?.data || error.message);
+    
+    if (error.response?.status === 404) {
+      return res.status(404).json({ 
+        error: "Commit not found" 
+      });
+    }
+
+    res.status(error.response?.status || 500).json({ 
+      error: error.response?.data?.message || "Failed to fetch commit from GitHub" 
+    });
+  }
+});
+
 export default router;

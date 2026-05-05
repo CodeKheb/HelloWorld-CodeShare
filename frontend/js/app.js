@@ -389,3 +389,75 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+
+// Settings Dropdown Functionality
+const settingsButton = document.getElementById('settingsButton');
+const settingsDropdown = document.getElementById('settingsDropdown');
+const settingsBackdrop = document.getElementById('settingsBackdrop');
+const logoutButton = document.getElementById('logoutButton');
+
+// Toggle dropdown
+settingsButton?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = settingsDropdown.classList.contains('show');
+    
+    if (isOpen) {
+        closeSettingsDropdown();
+    } else {
+        openSettingsDropdown();
+    }
+});
+
+// Open dropdown
+function openSettingsDropdown() {
+    settingsDropdown.classList.add('show');
+    settingsBackdrop.classList.add('show');
+}
+
+// Close dropdown
+function closeSettingsDropdown() {
+    settingsDropdown.classList.remove('show');
+    settingsBackdrop.classList.remove('show');
+}
+
+// Close when clicking backdrop
+settingsBackdrop?.addEventListener('click', closeSettingsDropdown);
+
+// Close when clicking outside
+document.addEventListener('click', (e) => {
+    if (!settingsButton?.contains(e.target) && !settingsDropdown?.contains(e.target)) {
+        closeSettingsDropdown();
+    }
+});
+
+// Logout functionality
+logoutButton?.addEventListener('click', async () => {
+    try {
+        const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            // Redirect to login page or home
+            window.location.href = '/login';
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Logout failed. Please try again.');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        alert('An error occurred during logout. Please try again.');
+    }
+});
+
+// Close dropdown on escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeSettingsDropdown();
+    }
+});

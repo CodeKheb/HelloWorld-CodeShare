@@ -100,6 +100,21 @@ async function loadGroups() {
           </div>
         </div>
       `;
+      
+      // Add click handler to redirect to group conversation
+      
+        // Store group ID as data attribute and add click handler to redirect to group conversation
+        card.dataset.groupId = group.id;
+        card.dataset.groupName = group.name;
+        card.style.cursor = 'pointer';
+      
+        card.addEventListener('click', (e) => {
+          const groupId = e.currentTarget.dataset.groupId;
+          const groupName = e.currentTarget.dataset.groupName;
+          console.log('Clicked group:', groupId, groupName);
+          navigateToGroupConversation(groupId, groupName);
+        });
+      
       groupsGrid.appendChild(card);
     });
   } catch (error) {
@@ -109,6 +124,11 @@ async function loadGroups() {
 
 // Load groups on page load
 loadGroups();
+
+// Navigate to group conversation
+function navigateToGroupConversation(groupId, groupName) {
+  window.location.href = `/messages?groupId=${groupId}&groupName=${encodeURIComponent(groupName)}`;
+}
 
 // Modal show/hide with simple animation
 function showModal() {

@@ -18,6 +18,7 @@ passport.use(new GitHubStrategy(
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
         callbackURL: process.env.GITHUB_CALLBACK,
+        scope: ['user', 'repo', 'admin:repo_hook'],
     },
     // Make the verify callback async so we can run DB queries.
     async (accessToken, refreshToken, profile, done) => {
@@ -82,7 +83,9 @@ authRouter.get("/user", async (req, res) => {
 });
 
 authRouter.get("/github",
-    passport.authenticate("github", { scope: ["user:email", "repo"] })
+    passport.authenticate("github", { 
+        scope: ["user", "repo", "admin:repo_hook"]
+    })
 );
 
 authRouter.get("/github/callback",
@@ -127,6 +130,41 @@ authRouter.get("/repos", async (req, res) => {
         console.error("GitHub API Error:", error.response?.data || error.message);
         res.status(error.response?.status || 500).json({ error: "Failed to fetch repositories" });
     }
+});
+
+//TODO: Frontend redirect to login page after fetching /logout
+authRouter.post('/logout', async (req, res, next) => {
+    const accessToken = req.user?.accessToken;
+
+    // Revoke GitHub OAuth token before destroying session
+    if (accessToken) {
+        try {
+            await fetch(`https://api.github.com/applications/${process.env.GITHUB_CLIENT_ID}/token`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Basic ${Buffer.from(`${process.env.GITHUB_CLIENT_ID}:${process.env.GITHUB_CLIENT_SECRET}`).toString('base64')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ access_token: accessToken })
+            });
+        } catch (err) {
+            // Non-fatal — proceed with local logout even if revocation fails
+            console.error('GitHub token revocation failed:', err);
+        }
+    }
+
+    req.logout((err) => {
+        if (err) { return next(err); }
+
+        req.session.destroy((err) => {
+            if (err) {
+                return res.status(500).json({ message: "Could not log out" });
+            }
+
+            res.clearCookie('connect.sid');
+            res.status(200).json({ message: "Logged out successfully" });
+        });
+    });
 });
 
 export default authRouter;
