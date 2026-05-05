@@ -131,7 +131,7 @@ authRouter.get("/repos", async (req, res) => {
 
 //TODO: Frontend redirect to login page after fetching /logout
 authRouter.post('/logout', async (req, res, next) => {
-    const accessToken = req.user?.access_token;
+    const accessToken = req.user?.accessToken;
 
     // Revoke GitHub OAuth token before destroying session
     if (accessToken) {

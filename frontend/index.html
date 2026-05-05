@@ -47,10 +47,27 @@
                     <a class="topbar-tab" href="#">Wiki</a>
                 </nav>
                 <div class="topbar-actions">
-                    <button class="icon-button" type="button" aria-label="Notifications"><span class="material-symbols-outlined">notifications</span></button>
-                    <button class="icon-button" type="button" aria-label="Settings"><span class="material-symbols-outlined">settings</span></button>
-                    <button class="secondary-button" type="button">Create Group</button>
-                </div>
+                    <div class="topbar-actions">
+                        <button class="icon-button" type="button" aria-label="Notifications">
+                            <span class="material-symbols-outlined">notifications</span>
+                        </button>
+
+                        <div class="dropdown">
+                            <button class="icon-button" type="button" aria-label="Settings" id="settingsButton">
+                                <span class="material-symbols-outlined">settings</span>
+                            </button>
+                            <div class="dropdown-backdrop" id="settingsBackdrop"></div>
+                            <div class="dropdown-menu" id="settingsDropdown">
+                               <div class="dropdown-divider"></div>
+                                <button class="dropdown-item danger" id="logoutButton">
+                                    <span class="material-symbols-outlined">logout</span>
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        </div>
+
+    <button class="secondary-button" type="button">Create Group</button>
+</div>                </div>
             </header>
 
             <main class="content">
