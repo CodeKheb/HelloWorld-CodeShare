@@ -1337,3 +1337,40 @@ body.messages-page {
 *::-webkit-scrollbar-corner {
     background: #0d1117;
 }
+
+#joinGroupId {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #c9d1d9;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#joinGroupId:focus {
+    outline: none;
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+
+}
+
+.group-id-display {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    color: #8b949e;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+.group-id-display span {
+    color: #58a6ff;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}

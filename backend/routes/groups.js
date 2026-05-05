@@ -358,4 +358,38 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
     }
 });
 
+// POST /api/groups/:groupId/join
+groupsRouter.post("/:groupId/join", async (req, res) => {
+    try {
+        if (!req.isAuthenticated()) {
+            return res.status(401).json({ error: "User not authenticated" });
+        }
+
+        const { groupId } = req.params;
+        const userId = req.user.id;
+
+        // Check group exists
+        const groupCheck = await pool.query(
+            `SELECT id FROM group_chats WHERE id = $1`,
+            [groupId]
+        );
+        if (groupCheck.rows.length === 0) {
+            return res.status(404).json({ error: "Group not found" });
+        }
+
+        // Insert member (idempotent)
+        await pool.query(
+            `INSERT INTO group_members (group_id, user_id)
+             VALUES ($1, $2)
+             ON CONFLICT (group_id, user_id) DO NOTHING`,
+            [groupId, userId]
+        );
+
+        return res.status(200).json({ success: true, groupId });
+    } catch (error) {
+        console.error("Error joining group:", error);
+        return res.status(500).json({ error: "Failed to join group", details: error.message });
+    }
+});
+
 export default groupsRouter;

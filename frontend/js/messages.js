@@ -332,6 +332,7 @@ function renderRepoList(repos) {
     });
 }
 
+
 // small helpers for escaping attributes
 function escapeAttr(s) {
     if (!s) return '';
