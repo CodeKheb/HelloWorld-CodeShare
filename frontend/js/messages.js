@@ -1,6 +1,6 @@
 import { io } from "https://cdn.socket.io/4.5.4/socket.io.esm.min.js";
 
-const socket = io("https://codeshare-ewmi.onrender.com", {
+const socket = io("http://localhost:3000", {
     withCredentials: true
 });
 
