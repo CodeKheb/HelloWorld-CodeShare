@@ -109,6 +109,7 @@ body.messages-page {
 .messages-page .message-feed {
 	flex: 1;
 	overflow-y: auto;
+    overflow-x: hidden;
 	padding: 24px;
 	display: flex;
 	flex-direction: column;
@@ -1083,6 +1084,8 @@ body.messages-page {
     margin: 1rem 0;
     display: block;
     max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .diff-header {
@@ -1094,6 +1097,7 @@ body.messages-page {
     border-bottom: 1px solid #21262d;
     gap: 1rem;
     flex-wrap: wrap;
+    width: 100%;  
 }
 
 .diff-title {
@@ -1137,6 +1141,7 @@ body.messages-page {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    width: 100%; 
 }
 
 .diff-file {
@@ -1144,6 +1149,7 @@ body.messages-page {
     border-radius: 4px;
     overflow: hidden;
     border: 1px solid #30363d;
+    width: 100%; 
 }
 
 .diff-file-header {
@@ -1161,7 +1167,7 @@ body.messages-page {
     padding: 0.5rem;
     font-size: 0.75rem;
     font-family: 'Courier New', monospace;
-    overflow-x: auto;
+    overflow-x: hidden;
     max-height: 400px;
     overflow-y: auto;
 }
@@ -1170,6 +1176,8 @@ body.messages-page {
     padding: 0.125rem 0.5rem;
     white-space: pre-wrap;
     word-wrap: break-word;
+    word-break: break-all;
+    overflow-wrap: break-word;
     line-height: 1.5;
 }
 
@@ -1255,4 +1263,33 @@ body.messages-page {
 .modal--large .modal-body::-webkit-scrollbar-thumb:hover,
 .diff-file-content::-webkit-scrollbar-thumb:hover {
     background: #484f58;
+}
+
+/* Themed scrollbars — full override */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #30363d #0d1117;
+}
+
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: #0d1117;
+    border-radius: 0;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+}
+
+*::-webkit-scrollbar-corner {
+    background: #0d1117;
 }

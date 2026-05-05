@@ -990,3 +990,8 @@ a {
     display: block;
 }
 
+.messages-page .message-feed .message--diff {
+    display: block;
+    width: 100%;
+    flex-shrink: 0;
+}
