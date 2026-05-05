@@ -305,8 +305,9 @@ function updateGroupHeaderFromMembers(group) {
 async function selectGroup(group) {
     if (!group) return;
     // Leave previous group if set
-    if (window.currentGroupId) socket.emit('leave-group', window.currentGroupId);
+    if (window.currentInviteCode) socket.emit('leave-group', window.currentInviteCode);
     window.currentGroupId = group.id;
+    window.currentInviteCode = group.invite_code;
     // Update header UI
     const titleEl = document.querySelector('.chat-channel');
     if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> ${escapeHtml(group.name)}`;
