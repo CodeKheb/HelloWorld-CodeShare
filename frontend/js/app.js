@@ -324,7 +324,7 @@ function renderRepos(showAll) {
                     </span>
                     <span>Updated ${new Date(repo.updated_at).toLocaleDateString()}</span>
                 </div>
-                <a href="/api/repos/${repo.owner.login}/${repo.name}/download" class="btn-download icon-button" onclick="event.stopPropagation()" aria-label="Download">
+                <a href="/api/repos/${repo.owner.login}/${repo.name}/download" class="btn-download" onclick="event.stopPropagation()" aria-label="Download">
                     <span class="material-symbols-outlined">download</span>
                 </a>
             </div>
