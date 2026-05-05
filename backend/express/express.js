@@ -5,7 +5,6 @@ import session from 'express-session';
 import passport from "passport";
 import pool from "../db/pool.js";
 import { handleGithubWebhook } from '../webhooks/github.js';
-import { io } from '../server.js';
 
 export const app = express()
 
@@ -25,7 +24,11 @@ const requireAuth = (req, res, next) => {
 };
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.json({
+    verify: (req, _res, buf) => {
+        req.rawBody = buf;
+    }
+}));
 app.use(express.static(path.join(__dirname, "../../frontend"), { index: false }));
 
 
@@ -108,22 +111,8 @@ app.get('/api/user', requireAuth, (req, res) => {
     });
 });
 
-// FAKE db controller for testing of webhooks
-const mockDbController = {
-  saveSystemMessage: async (repoFullName, content) => {
-    console.log(`[MOCK DB] Saving to DB: Repo: ${repoFullName}, Content: ${content}`);
-    // Return a fake object that looks like your SQL schema
-    return { 
-      group_id: 1, // Just a guess for testing
-      content: content,
-      type: 'system' 
-    };
-  }
-};
-
 app.post("/api/webhooks/github", (req, res) => {
-  // Pass the dependencies (db and socket) so the webhook logic can use them
-  handleGithubWebhook(req, res, mockDbController, io);
+    handleGithubWebhook(req, res);
 });
 
 app.use("/api/auth", authRouter);
