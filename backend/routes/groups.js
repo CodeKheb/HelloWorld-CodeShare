@@ -128,15 +128,29 @@ groupsRouter.post("/create", async (req, res) => {
 
                 const repoRow = insertedRepo.rows[0];
                 if (repoRow) {
-                    const webhookId = await createGithubWebhook({
-                        repoFullName: repoRow.repo_full_name,
-                        accessToken: req.user.accessToken
-                    });
+                    try {
+                        const webhookId = await createGithubWebhook({
+                            repoFullName: repoRow.repo_full_name,
+                            accessToken: req.user.accessToken
+                        });
 
-                    await client.query(
-                        `UPDATE group_repos SET webhook_id = $1 WHERE id = $2`,
-                        [webhookId, repoRow.id]
-                    );
+                        await client.query(
+                            `UPDATE group_repos SET webhook_id = $1 WHERE id = $2`,
+                            [webhookId, repoRow.id]
+                        );
+                        console.log(`[WEBHOOK] Successfully created webhook for ${repoRow.repo_full_name} (ID: ${webhookId})`);
+                    } catch (webhookErr) {
+                        const isPermissionError = webhookErr.message.includes('403') || webhookErr.message.includes('404');
+                        if (isPermissionError) {
+                            console.log(`[POLLING] Webhook creation failed due to permissions. Enabling polling for ${repoRow.repo_full_name}`);
+                            await client.query(
+                                `UPDATE group_repos SET use_polling = TRUE WHERE id = $1`,
+                                [repoRow.id]
+                            );
+                        } else {
+                            console.warn(`[WEBHOOK] Failed to create webhook for ${repoRow.repo_full_name}: ${webhookErr.message}`);
+                        }
+                    }
                 }
             }
 
@@ -334,22 +348,37 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
                         `UPDATE group_repos
                          SET webhook_id = $1
                          WHERE id = $2
-                         RETURNING id, group_id, repo_full_name, webhook_id, added_at`,
+                         RETURNING id, group_id, repo_full_name, webhook_id, added_at, use_polling`,
                         [webhookId, repoRow.id]
                     );
                     repoRow = updated.rows[0];
-                    
+                    console.log(`[WEBHOOK] Successfully created webhook for ${repoRow.repo_full_name} (ID: ${webhookId})`);
                 } catch (webhookErr) {
-                    console.warn(`[WEBHOOK] Failed to create webhook for ${repoRow.repo_full_name}: ${webhookErr.message}`);
-                    console.warn(`[WEBHOOK] Repo will be attached without automatic webhook events`);
-                    // Don't throw — allow repo attachment to succeed even without webhook
+                    // Check if this is a permission error (403/404)
+                    const isPermissionError = webhookErr.message.includes('403') || webhookErr.message.includes('404');
+                    
+                    if (isPermissionError) {
+                        console.log(`[POLLING] Webhook creation failed due to permissions. Enabling polling for ${repoRow.repo_full_name}`);
+                        // Fall back to polling
+                        const updated = await client.query(
+                            `UPDATE group_repos
+                             SET use_polling = TRUE
+                             WHERE id = $1
+                             RETURNING id, group_id, repo_full_name, webhook_id, added_at, use_polling`,
+                            [repoRow.id]
+                        );
+                        repoRow = updated.rows[0];
+                    } else {
+                        // Some other error — log but don't fail
+                        console.warn(`[WEBHOOK] Failed to create webhook for ${repoRow.repo_full_name}: ${webhookErr.message}`);
+                    }
                 }
             }
             io.to(String(groupId)).emit("server-group-text", {
                           id: null,
                           groupId: groupId,
                           senderId: userId,
-                          text: `${userName} attached ${repoFullName} to this group.`,
+                          text: `${userName} attached ${repoFullName} to this conversation.`,
                           type: "system",
                           timestamp: new Date(),
                           author: "System",

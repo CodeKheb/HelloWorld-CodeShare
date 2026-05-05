@@ -80,6 +80,7 @@
                         </div>
 
                         <div class="chat-header__actions">
+                            <button class="mobile-group-info-toggle" id="mobileGroupInfoToggle" aria-label="Group info" title="Group info">ℹ</button>
                             <button id="openAttachRepoModal" class="secondary-button action-button" type="button">
                                 <span class="material-symbols-outlined" aria-hidden="true">link</span>
                                 <span class="mobile-hide">Attach Repo</span>
@@ -185,6 +186,7 @@
         </div>
 
         <!-- Modal Overlay -->
+        <div id="groupPanelOverlay" class="group-panel-overlay hidden"></div>
         <div id="modalOverlay" class="modal-overlay hidden">
             <div class="modal">
                 <div class="modal-header">
@@ -550,7 +552,59 @@
                     panel.scrollTop = panel.scrollHeight;
                 });
             })();
+
+            (function () {
+                const toggleBtn  = document.getElementById('mobileGroupInfoToggle');
+                const panel      = document.querySelector('.messages-page .group-panel');
+                const overlay    = document.getElementById('groupPanelOverlay');
+                if (!toggleBtn || !panel || !overlay) return;
+
+                function openPanel() {
+                    panel.classList.add('active');
+                    overlay.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+
+                function closePanel() {
+                    panel.classList.remove('active');
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+
+                toggleBtn.addEventListener('click', () => {
+                    panel.classList.contains('active') ? closePanel() : openPanel();
+                });
+
+                overlay.addEventListener('click', closePanel);
+
+                // Swipe-down to close
+                let touchStartY = 0;
+                panel.addEventListener('touchstart', (e) => {
+                    touchStartY = e.touches[0].clientY;
+                }, { passive: true });
+                panel.addEventListener('touchend', (e) => {
+                    const dy = e.changedTouches[0].clientY - touchStartY;
+                    if (dy > 60) closePanel();
+                }, { passive: true });
+            })();
+
+            // ── Mobile: Sidebar section collapse toggle ──────────
+            (function () {
+                // Only activate on mobile
+                if (window.innerWidth > 768) return;
+
+                document.querySelectorAll('.messages-page .sidebar .section-header').forEach((header) => {
+                    header.addEventListener('click', (e) => {
+                        // Don't collapse if the + (add) button was clicked
+                        if (e.target.closest('button')) return;
+                        const section = header.closest('.sidebar-section');
+                        if (section) section.classList.toggle('collapsed');
+                    });
+                });
+            })();
+
         </script>
+
 
     </body>
 </html>

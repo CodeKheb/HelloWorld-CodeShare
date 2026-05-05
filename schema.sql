@@ -44,6 +44,7 @@ CREATE TABLE group_repos (
   added_at TIMESTAMP DEFAULT NOW(),
   last_checked_at TIMESTAMP,
   last_commit_sha VARCHAR(40),
+  use_polling BOOLEAN DEFAULT FALSE,
   UNIQUE (group_id, repo_full_name)
 );
 
@@ -69,4 +70,16 @@ CREATE TABLE webhook_events (
   delivery_id VARCHAR(128),
   payload JSONB,
   created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Deduplication: tracks processed GitHub event IDs to prevent duplicate system messages
+CREATE TABLE processed_events (
+  id SERIAL PRIMARY KEY,
+  github_event_id VARCHAR(128) UNIQUE NOT NULL,
+  group_id INTEGER REFERENCES group_chats(id) ON DELETE CASCADE,
+  repo_full_name VARCHAR(255) NOT NULL,
+  event_type VARCHAR(64),
+  processed_at TIMESTAMP DEFAULT NOW(),
+  INDEX (github_event_id),
+  INDEX (group_id, repo_full_name)
 );
