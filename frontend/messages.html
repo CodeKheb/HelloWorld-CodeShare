@@ -227,13 +227,55 @@
                         </div>
                     </div>
                 </div>
+                <!-- Commits Modal -->
+                <div id="commitsOverlay" class="modal-overlay hidden">
+                    <div class="modal modal--large">
+                        <div class="modal-header">
+                            <h2>Repository Commits</h2>
+                            <button id="closeCommits">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="repoSelector" class="repo-selector">
+                                <label>SELECT REPOSITORY</label>
+                                <select id="commitRepoSelect">
+                                    <option value="">-- Select a repository --</option>
+                                </select>
+                            </div>
+
+                            <div id="commitsContainer" class="commits-container hidden">
+                                <div class="commits-header">
+                                    <h3 id="selectedRepoName"></h3>
+                                    <div class="commits-actions">
+                                        <button id="compareCommitsBtn" class="btn-primary" disabled>
+                                            Compare Selected
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="commitsList" class="commits-list">
+                                    <!-- Commits will be populated here -->
+                                </div>
+                            </div>
+
+                            <div id="commitsLoading" class="loading-state hidden">
+                                <span class="material-symbols-outlined spinning">progress_activity</span>
+                                <p>Loading commits...</p>
+                            </div>
+
+                            <div id="commitsError" class="error-state hidden">
+                                <span class="material-symbols-outlined">error</span>
+                                <p id="commitsErrorText"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <script>
-                // Local modal helpers for messages page
-                function showModal() {
-                    const overlay = document.getElementById('modalOverlay');
-                    if (!overlay) return;
-                    const modal = overlay.querySelector('.modal');
+                    // Local modal helpers for messages page
+                    function showModal() {
+                        const overlay = document.getElementById('modalOverlay');
+                        if (!overlay) return;
+                        const modal = overlay.querySelector('.modal');
                     overlay.classList.remove('hidden');
                     overlay.style.display = 'flex';
                     requestAnimationFrame(() => {
