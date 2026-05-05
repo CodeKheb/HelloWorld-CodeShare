@@ -55,3 +55,16 @@ CREATE TABLE messages (
     CHECK (type IN ('text', 'system', 'ai_summary')),
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Stores webhook delivery metadata linked to system messages
+CREATE TABLE webhook_events (
+  id SERIAL PRIMARY KEY,
+  message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
+  group_id INTEGER REFERENCES group_chats(id) ON DELETE CASCADE,
+  repo_full_name VARCHAR(255) NOT NULL,
+  webhook_id BIGINT,
+  github_event VARCHAR(64),
+  delivery_id VARCHAR(128),
+  payload JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
