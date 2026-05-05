@@ -111,15 +111,8 @@ export default function chatHandler(socket) {
                 return;
             }
 
-            if (clientState?.active_directed_recieverId) {
-                socket.leave(clientState.active_directed_recieverId);
-                clientState.active_directed_recieverId = null;
-            }
-
-            if (clientState?.active_group) {
-                socket.leave(String(clientState.active_group));
-            }
-
+            // Just update the cursor, no leaving
+            clientState.active_directed_recieverId = null;
             clientState.active_group = groupId;
             socket.join(String(groupId));
 
@@ -135,18 +128,13 @@ export default function chatHandler(socket) {
         const authUser = socket.request.user;
         if (!authUser) return;
 
-        // Cleanup: Leave current group room
-        if (clientState.active_group) {
-            socket.leave(String(clientState.active_group));
-            clientState.active_group = null;
-        }
-
+        // Just update the cursor, no leaving
+        clientState.active_group = null;
         clientState.active_directed_recieverId = receiverId;
 
-        // Join the unique DM room based on both User IDs
         const dmRoom = `dm_${[authUser.id, receiverId].sort().join("_")}`;
         socket.join(dmRoom);
-        
+
         console.log(`User ${authUser.id} joined DM room: ${dmRoom}`);
     });
 }
