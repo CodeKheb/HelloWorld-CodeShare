@@ -153,6 +153,35 @@ body.messages-page {
 	flex-shrink: 0;
 }
 
+.messages-page .message--system {
+	justify-content: center;
+	gap: 0;
+}
+
+.messages-page .message__system-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	max-width: min(90%, 680px);
+	padding: 8px 14px;
+	border-radius: 999px;
+	border: 1px solid var(--border);
+	background: rgba(139, 148, 158, 0.14);
+	color: var(--muted);
+	font-size: 12px;
+	line-height: 1.4;
+	text-align: center;
+}
+
+.messages-page .message__system-text {
+	overflow-wrap: anywhere;
+}
+
+.messages-page .message__system-time {
+	opacity: 0.85;
+	white-space: nowrap;
+}
+
 .messages-page .message:last-child {
 	margin-bottom: 0;
 }

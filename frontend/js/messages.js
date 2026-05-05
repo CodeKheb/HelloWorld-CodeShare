@@ -429,7 +429,6 @@ function displayMessage(messageData) {
     }
 
     const messageElement = document.createElement('article');
-    messageElement.className = 'message message--standard';
 
     const now = new Date(messageData.timestamp || Date.now());
     const timeString = now.toLocaleTimeString('en-US', {
@@ -438,18 +437,29 @@ function displayMessage(messageData) {
         hour12: true
     });
 
-    messageElement.innerHTML = `
-        <img alt="${escapeHtml(messageData.authorName || messageData.author)}" 
-             class="avatar avatar--message" 
-             src="${messageData.fromAvatar || messageData.avatar || '/default-avatar.png'}"/>
-        <div class="message__body">
-            <div class="message__meta">
-                <span class="message__author">${escapeHtml(messageData.authorName || messageData.from || messageData.author)}</span>
-                <span class="message__time">${timeString}</span>
+    if (messageData.type === 'system') {
+        messageElement.className = 'message message--system';
+        messageElement.innerHTML = `
+            <div class="message__system-pill" role="status" aria-live="polite">
+                <span class="message__system-text">${escapeHtml(messageData.text || '')}</span>
+                <span class="message__system-time">${timeString}</span>
             </div>
-            <p class="message__text">${escapeHtml(messageData.text)}</p>
-        </div>
-    `;
+        `;
+    } else {
+        messageElement.className = 'message message--standard';
+        messageElement.innerHTML = `
+            <img alt="${escapeHtml(messageData.authorName || messageData.author)}" 
+                 class="avatar avatar--message" 
+                 src="${messageData.fromAvatar || messageData.avatar || '/default-avatar.png'}"/>
+            <div class="message__body">
+                <div class="message__meta">
+                    <span class="message__author">${escapeHtml(messageData.authorName || messageData.from || messageData.author)}</span>
+                    <span class="message__time">${timeString}</span>
+                </div>
+                <p class="message__text">${escapeHtml(messageData.text)}</p>
+            </div>
+        `;
+    }
 
     messageFeed.appendChild(messageElement);
 
@@ -460,7 +470,7 @@ function displayMessage(messageData) {
 
 function escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = text ?? '';
     return div.innerHTML;
 }
 
