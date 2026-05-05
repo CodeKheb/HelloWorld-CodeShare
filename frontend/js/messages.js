@@ -431,7 +431,7 @@ function displayMessage(messageData) {
 
     const messageElement = document.createElement('article');
 
-    const now = new Date(messageData.timestamp || Date.now());
+    const now = new Date(messageData.created_at || messageData.timestamp || Date.now());
     const timeString = now.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
@@ -442,7 +442,7 @@ function displayMessage(messageData) {
         messageElement.className = 'message message--system';
         messageElement.innerHTML = `
             <div class="message__system-pill" role="status" aria-live="polite">
-                <span class="message__system-text">${escapeHtml(messageData.text || '')}</span>
+                <span class="message__system-text">${escapeHtml(messageData.content || messageData.text || '')}</span>
                 <span class="message__system-time">${timeString}</span>
             </div>
         `;
@@ -454,10 +454,10 @@ function displayMessage(messageData) {
                  src="${messageData.fromAvatar || messageData.avatar || '/default-avatar.png'}"/>
             <div class="message__body">
                 <div class="message__meta">
-                    <span class="message__author">${escapeHtml(messageData.authorName || messageData.from || messageData.author)}</span>
+                    <span class="message__author">${escapeHtml(messageData.authorName || messageData.from || messageData.author || messageData.sender_username)}</span>
                     <span class="message__time">${timeString}</span>
                 </div>
-                <p class="message__text">${escapeHtml(messageData.text)}</p>
+                <p class="message__text">${escapeHtml(messageData.content || messageData.text)}</p>
             </div>
         `;
     }

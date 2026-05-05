@@ -143,7 +143,24 @@ export const handleGithubWebhook = async (req, res) => {
       return res.status(200).send("Ignored event");
     }
 
-    const savedMessages = await saveSystemMessages(transformed.repoFullName, transformed.content, {
+    const repoFullName = transformed.repoFullName;
+
+    // Use deliveryId as event ID for deduplication (unique per GitHub delivery)
+    const webhookEventId = `webhook_${deliveryId}`;
+
+    // Record in processed_events to prevent duplicates
+    try {
+      await pool.query(
+        `INSERT INTO processed_events (github_event_id, event_type, repo_full_name)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (github_event_id) DO NOTHING`,
+        [webhookEventId, event, repoFullName]
+      );
+    } catch (err) {
+      console.warn(`[WEBHOOK] Warning: failed to record processed event:`, err.message);
+    }
+
+    const savedMessages = await saveSystemMessages(repoFullName, transformed.content, {
       event,
       deliveryId,
       payload
