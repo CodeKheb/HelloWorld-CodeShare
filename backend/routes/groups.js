@@ -1,5 +1,6 @@
 import { Router } from "express";
 import pool from "../db/pool.js";
+import { io } from "../server.js";
 
 const groupsRouter = Router();
 
@@ -272,6 +273,7 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
         const { repoFullName } = req.body;
         const userId = req.user.id;
         const accessToken = req.user.accessToken;
+        const userName = req.user.username
 
         if (!repoFullName || repoFullName.trim() === "") {
             return res.status(400).json({ error: "Repository name is required (owner/repo)" });
@@ -336,13 +338,24 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
                         [webhookId, repoRow.id]
                     );
                     repoRow = updated.rows[0];
+                    
                 } catch (webhookErr) {
                     console.warn(`[WEBHOOK] Failed to create webhook for ${repoRow.repo_full_name}: ${webhookErr.message}`);
                     console.warn(`[WEBHOOK] Repo will be attached without automatic webhook events`);
                     // Don't throw — allow repo attachment to succeed even without webhook
                 }
             }
-
+            io.to(String(groupId)).emit("server-group-text", {
+                          id: null,
+                          groupId: groupId,
+                          senderId: userId,
+                          text: `${userName} attached ${repoFullName} to this group.`,
+                          type: "system",
+                          timestamp: new Date(),
+                          author: "System",
+                          authorName: "System",
+                          avatar: "/default-avatar.png"
+                        });
             await client.query("COMMIT");
         } catch (err) {
             await client.query("ROLLBACK");
