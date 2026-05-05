@@ -378,7 +378,7 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
                           id: null,
                           groupId: groupId,
                           senderId: userId,
-                          text: `${userName} attached ${repoFullName} to this group.`,
+                          text: `${userName} attached ${repoFullName} to this conversation.`,
                           type: "system",
                           timestamp: new Date(),
                           author: "System",
