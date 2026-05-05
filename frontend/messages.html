@@ -154,7 +154,7 @@
                                 Add Member
                             </button>
                             <div id="groupIdDisplay" class="group-id-display hidden">
-                                Group ID: <span id="groupIdValue">—</span>
+                                Invite Code: <span id="inviteCodeValue">—</span>
                             </div>                        
 
                         </section>
@@ -241,9 +241,9 @@
                     <button id="closeJoinGroup">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <label>GROUP ID <span class="required">*</span></label>
-                    <input type="text" id="joinGroupId" placeholder="e.g. 42" />
-                    <small>Enter the Group ID to join an existing group.</small>
+                    <label>INVITE CODE <span class="required">*</span></label>
+                    <input type="text" id="joinGroupId" placeholder="e.g. ABC123" />
+                    <small>Enter the invite code to join a group.</small>
                 </div>
                 <div class="modal-footer">
                     <button id="submitJoinGroup" class="btn-primary">JOIN GROUP</button>
@@ -332,10 +332,12 @@
                 e.preventDefault();
                 showJoinGroupModal();
             });
+
+            // when user clicks "add member"
             document.getElementById('showGroupIdBtn')?.addEventListener('click', () => {
                 const display = document.getElementById('groupIdDisplay');
-                const val = document.getElementById('groupIdValue');
-                if (val) val.textContent = window.currentGroupId || 'No group selected';
+                const val = document.getElementById('inviteCodeValue');
+                if (val) val.textContent = window.currentInviteCode || 'Code cannot be fetched';
                 display.classList.toggle('hidden');
             });
 
@@ -483,13 +485,13 @@
             });
             document.getElementById('submitJoinGroup')?.addEventListener('click', async () => {
                 const btn = document.getElementById('submitJoinGroup');
-                const groupId = document.getElementById('joinGroupId').value.trim();
-                if (!groupId) return alert('Group ID is required');
+                const inviteCode = document.getElementById('joinGroupId').value.trim();
+                if (!inviteCode) return alert('Invite code is required');
                 btn.disabled = true;
                 const orig = btn.textContent;
                 btn.textContent = 'Joining...';
                 try {
-                    const res = await fetch(`/api/groups/${encodeURIComponent(groupId)}/join`, {
+                    const res = await fetch(`/api/groups/join/${encodeURIComponent(inviteCode)}`, {
                         method: 'POST',
                         credentials: 'include'
                     });
@@ -497,6 +499,10 @@
                     if (res.ok) {
                         alert('Joined group successfully');
                         hideJoinGroupModal();
+                        // Reload groups
+                        if (typeof window.loadGroups === 'function') {
+                            window.loadGroups();
+                        }
                     } else {
                         alert('Error: ' + (data.error || 'Failed'));
                     }

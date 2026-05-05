@@ -158,14 +158,15 @@ groupsRouter.post("/create", async (req, res) => {
 
             // Return the created group
             return res.status(201).json({
-                success: true,
-                group: {
-                    id: group.id,
-                    name: group.name,
-                    created_by: group.created_by,
-                    created_at: group.created_at
-                }
-            });
+            success: true,
+            group: {
+                id: group.id,
+                name: group.name,
+                created_by: group.created_by,
+                created_at: group.created_at,
+                invite_code: group.invite_code 
+            }
+        });
         } catch (err) {
             await client.query("ROLLBACK");
             throw err;
@@ -194,6 +195,7 @@ groupsRouter.get("/", async (req, res) => {
                     gc.created_by,
                     gc.created_at,
                     gc.last_summarized_at,
+                    gc.invite_code,
                     COUNT(gm.user_id) AS member_count,
                     COALESCE(json_agg(json_build_object('id', u.id, 'username', u.username, 'avatar_url', u.avatar_url) ORDER BY gm.joined_at) FILTER (WHERE u.id IS NOT NULL), '[]') AS members
              FROM group_chats gc
@@ -400,7 +402,55 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
     }
 });
 
-// POST /api/groups/:groupId/join
+// POST /groups/join/:inviteCode - Must come BEFORE /:groupId/join to match first
+groupsRouter.post("/join/:inviteCode", async (req, res) => {
+    try {
+        if (!req.isAuthenticated()) {
+            return res.status(401).json({ error: "User not authenticated" });
+        }
+
+        const { inviteCode } = req.params;
+        const userId = req.user.id;
+
+        // Resolve invite code → group (never expose UUID to join flow)
+        const groupCheck = await pool.query(
+            `SELECT id, name, is_direct FROM group_chats 
+             WHERE invite_code = $1`,
+            [inviteCode.toUpperCase()]  // normalize in case user types lowercase
+        );
+
+        if (groupCheck.rows.length === 0) {
+            return res.status(404).json({ error: "Invalid invite code" });
+        }
+
+        const group = groupCheck.rows[0];
+
+        // DMs shouldn't be joinable via invite code
+        if (group.is_direct) {
+            return res.status(403).json({ error: "Cannot join a direct message via invite code" });
+        }
+
+        // Insert member (idempotent)
+        await pool.query(
+            `INSERT INTO group_members (group_id, user_id)
+             VALUES ($1, $2)
+             ON CONFLICT (group_id, user_id) DO NOTHING`,
+            [group.id, userId]
+        );
+
+        return res.status(200).json({ 
+            success: true, 
+            groupId: group.id,   // return UUID only after join is confirmed
+            groupName: group.name
+        });
+
+    } catch (error) {
+        console.error("Error joining group:", error);
+        return res.status(500).json({ error: "Failed to join group", details: error.message });
+    }
+});
+
+// POST /groups/join/:groupId - Join by group ID (less common, kept for compatibility)
 groupsRouter.post("/:groupId/join", async (req, res) => {
     try {
         if (!req.isAuthenticated()) {
@@ -431,6 +481,41 @@ groupsRouter.post("/:groupId/join", async (req, res) => {
     } catch (error) {
         console.error("Error joining group:", error);
         return res.status(500).json({ error: "Failed to join group", details: error.message });
+    }
+});
+
+// POST /groups/:groupId/regenerate-invite
+groupsRouter.post("/:groupId/regenerate-invite", async (req, res) => {
+    try {
+        if (!req.isAuthenticated()) {
+            return res.status(401).json({ error: "User not authenticated" });
+        }
+
+        const { groupId } = req.params;
+        const userId = req.user.id;
+
+        // Only group creator should be able to rotate the code
+        const authCheck = await pool.query(
+            `SELECT id FROM group_chats WHERE id = $1 AND created_by = $2`,
+            [groupId, userId]
+        );
+        if (authCheck.rows.length === 0) {
+            return res.status(403).json({ error: "Not authorized" });
+        }
+
+        const result = await pool.query(
+            `UPDATE group_chats
+             SET invite_code = upper(substring(gen_random_uuid()::text FROM 1 FOR 8))
+             WHERE id = $1
+             RETURNING invite_code`,
+            [groupId]
+        );
+
+        return res.status(200).json({ inviteCode: result.rows[0].invite_code });
+
+    } catch (error) {
+        console.error("Error regenerating invite:", error);
+        return res.status(500).json({ error: "Failed to regenerate invite code" });
     }
 });
 
