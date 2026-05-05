@@ -3,6 +3,79 @@ import pool from "../db/pool.js";
 
 const groupsRouter = Router();
 
+async function getExistingWebhooks({ owner, repo, accessToken }) {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/hooks`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28"
+        }
+    });
+
+    if (!response.ok) {
+        console.log(`[WEBHOOK] Could not list existing webhooks for ${owner}/${repo}: ${response.status}`);
+        return [];
+    }
+
+    return await response.json();
+}
+
+async function createGithubWebhook({ repoFullName, accessToken }) {
+    const [owner, repo] = String(repoFullName).split("/");
+    if (!owner || !repo) {
+        throw new Error("Invalid repository format. Use owner/repo");
+    }
+
+    const appBaseUrl = process.env.APP_BASE_URL;
+    if (!appBaseUrl) {
+        throw new Error("APP_BASE_URL is required to create webhooks");
+    }
+
+    const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET || "test_secret";
+    
+    // Check if webhook already exists for this URL
+    const existingHooks = await getExistingWebhooks({ owner, repo, accessToken });
+    const targetUrl = `${appBaseUrl.replace(/\/$/, "")}/api/webhooks/github`;
+    const existingHook = existingHooks.find(h => h.config?.url === targetUrl);
+    
+    if (existingHook) {
+        console.log(`[WEBHOOK] Webhook already exists for ${owner}/${repo} with ID ${existingHook.id}`);
+        return existingHook.id;
+    }
+
+    const webhookUrl = `https://api.github.com/repos/${owner}/${repo}/hooks`;
+    console.log(`[WEBHOOK] Creating webhook for ${owner}/${repo} at ${webhookUrl}`);
+    const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            name: "web",
+            active: true,
+            events: ["push", "pull_request"],
+            config: {
+                url: targetUrl,
+                content_type: "json",
+                secret: webhookSecret,
+                insecure_ssl: "0"
+            }
+        })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`GitHub webhook creation failed: ${response.status} ${errText}`);
+    }
+
+    const hook = await response.json();
+    return hook.id;
+}
+
 // POST /api/groups/create - Create a new group
 groupsRouter.post("/create", async (req, res) => {
     try {
@@ -44,12 +117,26 @@ groupsRouter.post("/create", async (req, res) => {
 
             // 3. If a repo was provided, add it to the group
             if (repoFullName && repoFullName.trim() !== "") {
-                await client.query(
+                const insertedRepo = await client.query(
                     `INSERT INTO group_repos (group_id, repo_full_name)
                      VALUES ($1, $2)
-                     ON CONFLICT (group_id, repo_full_name) DO NOTHING`,
+                     ON CONFLICT (group_id, repo_full_name) DO NOTHING
+                     RETURNING id, repo_full_name`,
                     [group.id, repoFullName.trim()]
                 );
+
+                const repoRow = insertedRepo.rows[0];
+                if (repoRow) {
+                    const webhookId = await createGithubWebhook({
+                        repoFullName: repoRow.repo_full_name,
+                        accessToken: req.user.accessToken
+                    });
+
+                    await client.query(
+                        `UPDATE group_repos SET webhook_id = $1 WHERE id = $2`,
+                        [webhookId, repoRow.id]
+                    );
+                }
             }
 
             await client.query("COMMIT");
@@ -184,9 +271,14 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
         const { groupId } = req.params;
         const { repoFullName } = req.body;
         const userId = req.user.id;
+        const accessToken = req.user.accessToken;
 
         if (!repoFullName || repoFullName.trim() === "") {
             return res.status(400).json({ error: "Repository name is required (owner/repo)" });
+        }
+
+        if (!accessToken) {
+            return res.status(401).json({ error: "Missing GitHub access token. Please log in again." });
         }
 
         // Ensure the user is a member of this group
@@ -199,25 +291,64 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
             return res.status(403).json({ error: "You are not a member of this group" });
         }
 
-        // Insert repo relation (idempotent per UNIQUE(group_id, repo_full_name))
-        const insertResult = await pool.query(
-            `INSERT INTO group_repos (group_id, repo_full_name)
-             VALUES ($1, $2)
-             ON CONFLICT (group_id, repo_full_name) DO NOTHING
-             RETURNING id, group_id, repo_full_name, webhook_id, added_at`,
-            [groupId, repoFullName.trim()]
-        );
+        const client = await pool.connect();
+        let repoRow;
+        try {
+            await client.query("BEGIN");
 
-        // If conflict happened, fetch existing row so frontend still receives repo payload
-        let repoRow = insertResult.rows[0];
-        if (!repoRow) {
-            const existing = await pool.query(
-                `SELECT id, group_id, repo_full_name, webhook_id, added_at
-                 FROM group_repos
-                 WHERE group_id = $1 AND repo_full_name = $2`,
+            // Insert repo relation (idempotent per UNIQUE(group_id, repo_full_name))
+            const insertResult = await client.query(
+                `INSERT INTO group_repos (group_id, repo_full_name)
+                 VALUES ($1, $2)
+                 ON CONFLICT (group_id, repo_full_name) DO NOTHING
+                 RETURNING id, group_id, repo_full_name, webhook_id, added_at`,
                 [groupId, repoFullName.trim()]
             );
-            repoRow = existing.rows[0] || null;
+
+            repoRow = insertResult.rows[0];
+            if (!repoRow) {
+                const existing = await client.query(
+                    `SELECT id, group_id, repo_full_name, webhook_id, added_at
+                     FROM group_repos
+                     WHERE group_id = $1 AND repo_full_name = $2`,
+                    [groupId, repoFullName.trim()]
+                );
+                repoRow = existing.rows[0] || null;
+            }
+
+            if (!repoRow) {
+                throw new Error("Failed to load repository attachment row");
+            }
+
+            // Create webhook automatically if missing, but don't block repo attachment if it fails
+            if (!repoRow.webhook_id) {
+                try {
+                    const webhookId = await createGithubWebhook({
+                        repoFullName: repoRow.repo_full_name,
+                        accessToken
+                    });
+
+                    const updated = await client.query(
+                        `UPDATE group_repos
+                         SET webhook_id = $1
+                         WHERE id = $2
+                         RETURNING id, group_id, repo_full_name, webhook_id, added_at`,
+                        [webhookId, repoRow.id]
+                    );
+                    repoRow = updated.rows[0];
+                } catch (webhookErr) {
+                    console.warn(`[WEBHOOK] Failed to create webhook for ${repoRow.repo_full_name}: ${webhookErr.message}`);
+                    console.warn(`[WEBHOOK] Repo will be attached without automatic webhook events`);
+                    // Don't throw — allow repo attachment to succeed even without webhook
+                }
+            }
+
+            await client.query("COMMIT");
+        } catch (err) {
+            await client.query("ROLLBACK");
+            throw err;
+        } finally {
+            client.release();
         }
 
         return res.status(201).json({ success: true, repo: repoRow });
