@@ -224,12 +224,11 @@ router.get("/:owner/:repo/commits", async (req, res) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Unauthorized" });
   }
-
   const { owner, repo } = req.params;
   
   // Optional query parameters for filtering commits
   const {
-    sha = 'main',        // Branch/SHA to start listing commits from
+    sha = null,        // Branch/SHA to start listing commits from
     path = null,         // Only commits containing this file path
     author = null,       // GitHub login or email address
     since = null,        // ISO 8601 date - only commits after this date
@@ -241,11 +240,11 @@ router.get("/:owner/:repo/commits", async (req, res) => {
   try {
     // Build the query parameters
     const params = new URLSearchParams({
-      sha,
       per_page: Math.min(parseInt(per_page), 100),
       page: parseInt(page)
     });
 
+    if (sha) params.append('sha', sha); 
     if (path) params.append('path', path);
     if (author) params.append('author', author);
     if (since) params.append('since', since);
@@ -285,7 +284,7 @@ router.get("/:owner/:repo/commits", async (req, res) => {
 
     res.json({
       repository: `${owner}/${repo}`,
-      branch: sha,
+      branch: sha || 'default',
       commits,
       pagination: {
         current_page: parseInt(page),

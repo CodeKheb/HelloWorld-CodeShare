@@ -18,6 +18,7 @@ passport.use(new GitHubStrategy(
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
         callbackURL: process.env.GITHUB_CALLBACK,
+        scope: ['user', 'repo'],
     },
     // Make the verify callback async so we can run DB queries.
     async (accessToken, refreshToken, profile, done) => {
@@ -82,7 +83,10 @@ authRouter.get("/user", async (req, res) => {
 });
 
 authRouter.get("/github",
-    passport.authenticate("github", { scope: ["user:email", "repo"] })
+    passport.authenticate("github", { 
+        scope: ["user", "repo"],
+        prompt: "consent"   // forces re-auth screen, remove once all users have re-authed
+    })
 );
 
 authRouter.get("/github/callback",
