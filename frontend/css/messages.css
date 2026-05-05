@@ -615,12 +615,19 @@ body.messages-page {
 	to   { opacity: 1; }
 }
 
+/* ── Mobile Group Info Drawer ───────────────── */
+
+/* The floating info button — hidden on desktop */
+.mobile-group-info-toggle {
+	display: none;
+}
+
 /* ── Mobile (≤ 768px) — single clean block ─── */
 
 @media (max-width: 768px) {
-  .mobile-hide {
-        display: none;
-    }
+	.mobile-hide {
+		display: none;
+	}
 
 	/* Lock the whole page to viewport, no scroll bounce */
 	body.messages-page {
@@ -631,7 +638,7 @@ body.messages-page {
 		height: 100dvh;
 		min-height: unset;
 		overflow: hidden;
-		flex-direction: row; /* keep row so panel sits beside if needed */
+		flex-direction: row;
 	}
 
 	/* Shell fills width, stacks chat + panel vertically */
@@ -647,7 +654,7 @@ body.messages-page {
 	/* Chat takes all remaining vertical space */
 	.messages-page .chat-main {
 		flex: 1;
-		min-height: 0;       /* critical — lets flex shrink */
+		min-height: 0;
 		overflow: hidden;
 		border-right: none;
 		display: flex;
@@ -657,8 +664,8 @@ body.messages-page {
 	/* ── Header: single compact row ── */
 	.messages-page .chat-header {
 		min-height: 3.25rem;
-		padding: 0 12px;
-		gap: 8px;
+		padding: 0 10px;
+		gap: 6px;
 		flex-wrap: nowrap;
 		flex-shrink: 0;
 	}
@@ -671,10 +678,16 @@ body.messages-page {
 	}
 
 	.messages-page .chat-channel {
-		font-size: 16px;
+		font-size: 15px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		gap: 5px;
+	}
+
+	.messages-page .chat-channel .material-symbols-outlined {
+		font-size: 18px;
+		flex-shrink: 0;
 	}
 
 	/* Hide noisy elements */
@@ -683,89 +696,130 @@ body.messages-page {
 		display: none;
 	}
 
-    /* Action buttons → icon-only squares */
-    .messages-page .chat-header__actions .action-button {
-        width: 2.25rem !important;
-        height: 2.25rem !important;
-        min-width: 2.25rem !important;
-        max-width: 2.25rem !important;
-        padding: 0 !important;
-        overflow: hidden;
-    }
+	/* Action buttons → icon-only squares */
+	.messages-page .chat-header__actions .action-button {
+		width: 2.25rem !important;
+		height: 2.25rem !important;
+		min-width: 2.25rem !important;
+		max-width: 2.25rem !important;
+		padding: 0 !important;
+		overflow: hidden;
+	}
 
-    .messages-page .chat-header__actions .action-button span:not(.material-symbols-outlined) {
-        display: none !important;
-    }
+	.messages-page .chat-header__actions .action-button span:not(.material-symbols-outlined) {
+		display: none !important;
+	}
 
-    .messages-page #openAttachRepoModal {
-        width: 2.25rem !important;
-        min-width: 2.25rem !important;
-        padding: 0 !important;
-    }
+	.messages-page #openAttachRepoModal {
+		width: 2.25rem !important;
+		min-width: 2.25rem !important;
+		padding: 0 !important;
+	}
 
-/* ── Message feed scrolls freely ── */
-.messages-page .message-feed {
+	/* Info toggle button — shown on mobile in header */
+	.mobile-group-info-toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: 2.25rem;
+		height: 2.25rem;
+		background: none;
+		border: none;
+		border-radius: 50%;
+		color: var(--muted);
+		cursor: pointer;
+		font-size: 22px;
+		transition: color 160ms ease, background 160ms ease;
+		line-height: 1;
+		padding: 0;
+	}
+
+	.mobile-group-info-toggle:hover,
+	.mobile-group-info-toggle:focus-visible {
+		background: rgba(255, 255, 255, 0.06);
+		color: var(--text);
+	}
+
+	/* ── Message feed scrolls freely ── */
+	.messages-page .message-feed {
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
 		overflow-x: hidden;
-		padding: 16px 14px;
+		padding: 14px 12px;
 		-webkit-overflow-scrolling: touch;
 		overscroll-behavior: contain;
 	}
 
 	.messages-page .message {
 		gap: 10px;
-		margin-bottom: 16px;
+		margin-bottom: 14px;
 	}
 
 	.messages-page .avatar--message {
-		width: 32px;
-		height: 32px;
+		width: 34px;
+		height: 34px;
+	}
+
+	.messages-page .message__author {
+		font-size: 14px;
+	}
+
+	.messages-page .message__text {
+		font-size: 14px;
+		line-height: 1.55;
 	}
 
 	/* ── Composer pinned at bottom ── */
 	.messages-page .composer {
 		flex-shrink: 0;
-		padding: 10px 12px 14px;
+		padding: 8px 10px 12px;
 		gap: 6px;
+		border-top: 1px solid var(--border);
+		background: var(--bg);
 	}
 
 	.messages-page .composer__input {
-		font-size: 16px; /* prevents iOS auto-zoom */
-		padding: 10px 12px;
+		font-size: 16px;
+		padding: 9px 12px;
 		background: var(--messages-bg-soft);
 		border-radius: 20px;
 		border: 1px solid var(--border);
+		min-height: 38px;
 	}
 
-    /* Sidebar inner content padding */
-    .messages-page .sidebar {
-        position: fixed !important;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        z-index: 1000;
-        width: min(280px, 85vw);
-        transform: translateX(-100%);   /* ← same as dashboard */
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        background: #0d1117 !important;
-        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.7);
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-    }
+	.messages-page .icon-button {
+		width: 2.25rem;
+		height: 2.25rem;
+	}
 
-    .messages-page .sidebar.active {
-        transform: translateX(0);       /* ← slides in */
-    }
+	/* Sidebar: slide-in drawer on mobile */
+	.messages-page .sidebar {
+		position: fixed !important;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		z-index: 1000;
+		width: min(280px, 85vw);
+		transform: translateX(-100%);
+		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		background: #0d1117 !important;
+		box-shadow: 4px 0 24px rgba(0, 0, 0, 0.7);
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
 
+	.messages-page .sidebar.active {
+		transform: translateX(0);
+	}
 
-    /* Fix resize handle still showing */
-    .messages-page .resize-handle {
-        display: none !important;
-    }	
+	/* Fix resize handle still showing */
+	.messages-page .resize-handle {
+		display: none !important;
+	}
 
-    /* ── Hamburger: visible on mobile ── */
+	/* ── Hamburger: visible on mobile ── */
 	.sidebar-toggle {
 		display: inline-flex;
 		align-items: center;
@@ -787,24 +841,104 @@ body.messages-page {
 		background: rgba(255, 255, 255, 0.06);
 	}
 
-	/* ── Group panel: scrollable section below chat ── */
+	/* ── Group Panel: slide-up drawer on mobile ── */
 	.messages-page .group-panel {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
 		width: 100%;
 		min-width: 0;
 		max-width: none;
-		max-height: 40dvh;    /* takes up at most 40% of screen */
+		max-height: 70dvh;
+		height: auto;
 		overflow-y: auto;
 		flex-shrink: 0;
 		border-top: 1px solid var(--border);
+		border-radius: 16px 16px 0 0;
+		background: #0d1117;
+		box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+		z-index: 900;
+
+		/* Hidden by default — slides up when .active */
+		transform: translateY(100%);
+		transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
-	.messages-page .resize-handle {
+	.messages-page .group-panel.active {
+		transform: translateY(0);
+	}
+
+	/* Drag handle pill at top of drawer */
+	.messages-page .group-panel::before {
+		content: '';
+		display: block;
+		width: 36px;
+		height: 4px;
+		background: rgba(139, 148, 158, 0.3);
+		border-radius: 999px;
+		margin: 10px auto 0;
+		flex-shrink: 0;
+	}
+
+	/* Overlay behind group panel drawer */
+	.group-panel-overlay {
 		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.45);
+		z-index: 899;
+		backdrop-filter: blur(2px);
+		-webkit-backdrop-filter: blur(2px);
+		animation: overlayFadeIn 0.2s ease;
+	}
+
+	.group-panel-overlay.active {
+		display: block;
 	}
 
 	.messages-page .panel-section,
 	.messages-page .group-panel__intro {
-		padding: 16px;
+		padding: 14px 16px;
+	}
+
+	.messages-page .group-panel__intro h3 {
+		font-size: 17px;
+		margin-bottom: 6px;
+	}
+
+	.messages-page .group-panel__intro p {
+		font-size: 13px;
+	}
+
+	/* Sidebar section collapsibles — desktop sections still visible inside the drawer */
+	.messages-page .sidebar .sidebar-section {
+		border-bottom: 1px solid rgba(255,255,255,0.05);
+	}
+
+	/* Sidebar section header collapse toggle */
+	.messages-page .sidebar .section-header {
+		cursor: pointer;
+		user-select: none;
+	}
+
+	/* Collapsed state: hide the ul */
+	.messages-page .sidebar .sidebar-section.collapsed > ul {
+		display: none;
+	}
+
+	/* Collapse arrow indicator */
+	.messages-page .sidebar .section-header::after {
+		content: 'expand_less';
+		font-family: 'Material Symbols Outlined';
+		font-size: 18px;
+		color: var(--muted);
+		margin-left: auto;
+		transition: transform 0.2s ease;
+	}
+
+	.messages-page .sidebar .sidebar-section.collapsed .section-header::after {
+		transform: rotate(180deg);
 	}
 }
 
@@ -827,7 +961,7 @@ body.messages-page {
     flex: 1;
     overflow-y: auto;
     padding: 1.5rem;
-    max-height: calc(90vh - 120px); /* Account for header */
+    max-height: calc(90vh - 120px);
 }
 
 /* Repository Selector - UPDATED */
@@ -885,7 +1019,6 @@ body.messages-page {
     padding: 0.5rem;
 }
 
-
 .commits-container {
     margin-top: 1rem;
 }
@@ -900,7 +1033,7 @@ body.messages-page {
     border-radius: 6px;
     margin-bottom: 1rem;
     position: sticky;
-    top: 90px; /* Below repo selector */
+    top: 90px;
     z-index: 9;
 }
 
@@ -1355,7 +1488,6 @@ body.messages-page {
     outline: none;
     border-color: #58a6ff;
     box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
-
 }
 
 .group-id-display {
