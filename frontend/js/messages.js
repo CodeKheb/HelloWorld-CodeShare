@@ -32,6 +32,89 @@ socket.on("server-error", (error) => {
     alert(`Error: ${error.reason}`);
 });
 
+socket.on("dm-ready", async ({ dmGroupId, receiverId }) => {
+    await Promise.all([
+        loadDmMessages(dmGroupId),
+        loadDmDetails(receiverId)
+    ]);
+});
+
+async function loadDmMessages(dmGroupId) {
+    try {
+        const messageFeed = document.querySelector('.message-feed');
+        if (!messageFeed) return;
+
+        messageFeed.innerHTML = '';
+
+        const response = await fetch(`/api/messages/group/${encodeURIComponent(dmGroupId)}?limit=100`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            console.error('Failed to load DM messages');
+            return;
+        }
+
+        const payload = await response.json();
+        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+
+        messages.forEach((m) => {
+            displayMessage({
+                id: m.id,
+                text: m.content,
+                type: m.type,
+                timestamp: m.created_at,
+                author: m.sender_username || 'Unknown',
+                authorName: m.sender_username || 'Unknown',
+                avatar: m.sender_avatar_url || '/default-avatar.png',
+                senderId: m.sender_id
+            });
+        });
+    } catch (error) {
+        console.error('Error loading DM messages:', error);
+    }
+}
+
+async function loadDmDetails(dmGroupId) {
+    try {
+        const response = await fetch(`/api/groups/${encodeURIComponent(dmGroupId)}`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) return;
+
+        const payload = await response.json();
+        const members = payload?.group?.members || [];
+
+        // Find the other person (not the current user)
+        const other = members.find(m => m.id !== window.currentUser.id);
+        if (!other) return;
+
+        // Update chat header
+        const titleEl = document.querySelector('.chat-channel');
+        if (titleEl) {
+            titleEl.innerHTML = `
+                <img src="${escapeAttr(other.avatar_url || '/default-avatar.png')}"
+                     class="avatar avatar--small"
+                     alt="${escapeHtml(other.username)}"/>
+                ${escapeHtml(other.username)}
+            `;
+        }
+
+        // Update right panel
+        const introTitle = document.querySelector('.group-panel__intro h3');
+        const introText = document.querySelector('.group-panel__intro p');
+        if (introTitle) introTitle.textContent = other.username;
+        if (introText) introText.textContent = 'Direct message conversation.';
+
+        renderMemberList(members);
+        renderRepoList([]);  // DMs have no repos
+
+    } catch (error) {
+        console.error('Error loading DM details:', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-route]').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -169,6 +252,17 @@ async function fetchAndRenderSidebar() {
                 a.href = '#';
                 const avatar = `<div class="avatar avatar--small"><img src="${escapeAttr(c.avatar_url || '/default-avatar.png')}" alt="${escapeAttr(c.username)}"/></div>`;
                 a.innerHTML = `${avatar}<span>${escapeHtml(c.username)}</span>`;
+
+                a.dataset.userId = c.id; // add this
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelectorAll('#sidebar-contacts .sidebar-link')
+                        .forEach(link => link.classList.remove('active'));
+                    a.classList.add('active');
+                socket.emit('direct-connect', c.id);
+                console.log('Opening DM with:', c.username, '| ID:', c.id);
+                });
+
                 li.appendChild(a);
                 contactsList.appendChild(li);
             });
