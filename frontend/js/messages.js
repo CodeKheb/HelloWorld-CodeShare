@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMessagesView();
     initializeMessageComposer();
     initializeSidebar();
+    initializeCommitsModal();
 
     // Allow inline HTML script to refresh panel after attach-repo modal submit
     window.refreshCurrentGroupDetails = async () => {
@@ -478,3 +479,428 @@ function initializeSidebar() {
         });
     });
 }
+
+// Add after the initializeSidebar function
+
+let selectedCommits = new Set();
+
+function initializeCommitsModal() {
+    const summarizeBtn = document.querySelector('.primary-button.action-button');
+    const commitsOverlay = document.getElementById('commitsOverlay');
+    const closeBtn = document.getElementById('closeCommits');
+    const repoSelect = document.getElementById('commitRepoSelect');
+    const compareBtn = document.getElementById('compareCommitsBtn');
+
+    if (!summarizeBtn || !commitsOverlay) {
+        console.warn('Summarize button or commits overlay not found');
+        return;
+    }
+
+    // Open commits modal when Summarize is clicked
+    summarizeBtn.addEventListener('click', () => {
+        if (!window.currentGroupId) {
+            alert('Please select a group first');
+            return;
+        }
+        showCommitsModal();
+    });
+
+    // Close modal
+    closeBtn?.addEventListener('click', hideCommitsModal);
+    commitsOverlay?.addEventListener('click', (e) => {
+        if (e.target.id === 'commitsOverlay') hideCommitsModal();
+    });
+
+    // Repository selection
+    repoSelect?.addEventListener('change', async (e) => {
+        const repoFullName = e.target.value;
+        if (repoFullName) {
+            await loadCommits(repoFullName);
+        } else {
+            hideCommitsContainer();
+        }
+    });
+
+    // Compare commits button
+    compareBtn?.addEventListener('click', async () => {
+        const commits = Array.from(selectedCommits);
+        if (commits.length !== 2) {
+            alert('Please select exactly 2 commits to compare');
+            return;
+        }
+        await compareCommits(commits[0], commits[1]);
+    });
+}
+
+function showCommitsModal() {
+    const overlay = document.getElementById('commitsOverlay');
+    if (!overlay) return;
+
+    // Reset state
+    selectedCommits.clear();
+    document.getElementById('commitRepoSelect').value = '';
+    hideCommitsContainer();
+
+    // Load repositories for the current group
+    loadGroupRepositories();
+
+    const modal = overlay.querySelector('.modal');
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => {
+        overlay.classList.add('anim-open');
+        if (modal) modal.classList.add('open');
+    });
+}
+
+function hideCommitsModal() {
+    const overlay = document.getElementById('commitsOverlay');
+    if (!overlay) return;
+    const modal = overlay.querySelector('.modal');
+    if (modal) modal.classList.remove('open');
+    overlay.classList.remove('anim-open');
+    const onEnd = (e) => {
+        if (e.target !== overlay) return;
+        overlay.style.display = '';
+        overlay.classList.add('hidden');
+        overlay.removeEventListener('transitionend', onEnd);
+    };
+    overlay.addEventListener('transitionend', onEnd);
+}
+
+async function loadGroupRepositories() {
+    try {
+        const response = await fetch(`/api/groups/${encodeURIComponent(window.currentGroupId)}`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load group details');
+        }
+
+        const payload = await response.json();
+        const repos = Array.isArray(payload?.group?.repos) ? payload.group.repos : [];
+
+        const repoSelect = document.getElementById('commitRepoSelect');
+        if (!repoSelect) return;
+
+        // Clear and populate select
+        repoSelect.innerHTML = '<option value="">-- Select a repository --</option>';
+        
+        repos.forEach(repo => {
+            const option = document.createElement('option');
+            option.value = repo.repo_full_name;
+            option.textContent = repo.repo_full_name;
+            repoSelect.appendChild(option);
+        });
+
+        if (repos.length === 0) {
+            repoSelect.innerHTML = '<option value="">No repositories attached</option>';
+        }
+    } catch (error) {
+        console.error('Error loading repositories:', error);
+        showCommitsError('Failed to load repositories');
+    }
+}
+
+async function loadCommits(repoFullName) {
+    const [owner, repo] = repoFullName.split('/');
+    
+    if (!owner || !repo) {
+        showCommitsError('Invalid repository name');
+        return;
+    }
+
+    showCommitsLoading();
+    hideCommitsError();
+    selectedCommits.clear();
+
+    try {
+        const response = await fetch(`/api/repos/${owner}/${repo}/commits?per_page=20`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch commits');
+        }
+
+        const data = await response.json();
+        displayCommits(data.commits, repoFullName);
+    } catch (error) {
+        console.error('Error loading commits:', error);
+        showCommitsError(error.message);
+    } finally {
+        hideCommitsLoading();
+    }
+}
+
+function displayCommits(commits, repoFullName) {
+    const container = document.getElementById('commitsContainer');
+    const list = document.getElementById('commitsList');
+    const repoNameEl = document.getElementById('selectedRepoName');
+
+    if (!container || !list || !repoNameEl) return;
+
+    // Update header
+    repoNameEl.innerHTML = `<span class="material-symbols-outlined">folder</span>${escapeHtml(repoFullName)}`;
+
+    // Clear list
+    list.innerHTML = '';
+
+    if (!commits || commits.length === 0) {
+        list.innerHTML = '<div class="empty-state"><p>No commits found</p></div>';
+        container.classList.remove('hidden');
+        return;
+    }
+
+    // Render commits
+    commits.forEach(commit => {
+        const item = createCommitElement(commit, repoFullName);
+        list.appendChild(item);
+    });
+
+    container.classList.remove('hidden');
+    updateCompareButton();
+}
+
+function createCommitElement(commit, repoFullName) {
+    const div = document.createElement('div');
+    div.className = 'commit-item';
+    div.dataset.sha = commit.sha;
+    div.dataset.repo = repoFullName;
+
+    const shortSha = commit.sha.substring(0, 7);
+    const commitDate = new Date(commit.author.date);
+    const timeAgo = getTimeAgo(commitDate);
+
+    div.innerHTML = `
+        <div class="commit-checkbox">
+            <input type="checkbox" data-sha="${commit.sha}" aria-label="Select commit ${shortSha}">
+        </div>
+        <div class="commit-avatar">
+            <img src="${escapeAttr(commit.author.avatar_url || '/default-avatar.png')}" 
+                 alt="${escapeAttr(commit.author.name)}">
+        </div>
+        <div class="commit-content">
+            <p class="commit-message">${escapeHtml(commit.message.split('\n')[0])}</p>
+            <div class="commit-meta">
+                <span class="commit-author">${escapeHtml(commit.author.name)}</span>
+                <span class="commit-sha">${shortSha}</span>
+                <span class="commit-date">
+                    <span class="material-symbols-outlined" style="font-size: 1rem;">schedule</span>
+                    ${timeAgo}
+                </span>
+            </div>
+        </div>
+    `;
+
+    // Handle checkbox selection
+    const checkbox = div.querySelector('input[type="checkbox"]');
+    checkbox.addEventListener('change', (e) => {
+        const sha = e.target.dataset.sha;
+        
+        if (e.target.checked) {
+            if (selectedCommits.size >= 2) {
+                e.target.checked = false;
+                alert('You can only select 2 commits to compare');
+                return;
+            }
+            selectedCommits.add(sha);
+            div.classList.add('selected');
+        } else {
+            selectedCommits.delete(sha);
+            div.classList.remove('selected');
+        }
+        
+        updateCompareButton();
+    });
+
+    return div;
+}
+
+function updateCompareButton() {
+    const compareBtn = document.getElementById('compareCommitsBtn');
+    if (!compareBtn) return;
+
+    if (selectedCommits.size === 2) {
+        compareBtn.disabled = false;
+        compareBtn.textContent = 'Compare Selected';
+    } else {
+        compareBtn.disabled = true;
+        compareBtn.textContent = `Compare Selected (${selectedCommits.size}/2)`;
+    }
+}
+
+async function compareCommits(sha1, sha2) {
+    const repoFullName = document.getElementById('commitRepoSelect').value;
+    const [owner, repo] = repoFullName.split('/');
+
+    if (!owner || !repo) return;
+
+    try {
+        // Fetch both commits
+        const [commit1Response, commit2Response] = await Promise.all([
+            fetch(`/api/repos/${owner}/${repo}/commits/${sha1}`, { credentials: 'include' }),
+            fetch(`/api/repos/${owner}/${repo}/commits/${sha2}`, { credentials: 'include' })
+        ]);
+
+        if (!commit1Response.ok || !commit2Response.ok) {
+            throw new Error('Failed to fetch commit details');
+        }
+
+        const commit1 = await commit1Response.json();
+        const commit2 = await commit2Response.json();
+
+        // Display diff in message feed
+        displayCommitDiff(commit1, commit2, repoFullName);
+
+        // Close modal
+        hideCommitsModal();
+    } catch (error) {
+        console.error('Error comparing commits:', error);
+        alert('Failed to compare commits: ' + error.message);
+    }
+}
+
+function displayCommitDiff(commit1, commit2, repoFullName) {
+    const messageFeed = document.querySelector('.message-feed');
+    if (!messageFeed) return;
+
+    const diffElement = document.createElement('article');
+    diffElement.className = 'message message--diff';
+
+    const shortSha1 = commit1.sha.substring(0, 7);
+    const shortSha2 = commit2.sha.substring(0, 7);
+
+    // Calculate total stats
+    const totalAdditions = commit1.stats.additions + commit2.stats.additions;
+    const totalDeletions = commit1.stats.deletions + commit2.stats.deletions;
+
+    // Get unique files from both commits
+    const filesMap = new Map();
+    
+    commit1.files.forEach(file => {
+        filesMap.set(file.filename, { ...file, commit: 1 });
+    });
+    
+    commit2.files.forEach(file => {
+        if (filesMap.has(file.filename)) {
+            const existing = filesMap.get(file.filename);
+            filesMap.set(file.filename, {
+                ...file,
+                commit: 'both',
+                patch: `${existing.patch || ''}\n\n${file.patch || ''}`
+            });
+        } else {
+            filesMap.set(file.filename, { ...file, commit: 2 });
+        }
+    });
+
+    const filesHtml = Array.from(filesMap.values()).map(file => `
+        <div class="diff-file">
+            <div class="diff-file-header">
+                ${escapeHtml(file.filename)}
+                <span style="margin-left: 1rem; color: #8b949e;">
+                    ${file.status} 
+                    (+${file.additions} -${file.deletions})
+                </span>
+            </div>
+            <div class="diff-file-content">
+                ${formatPatch(file.patch)}
+            </div>
+        </div>
+    `).join('');
+
+    diffElement.innerHTML = `
+        <div class="diff-header">
+            <div class="diff-title">
+                <span class="material-symbols-outlined" style="vertical-align: middle;">compare_arrows</span>
+                Comparing commits in ${escapeHtml(repoFullName)}
+                <br>
+                <small style="color: #8b949e; font-weight: 400;">
+                    ${shortSha1} (${escapeHtml(commit1.message.split('\n')[0])}) 
+                    ↔ 
+                    ${shortSha2} (${escapeHtml(commit2.message.split('\n')[0])})
+                </small>
+            </div>
+            <div class="diff-stats">
+                <span class="diff-stat diff-stat--additions">
+                    +${totalAdditions}
+                </span>
+                <span class="diff-stat diff-stat--deletions">
+                    -${totalDeletions}
+                </span>
+            </div>
+        </div>
+        <div class="diff-files">
+            ${filesHtml}
+        </div>
+    `;
+
+    messageFeed.appendChild(diffElement);
+    messageFeed.scrollTop = messageFeed.scrollHeight;
+}
+
+function formatPatch(patch) {
+    if (!patch) return '<div class="diff-line diff-line--context">No changes</div>';
+    
+    return patch.split('\n').map(line => {
+        if (line.startsWith('+')) {
+            return `<div class="diff-line diff-line--addition">${escapeHtml(line)}</div>`;
+        } else if (line.startsWith('-')) {
+            return `<div class="diff-line diff-line--deletion">${escapeHtml(line)}</div>`;
+        } else {
+            return `<div class="diff-line diff-line--context">${escapeHtml(line)}</div>`;
+        }
+    }).join('');
+}
+
+function showCommitsLoading() {
+    document.getElementById('commitsLoading')?.classList.remove('hidden');
+    document.getElementById('commitsContainer')?.classList.add('hidden');
+}
+
+function hideCommitsLoading() {
+    document.getElementById('commitsLoading')?.classList.add('hidden');
+}
+
+function showCommitsError(message) {
+    const errorEl = document.getElementById('commitsError');
+    const errorText = document.getElementById('commitsErrorText');
+    if (errorEl && errorText) {
+        errorText.textContent = message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+function hideCommitsError() {
+    document.getElementById('commitsError')?.classList.add('hidden');
+}
+
+function hideCommitsContainer() {
+    document.getElementById('commitsContainer')?.classList.add('hidden');
+}
+
+function getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    const intervals = {
+        year: 31536000,
+        month: 2592000,
+        week: 604800,
+        day: 86400,
+        hour: 3600,
+        minute: 60
+    };
+    
+    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+        const interval = Math.floor(seconds / secondsInUnit);
+        if (interval >= 1) {
+            return `${interval} ${unit}${interval !== 1 ? 's' : ''} ago`;
+        }
+    }
+    
+    return 'just now';
+}
+
