@@ -351,6 +351,7 @@ a {
 
 .group-card:hover {
 	border-color: #8b949e;
+	cursor: pointer;
 	transform: translateY(-1px);
 }
 

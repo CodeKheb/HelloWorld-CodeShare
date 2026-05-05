@@ -9,6 +9,11 @@ socket.on("connect", () => {
     socket.emit("client_ID", socket.id);
 });
 
+// Respect ?groupId=... in the URL so clicking a group card opens the correct conversation
+const _urlParams = new URLSearchParams(window.location.search);
+window.requestedGroupId = _urlParams.get('groupId');
+window.requestedGroupName = _urlParams.get('groupName');
+
 // group messages 
 socket.on("server-group-text", (message) => {
     console.log("Received group message:", message);
@@ -84,7 +89,7 @@ async function fetchAndRenderSidebar() {
         const payload = await res.json();
         const groups = (payload && payload.groups) || [];
 
-        // Render up to 4 groups
+        // Render up to 4 groups in the sidebar (visual only)
         const groupsList = document.getElementById('sidebar-groups');
         if (groupsList) {
             groupsList.innerHTML = '';
@@ -103,15 +108,41 @@ async function fetchAndRenderSidebar() {
                 });
                 li.appendChild(a);
                 groupsList.appendChild(li);
-                // Auto-select the first group if none selected yet
-                if (idx === 0 && !window.currentGroupId) {
-                  // Pre-fill header from fetched list to avoid temporary empty state
-                  updateGroupHeaderFromMembers(g);
-                  selectGroup(g);
-                }
             });
             if (groups.length === 0) {
                 groupsList.innerHTML = '<li class="muted" style="padding:8px 12px;color:#8b949e">No groups yet</li>';
+            }
+        }
+
+        // If a specific group was requested via URL, try to select it from the full groups array.
+        if (window.requestedGroupId) {
+            const target = groups.find(g => String(g.id) === String(window.requestedGroupId));
+            if (target) {
+                updateGroupHeaderFromMembers(target);
+                selectGroup(target);
+                window.requestedGroupId = null;
+            } else {
+                // As a fallback, try fetching the group directly from the API
+                try {
+                    const singleRes = await fetch(`/api/groups/${encodeURIComponent(window.requestedGroupId)}`, { credentials: 'include' });
+                    if (singleRes.ok) {
+                        const payload = await singleRes.json();
+                        if (payload && payload.group) {
+                            updateGroupHeaderFromMembers(payload.group);
+                            selectGroup(payload.group);
+                            window.requestedGroupId = null;
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Requested group not found in list and failed to fetch directly:', err);
+                }
+            }
+        } else {
+            // If no specific group requested, auto-select the first group if none selected yet
+            if (!window.currentGroupId && groups.length > 0) {
+                const first = groups[0];
+                updateGroupHeaderFromMembers(first);
+                selectGroup(first);
             }
         }
 
@@ -279,7 +310,7 @@ function renderRepoList(repos) {
                     <span class="material-symbols-outlined" aria-hidden="true">folder</span>
                     <span>${escapeHtml(repo.repo_full_name)}</span>
                 </div>
-                <div class="repo-card__meta">Added ${escapeHtml(addedAt)}</div>
+                <div class="repo-card__meta">Added on ${escapeHtml(addedAt)}</div>
             </div>
             <div class="repo-card__actions">
                 <button class="repo-card__download" aria-label="Download repository" title="Download as ZIP">
