@@ -85,8 +85,8 @@
                                 <span class="mobile-hide">Attach Repo</span>
                             </button>
                             <button class="primary-button action-button" type="button">
-                                <span class="material-symbols-outlined icon-filled" aria-hidden="true">auto_awesome</span>
-                                <span class="mobile-hide">Summarize</span>
+                                <span class="material-symbols-outlined icon-filled" aria-hidden="true">compare_arrows</span>
+                                <span class="mobile-hide">Compare</span>
                             </button>                        
                         </div>
                     </header>
@@ -109,7 +109,6 @@
                     </footer>
                 </main>
 
-                <div class="resize-handle" aria-hidden="true"></div>
 
                 <aside class="group-panel" aria-label="Group information">
                     <section class="group-panel__intro">
@@ -160,6 +159,7 @@
                         </section>
 
                         <section class="panel-section">
+                            <div class="resize-handle" aria-hidden="true"></div>
                             <h4>Attached Repos</h4>
                             <div id="group-repo-list" class="repo-list">
                                 <article class="repo-card">
@@ -533,7 +533,7 @@
                 document.addEventListener('mousemove', (e) => {
                     if (!isResizing) return;
                     const delta = e.clientX - startX;
-                    let newWidth = startWidth + delta;
+                    let newWidth = startWidth - delta;
                     if (newWidth < 250) newWidth = 250;
                     if (newWidth > 600) newWidth = 600;
                     panel.style.setProperty('--panel-width', `${newWidth}px`);
