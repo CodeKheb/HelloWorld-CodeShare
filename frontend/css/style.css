@@ -405,7 +405,7 @@ a {
 }
 
 .group-icon {
-	color: var(--brand);
+	color: var(--muted);
 	font-size: 20px;
 	flex-shrink: 0;
 	margin-top: 2px;
