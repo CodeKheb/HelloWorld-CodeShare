@@ -129,4 +129,39 @@ authRouter.get("/repos", async (req, res) => {
     }
 });
 
+//TODO: Frontend redirect to login page after fetching /logout
+authRouter.post('/logout', async (req, res, next) => {
+    const accessToken = req.user?.access_token;
+
+    // Revoke GitHub OAuth token before destroying session
+    if (accessToken) {
+        try {
+            await fetch(`https://api.github.com/applications/${process.env.GITHUB_CLIENT_ID}/token`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Basic ${Buffer.from(`${process.env.GITHUB_CLIENT_ID}:${process.env.GITHUB_CLIENT_SECRET}`).toString('base64')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ access_token: accessToken })
+            });
+        } catch (err) {
+            // Non-fatal — proceed with local logout even if revocation fails
+            console.error('GitHub token revocation failed:', err);
+        }
+    }
+
+    req.logout((err) => {
+        if (err) { return next(err); }
+
+        req.session.destroy((err) => {
+            if (err) {
+                return res.status(500).json({ message: "Could not log out" });
+            }
+
+            res.clearCookie('connect.sid');
+            res.status(200).json({ message: "Logged out successfully" });
+        });
+    });
+});
+
 export default authRouter;
