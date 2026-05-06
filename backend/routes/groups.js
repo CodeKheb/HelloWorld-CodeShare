@@ -196,6 +196,7 @@ groupsRouter.get("/", async (req, res) => {
                     gc.created_at,
                     gc.last_summarized_at,
                     gc.invite_code,
+                    gc.is_direct,
                     COUNT(gm.user_id) AS member_count,
                     COALESCE(json_agg(json_build_object('id', u.id, 'username', u.username, 'avatar_url', u.avatar_url) ORDER BY gm.joined_at) FILTER (WHERE u.id IS NOT NULL), '[]') AS members
              FROM group_chats gc

@@ -33,9 +33,11 @@ socket.on("server-error", (error) => {
 });
 
 socket.on("dm-ready", async ({ dmGroupId, receiverId }) => {
+    window.currentGroupId = dmGroupId;
+    window.currentIsDm = true;
     await Promise.all([
         loadDmMessages(dmGroupId),
-        loadDmDetails(receiverId)
+        loadDmDetails(dmGroupId)
     ]);
 });
 
@@ -90,28 +92,22 @@ async function loadDmDetails(dmGroupId) {
         const other = members.find(m => m.id !== window.currentUser.id);
         if (!other) return;
 
-        // Update chat header
-        const titleEl = document.querySelector('.chat-channel');
-        if (titleEl) {
-            titleEl.innerHTML = `
-                <img src="${escapeAttr(other.avatar_url || '/default-avatar.png')}"
-                     class="avatar avatar--small"
-                     alt="${escapeHtml(other.username)}"/>
-                ${escapeHtml(other.username)}
-            `;
-        }
-
-        // Update right panel
-        const introTitle = document.querySelector('.group-panel__intro h3');
-        const introText = document.querySelector('.group-panel__intro p');
-        if (introTitle) introTitle.textContent = other.username;
-        if (introText) introText.textContent = 'Direct message conversation.';
-
-        renderMemberList(members);
-        renderRepoList([]);  // DMs have no repos
+        updateDmHeader(other);
+        updateDmPanel(other);
 
     } catch (error) {
         console.error('Error loading DM details:', error);
+    }
+}
+
+// Collapse sidebar on mobile
+function collapseSidebarOnMobile() {
+    if (window.innerWidth <= 768) {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        if (sidebar) sidebar.classList.remove('active');
+        if (overlay) overlay.classList.remove('active');
+        document.body.style.overflow = '';
     }
 }
 
@@ -141,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initializeMessagesView() {
     try {
         const userRes = await fetch('/api/user', {
-            credentials: 'include' // Important for sending cookies
+            credentials: 'include'
         });
         const userData = await userRes.json();
 
@@ -170,13 +166,19 @@ async function fetchAndRenderSidebar() {
         const res = await fetch('/api/groups', { credentials: 'include' });
         if (!res.ok) return console.error('Failed to load groups for sidebar');
         const payload = await res.json();
-        const groups = (payload && payload.groups) || [];
+        const allGroups = (payload && payload.groups) || [];
 
-        // Render up to 4 groups in the sidebar (visual only)
+        // Separate DM groups from regular groups.
+        // convention like "dm-<uuid>" if the server doesn't provide the flag.
+        // Adjust the condition below to match whatever your server sends.
+        const groups = allGroups.filter(g => !g.is_direct);
+        const dmGroups = allGroups.filter(g => g.is_direct);
+
+        // ── Render regular groups in sidebar ────────────────────────────
         const groupsList = document.getElementById('sidebar-groups');
         if (groupsList) {
             groupsList.innerHTML = '';
-            groups.slice(0,4).forEach((g, idx) => {
+            groups.slice(0, 4).forEach((g) => {
                 const li = document.createElement('li');
                 const a = document.createElement('a');
                 a.className = 'sidebar-link';
@@ -185,9 +187,11 @@ async function fetchAndRenderSidebar() {
                 a.innerHTML = `<span class="material-symbols-outlined">tag</span><span>${escapeHtml(g.name)}</span>`;
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
-                    // Update header quickly from the list data (if available)
+                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+                    a.classList.add('active');
                     updateGroupHeaderFromMembers(g);
                     selectGroup(g);
+                    collapseSidebarOnMobile();
                 });
                 li.appendChild(a);
                 groupsList.appendChild(li);
@@ -197,31 +201,30 @@ async function fetchAndRenderSidebar() {
             }
         }
 
-        // If a specific group was requested via URL, try to select it from the full groups array.
+        // ── Handle URL-requested group ───────────────────────────────────
         if (window.requestedGroupId) {
-            const target = groups.find(g => String(g.id) === String(window.requestedGroupId));
+            const target = allGroups.find(g => String(g.id) === String(window.requestedGroupId));
             if (target) {
                 updateGroupHeaderFromMembers(target);
                 selectGroup(target);
                 window.requestedGroupId = null;
             } else {
-                // As a fallback, try fetching the group directly from the API
                 try {
                     const singleRes = await fetch(`/api/groups/${encodeURIComponent(window.requestedGroupId)}`, { credentials: 'include' });
                     if (singleRes.ok) {
-                        const payload = await singleRes.json();
-                        if (payload && payload.group) {
-                            updateGroupHeaderFromMembers(payload.group);
-                            selectGroup(payload.group);
+                        const p = await singleRes.json();
+                        if (p && p.group) {
+                            updateGroupHeaderFromMembers(p.group);
+                            selectGroup(p.group);
                             window.requestedGroupId = null;
                         }
                     }
                 } catch (err) {
-                    console.warn('Requested group not found in list and failed to fetch directly:', err);
+                    console.warn('Requested group not found:', err);
                 }
             }
         } else {
-            // If no specific group requested, auto-select the first group if none selected yet
+            // Auto-select first regular group if none selected
             if (!window.currentGroupId && groups.length > 0) {
                 const first = groups[0];
                 updateGroupHeaderFromMembers(first);
@@ -229,19 +232,34 @@ async function fetchAndRenderSidebar() {
             }
         }
 
-        // Build contacts by aggregating members across groups, dedupe by id
+        // ── Build contacts list ──────────────────────────────────────────
+        // Aggregate contacts from regular group members
         const contactsMap = new Map();
         groups.forEach(g => {
             if (Array.isArray(g.members)) {
                 g.members.forEach(m => {
                     if (!m || !m.id) return;
-                    if (m.id === window.currentUser.id) return; // skip self
+                    if (m.id === window.currentUser.id) return;
                     if (!contactsMap.has(m.id)) contactsMap.set(m.id, m);
                 });
             }
         });
 
-        const contacts = Array.from(contactsMap.values()).slice(0,4);
+        // Also surface the other participant from any existing DM groups
+        dmGroups.forEach(g => {
+            if (Array.isArray(g.members)) {
+                g.members.forEach(m => {
+                    if (!m || !m.id) return;
+                    if (m.id === window.currentUser.id) return;
+                    if (!contactsMap.has(m.id)) {
+                        // Attach the dmGroupId so we can open the conversation directly
+                        contactsMap.set(m.id, { ...m, existingDmGroupId: g.id });
+                    }
+                });
+            }
+        });
+
+        const contacts = Array.from(contactsMap.values()).slice(0, 4);
         const contactsList = document.getElementById('sidebar-contacts');
         if (contactsList) {
             contactsList.innerHTML = '';
@@ -252,35 +270,84 @@ async function fetchAndRenderSidebar() {
                 a.href = '#';
                 const avatar = `<div class="avatar avatar--small"><img src="${escapeAttr(c.avatar_url || '/default-avatar.png')}" alt="${escapeAttr(c.username)}"/></div>`;
                 a.innerHTML = `${avatar}<span>${escapeHtml(c.username)}</span>`;
+                a.dataset.userId = c.id;
 
-                a.dataset.userId = c.id; // add this
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
-                    document.querySelectorAll('#sidebar-contacts .sidebar-link')
-                        .forEach(link => link.classList.remove('active'));
+                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
                     a.classList.add('active');
-                socket.emit('direct-connect', c.id);
-                console.log('Opening DM with:', c.username, '| ID:', c.id);
+                    window.currentIsDm = true;
+
+                    if (c.existingDmGroupId) {
+                        // We already know the DM group — open it directly without re-emitting
+                        window.currentGroupId = c.existingDmGroupId;
+                        loadDmMessages(c.existingDmGroupId);
+                        // Update header to show the contact
+                        updateDmHeader(c);
+                        updateDmPanel(c);
+                    } else {
+                        // Let the server create / resolve the DM group
+                        socket.emit('direct-connect', c.id);
+                    }
+
+                    console.log('Opening DM with:', c.username, '| ID:', c.id);
+                    collapseSidebarOnMobile();
                 });
 
                 li.appendChild(a);
                 contactsList.appendChild(li);
             });
-            if (contacts.length === 0) contactsList.innerHTML = '<li class="muted" style="padding:8px 12px;color:#8b949e">No contacts yet</li>';
+            if (contacts.length === 0) {
+                contactsList.innerHTML = '<li class="muted" style="padding:8px 12px;color:#8b949e">No contacts yet</li>';
+            }
         }
     } catch (err) {
         console.error('Error populating sidebar:', err);
     }
 }
 
+// Update header to show a DM contact's avatar and name
+function updateDmHeader(contact) {
+    const titleEl = document.querySelector('.chat-channel');
+    if (titleEl) {
+        titleEl.innerHTML = `
+            <img src="${escapeAttr(contact.avatar_url || '/default-avatar.png')}"
+                 class="avatar avatar--small"
+                 alt="${escapeHtml(contact.username)}"/>
+            ${escapeHtml(contact.username)}
+        `;
+    }
+    // Hide member count / avatar stack for DMs
+    const stack = document.querySelector('.avatar-stack');
+    const count = document.querySelector('.member-count');
+    if (stack) stack.style.display = 'none';
+    if (count) count.style.display = 'none';
+}
+
+// Update right panel to show DM info
+function updateDmPanel(contact) {
+    const introTitle = document.querySelector('.group-panel__intro h3');
+    const introText = document.querySelector('.group-panel__intro p');
+    if (introTitle) introTitle.textContent = contact.username;
+    if (introText) introText.textContent = 'Direct message conversation.';
+    renderMemberList([contact, window.currentUser].filter(Boolean));
+    renderRepoList([]);
+}
+
 // Update the header avatar stack and member count using available group data
 function updateGroupHeaderFromMembers(group) {
     if (!group) return;
-    const members = Array.isArray(group.members) ? group.members : [];
+
+    // Restore avatar stack / member count visibility in case they were hidden for a DM
     const stack = document.querySelector('.avatar-stack');
+    const countEl = document.querySelector('.member-count');
+    if (stack) stack.style.display = '';
+    if (countEl) countEl.style.display = '';
+
+    const members = Array.isArray(group.members) ? group.members : [];
     if (stack) {
         stack.innerHTML = '';
-        const show = members.slice(0,3);
+        const show = members.slice(0, 3);
         show.forEach(m => {
             const img = document.createElement('img');
             img.className = 'avatar avatar--stacked';
@@ -295,7 +362,6 @@ function updateGroupHeaderFromMembers(group) {
             stack.appendChild(more);
         }
     }
-    const countEl = document.querySelector('.member-count');
     if (countEl) {
         const count = members.length || (group.member_count ? Number(group.member_count) : 0);
         countEl.textContent = `${count} members`;
@@ -304,17 +370,24 @@ function updateGroupHeaderFromMembers(group) {
 
 async function selectGroup(group) {
     if (!group) return;
+    window.currentIsDm = false;
     // Leave previous group if set
     if (window.currentInviteCode) socket.emit('leave-group', window.currentInviteCode);
     window.currentGroupId = group.id;
     window.currentInviteCode = group.invite_code;
-    // Update header UI
+
+    // Restore channel icon for regular groups
     const titleEl = document.querySelector('.chat-channel');
     if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> ${escapeHtml(group.name)}`;
-    // Emit join
+
+    // Restore avatar stack / member count
+    const stack = document.querySelector('.avatar-stack');
+    const count = document.querySelector('.member-count');
+    if (stack) stack.style.display = '';
+    if (count) count.style.display = '';
+
     socket.emit('join-group', group.id);
 
-    // Load persisted history for this group
     await Promise.all([
         loadGroupMessages(group.id),
         loadGroupDetails(group.id)
@@ -339,7 +412,6 @@ async function loadGroupDetails(groupId) {
         const members = Array.isArray(group.members) ? group.members : [];
         const repos = Array.isArray(group.repos) ? group.repos : [];
 
-        // Keep header in sync with full group details
         updateGroupHeaderFromMembers({ ...group, members });
 
         const introTitle = document.querySelector('.group-panel__intro h3');
@@ -427,8 +499,6 @@ function renderRepoList(repos) {
     });
 }
 
-
-// small helpers for escaping attributes
 function escapeAttr(s) {
     if (!s) return '';
     return String(s).replace(/"/g, '&quot;');
@@ -467,13 +537,11 @@ function initializeMessageComposer() {
             return;
         }
 
-        // Send to active group. The server persists and broadcasts the saved message.
         socket.emit("client-message", {
             text: text.trim(),
             groupId: window.currentGroupId
         });
 
-        // Clear input
         messageInput.value = '';
         messageInput.style.height = 'auto';
     }
@@ -514,7 +582,6 @@ async function loadGroupMessages(groupId) {
         console.error('Error loading persisted messages:', error);
     }
 }
-
 
 function displayMessage(messageData) {
     const messageFeed = document.querySelector('.message-feed');
@@ -558,11 +625,8 @@ function displayMessage(messageData) {
     }
 
     messageFeed.appendChild(messageElement);
-
-    // Scroll to bottom
     messageFeed.scrollTop = messageFeed.scrollHeight;
 }
-
 
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -570,13 +634,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function getReceiverSocketId() {
-    // TODO: receiver socket ID 
-    return null;
-}
-
 function initializeResizablePanel() {
-    // Intentionally left empty; resizing is handled in-page (messages.html) to keep behavior local to the document.
+    // Intentionally left empty; resizing is handled in-page (messages.html).
 }
 
 function initializeSidebar() {
@@ -610,6 +669,7 @@ function initializeSidebar() {
 
     overlay.addEventListener('click', closeSidebar);
 
+    // Sidebar links that are rendered server-side (static nav items)
     sidebar.querySelectorAll('.sidebar-link').forEach(link => {
         link.addEventListener('click', () => {
             if (window.innerWidth <= 768) closeSidebar();
@@ -617,7 +677,7 @@ function initializeSidebar() {
     });
 }
 
-// Add after the initializeSidebar function
+// ── Commits Modal ────────────────────────────────────────────────────────────
 
 let selectedCommits = new Set();
 
@@ -633,7 +693,6 @@ function initializeCommitsModal() {
         return;
     }
 
-    // Open commits modal when Summarize is clicked
     summarizeBtn.addEventListener('click', () => {
         if (!window.currentGroupId) {
             alert('Please select a group first');
@@ -642,13 +701,11 @@ function initializeCommitsModal() {
         showCommitsModal();
     });
 
-    // Close modal
     closeBtn?.addEventListener('click', hideCommitsModal);
     commitsOverlay?.addEventListener('click', (e) => {
         if (e.target.id === 'commitsOverlay') hideCommitsModal();
     });
 
-    // Repository selection
     repoSelect?.addEventListener('change', async (e) => {
         const repoFullName = e.target.value;
         if (repoFullName) {
@@ -658,7 +715,6 @@ function initializeCommitsModal() {
         }
     });
 
-    // Compare commits button
     compareBtn?.addEventListener('click', async () => {
         const commits = Array.from(selectedCommits);
         if (commits.length !== 2) {
@@ -673,12 +729,9 @@ function showCommitsModal() {
     const overlay = document.getElementById('commitsOverlay');
     if (!overlay) return;
 
-    // Reset state
     selectedCommits.clear();
     document.getElementById('commitRepoSelect').value = '';
     hideCommitsContainer();
-
-    // Load repositories for the current group
     loadGroupRepositories();
 
     const modal = overlay.querySelector('.modal');
@@ -711,9 +764,7 @@ async function loadGroupRepositories() {
             credentials: 'include'
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to load group details');
-        }
+        if (!response.ok) throw new Error('Failed to load group details');
 
         const payload = await response.json();
         const repos = Array.isArray(payload?.group?.repos) ? payload.group.repos : [];
@@ -721,9 +772,7 @@ async function loadGroupRepositories() {
         const repoSelect = document.getElementById('commitRepoSelect');
         if (!repoSelect) return;
 
-        // Clear and populate select
         repoSelect.innerHTML = '<option value="">-- Select a repository --</option>';
-        
         repos.forEach(repo => {
             const option = document.createElement('option');
             option.value = repo.repo_full_name;
@@ -742,7 +791,6 @@ async function loadGroupRepositories() {
 
 async function loadCommits(repoFullName) {
     const [owner, repo] = repoFullName.split('/');
-    
     if (!owner || !repo) {
         showCommitsError('Invalid repository name');
         return;
@@ -779,10 +827,7 @@ function displayCommits(commits, repoFullName) {
 
     if (!container || !list || !repoNameEl) return;
 
-    // Update header
     repoNameEl.innerHTML = `<span class="material-symbols-outlined">folder</span>${escapeHtml(repoFullName)}`;
-
-    // Clear list
     list.innerHTML = '';
 
     if (!commits || commits.length === 0) {
@@ -791,7 +836,6 @@ function displayCommits(commits, repoFullName) {
         return;
     }
 
-    // Render commits
     commits.forEach(commit => {
         const item = createCommitElement(commit, repoFullName);
         list.appendChild(item);
@@ -832,11 +876,9 @@ function createCommitElement(commit, repoFullName) {
         </div>
     `;
 
-    // Handle checkbox selection
     const checkbox = div.querySelector('input[type="checkbox"]');
     checkbox.addEventListener('change', (e) => {
         const sha = e.target.dataset.sha;
-        
         if (e.target.checked) {
             if (selectedCommits.size >= 2) {
                 e.target.checked = false;
@@ -849,7 +891,6 @@ function createCommitElement(commit, repoFullName) {
             selectedCommits.delete(sha);
             div.classList.remove('selected');
         }
-        
         updateCompareButton();
     });
 
@@ -872,11 +913,9 @@ function updateCompareButton() {
 async function compareCommits(sha1, sha2) {
     const repoFullName = document.getElementById('commitRepoSelect').value;
     const [owner, repo] = repoFullName.split('/');
-
     if (!owner || !repo) return;
 
     try {
-        // Fetch both commits
         const [commit1Response, commit2Response] = await Promise.all([
             fetch(`/api/repos/${owner}/${repo}/commits/${sha1}`, { credentials: 'include' }),
             fetch(`/api/repos/${owner}/${repo}/commits/${sha2}`, { credentials: 'include' })
@@ -889,10 +928,7 @@ async function compareCommits(sha1, sha2) {
         const commit1 = await commit1Response.json();
         const commit2 = await commit2Response.json();
 
-        // Display diff in message feed
         displayCommitDiff(commit1, commit2, repoFullName);
-
-        // Close modal
         hideCommitsModal();
     } catch (error) {
         console.error('Error comparing commits:', error);
@@ -910,17 +946,13 @@ function displayCommitDiff(commit1, commit2, repoFullName) {
     const shortSha1 = commit1.sha.substring(0, 7);
     const shortSha2 = commit2.sha.substring(0, 7);
 
-    // Calculate total stats
     const totalAdditions = commit1.stats.additions + commit2.stats.additions;
     const totalDeletions = commit1.stats.deletions + commit2.stats.deletions;
 
-    // Get unique files from both commits
     const filesMap = new Map();
-    
     commit1.files.forEach(file => {
         filesMap.set(file.filename, { ...file, commit: 1 });
     });
-    
     commit2.files.forEach(file => {
         if (filesMap.has(file.filename)) {
             const existing = filesMap.get(file.filename);
@@ -962,17 +994,11 @@ function displayCommitDiff(commit1, commit2, repoFullName) {
                 </small>
             </div>
             <div class="diff-stats">
-                <span class="diff-stat diff-stat--additions">
-                    +${totalAdditions}
-                </span>
-                <span class="diff-stat diff-stat--deletions">
-                    -${totalDeletions}
-                </span>
+                <span class="diff-stat diff-stat--additions">+${totalAdditions}</span>
+                <span class="diff-stat diff-stat--deletions">-${totalDeletions}</span>
             </div>
         </div>
-        <div class="diff-files">
-            ${filesHtml}
-        </div>
+        <div class="diff-files">${filesHtml}</div>
     `;
 
     messageFeed.appendChild(diffElement);
@@ -981,7 +1007,6 @@ function displayCommitDiff(commit1, commit2, repoFullName) {
 
 function formatPatch(patch) {
     if (!patch) return '<div class="diff-line diff-line--context">No changes</div>';
-    
     return patch.split('\n').map(line => {
         if (line.startsWith('+')) {
             return `<div class="diff-line diff-line--addition">${escapeHtml(line)}</div>`;
@@ -1021,7 +1046,6 @@ function hideCommitsContainer() {
 
 function getTimeAgo(date) {
     const seconds = Math.floor((new Date() - date) / 1000);
-    
     const intervals = {
         year: 31536000,
         month: 2592000,
@@ -1030,14 +1054,11 @@ function getTimeAgo(date) {
         hour: 3600,
         minute: 60
     };
-    
     for (const [unit, secondsInUnit] of Object.entries(intervals)) {
         const interval = Math.floor(seconds / secondsInUnit);
         if (interval >= 1) {
             return `${interval} ${unit}${interval !== 1 ? 's' : ''} ago`;
         }
     }
-    
     return 'just now';
 }
-
