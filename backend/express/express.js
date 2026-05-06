@@ -106,23 +106,8 @@ app.get('/', (req, res) => {
                 return res.sendFile(path.join(frontendPath, 'index.html'));
         }
 
-        // Return a guaranteed 200 response for first-time visitors and health checks.
-        return res.status(200).type('html').send(`
-                <!doctype html>
-                <html lang="en">
-                    <head>
-                        <meta charset="utf-8" />
-                        <meta name="viewport" content="width=device-width, initial-scale=1" />
-                        <title>HelloWorld CodeShare</title>
-                    </head>
-                    <body>
-                        <main>
-                            <h1>HelloWorld CodeShare</h1>
-                            <p>The app is running. Please <a href="/login">sign in with GitHub</a>.</p>
-                        </main>
-                    </body>
-                </html>
-        `);
+        // Public visitors see the styled login page.
+        return res.sendFile(path.join(frontendPath, 'login.html'));
 });
 
 app.get('/login', (req, res) => {
