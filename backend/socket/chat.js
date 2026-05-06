@@ -51,7 +51,8 @@ export default function chatHandler(socket) {
                     timestamp: saved.created_at,
                     author: authUser.username,
                     authorName: authUser.username,
-                    avatar: authUser.avatar_url
+                    avatar: authUser.avatar_url,
+                    DmId: dmGroupId
                 };
 
                 io.to(dmRoom).emit("server-direct-text", outbound);

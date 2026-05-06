@@ -79,6 +79,8 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (res.ok) {
+                    clearKeyCache();
+                    roomSecrets.clear()
                     window.location.href = '/login';
                 } else {
                     const data = await res.json();
