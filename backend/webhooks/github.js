@@ -103,14 +103,25 @@ export async function saveSystemMessages(repoFullName, content, metadata = {}) {
 
       const latestUserMessage = userMessageCheck.rows[0]?.latest_message;
       if (!latestUserMessage) {
-        // No user messages yet, don't insert system message. Still mark as processed to avoid later insertion.
-        console.log(`[WEBHOOK] Group ${repo.group_id} has no user messages yet, skipping system message but marking processed`);
+        // No user messages yet, don't insert system message. Still mark as processed and
+        // store webhook payload so dashboards and other tooling can read raw event data.
+        console.log(`[WEBHOOK] Group ${repo.group_id} has no user messages yet, skipping system message but recording payload and marking processed`);
+
+        // Insert webhook_events record (message_id NULL) so raw payload is preserved
+        await client.query(
+          `INSERT INTO webhook_events (message_id, group_id, repo_full_name, webhook_id, github_event, delivery_id, payload)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [null, repo.group_id, repoFullName, repo.webhook_id, metadata.event || null, metadata.deliveryId || null, metadata.payload || null]
+        );
+
+        // Record processed_events so polling won't re-insert later
         await client.query(
           `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
            VALUES ($1, $2, $3, $4)
            ON CONFLICT (github_event_id, group_id) DO NOTHING`,
           [metadata.deliveryId ? `webhook_${metadata.deliveryId}` : `webhook_${Date.now()}`, metadata.event || null, repo.group_id, repoFullName]
         );
+
         continue;
       }
 

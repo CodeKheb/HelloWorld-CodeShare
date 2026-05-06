@@ -113,6 +113,7 @@
                 </main>
 
                 <aside class="group-panel" aria-label="Group information">
+                    <button class="group-panel-drag-handle" type="button" aria-label="Drag group info down to close"></button>
                     <section class="group-panel__intro">
                         <div class="section-label">Group Info</div>
                         <h3><span class="skeleton skeleton--text" style="width:160px;height:20px;border-radius:4px;display:inline-block;"></span></h3>
@@ -252,60 +253,6 @@
                 if (!window.currentGroupId) { alert('Select a group first'); return; }
                 ModalManager.open('attachRepoModal');
             });
-
-            // ── Resizable group panel ────────────────────────────────────
-            (function() {
-                const resizeHandle = document.querySelector('.resize-handle');
-                const panel = document.querySelector('.group-panel');
-                if (!resizeHandle || !panel) return;
-
-                let isResizing = false, startX = 0, startWidth = 0;
-
-                const savedWidth = localStorage.getItem('groupPanelWidth');
-                if (savedWidth) panel.style.setProperty('--panel-width', `${savedWidth}px`);
-
-                resizeHandle.addEventListener('mousedown', (e) => {
-                    isResizing = true; startX = e.clientX; startWidth = panel.offsetWidth;
-                    resizeHandle.classList.add('dragging');
-                    document.body.style.cursor = 'col-resize';
-                    document.body.style.userSelect = 'none';
-                });
-
-                document.addEventListener('mousemove', (e) => {
-                    if (!isResizing) return;
-                    let newWidth = startWidth - (e.clientX - startX);
-                    newWidth = Math.min(600, Math.max(250, newWidth));
-                    panel.style.setProperty('--panel-width', `${newWidth}px`);
-                });
-
-                document.addEventListener('mouseup', () => {
-                    if (!isResizing) return;
-                    isResizing = false;
-                    resizeHandle.classList.remove('dragging');
-                    document.body.style.cursor = '';
-                    document.body.style.userSelect = '';
-                    localStorage.setItem('groupPanelWidth', panel.offsetWidth);
-                    panel.scrollTop = panel.scrollHeight;
-                });
-            })();
-
-            // ── Mobile group info drawer ─────────────────────────────────
-            (function () {
-                const toggleBtn = document.getElementById('mobileGroupInfoToggle');
-                const panel = document.querySelector('.messages-page .group-panel');
-                const overlay = document.getElementById('groupPanelOverlay');
-                if (!toggleBtn || !panel || !overlay) return;
-
-                const openPanel = () => { panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow = 'hidden'; };
-                const closePanel = () => { panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow = ''; };
-
-                toggleBtn.addEventListener('click', () => panel.classList.contains('active') ? closePanel() : openPanel());
-                overlay.addEventListener('click', closePanel);
-
-                let touchStartY = 0;
-                panel.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
-                panel.addEventListener('touchend', (e) => { if (e.changedTouches[0].clientY - touchStartY > 60) closePanel(); }, { passive: true });
-            })();
 
             // ── Mobile sidebar section collapse ──────────────────────────
             (function () {
