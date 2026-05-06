@@ -55,6 +55,41 @@ const frontendPath = frontendCandidates.find(candidate => fs.existsSync(candidat
 console.log(`[EXPRESS] Resolved frontend path: ${frontendPath}`);
 app.use(express.static(frontendPath, { index: false }));
 
+const fallbackLoginHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeShare - Login</title>
+    <style>
+        body { margin: 0; font-family: system-ui, sans-serif; background: #0d0f12; color: #f0f6fc; }
+        main { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+        section { width: min(100%, 420px); padding: 32px; border: 1px solid #30363d; border-radius: 16px; background: #161b22; }
+        a, button { color: inherit; }
+        button { width: 100%; padding: 14px 16px; border: 0; border-radius: 8px; background: #67df70; color: #0d0f12; font-weight: 700; cursor: pointer; }
+        p { color: #8b949e; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <main>
+        <section>
+            <h1>CodeShare</h1>
+            <p>Where your team and your repos actually talk to each other.</p>
+            <button type="button" onclick="window.location.href='/api/auth/github'">Continue with GitHub</button>
+        </section>
+    </main>
+</body>
+</html>`;
+
+function sendFileOrFallback(res, filePath, fallbackHtml) {
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.warn(`[EXPRESS] Failed to send ${filePath}:`, err.message);
+            res.status(200).type('html').send(fallbackHtml);
+        }
+    });
+}
+
 
 export const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET || "trial-secret",
@@ -103,18 +138,18 @@ passport.deserializeUser(async (id, done) => {
 
 app.get('/', (req, res) => {
         if (req.isAuthenticated()) {
-                return res.sendFile(path.join(frontendPath, 'index.html'));
+        return sendFileOrFallback(res, path.join(frontendPath, 'index.html'), fallbackLoginHtml);
         }
 
         // Public visitors see the styled login page.
-        return res.sendFile(path.join(frontendPath, 'login.html'));
+    return sendFileOrFallback(res, path.join(frontendPath, 'login.html'), fallbackLoginHtml);
 });
 
 app.get('/login', (req, res) => {
     if (req.isAuthenticated()) {
         return res.redirect('/');
     }
-    res.sendFile(path.join(frontendPath, 'login.html'));
+    return sendFileOrFallback(res, path.join(frontendPath, 'login.html'), fallbackLoginHtml);
 });
 
 app.get('/messages', requireAuth, (req, res) => {
