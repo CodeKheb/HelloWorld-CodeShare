@@ -86,8 +86,8 @@ function getEventTimestamp(event) {
 }
 
 function isAfterCutoff(eventTimestamp, cutoffTimestamp) {
-    if (!cutoffTimestamp) return true;
-    if (!eventTimestamp) return true;
+    if (!cutoffTimestamp) return false;
+    if (!eventTimestamp) return false;
 
     // Normalize both timestamps to UTC milliseconds to avoid timezone mismatches
     // GitHub events are in UTC; database timestamps may vary, so always normalize
@@ -162,24 +162,41 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
             accessToken
         });
 
-        // Determine cutoff from the latest non-system user message.
-        // This treats image/attachment posts as the anchor too, not just text.
-        const userMessageCheck = await pool.query(
-            `SELECT MAX(m.created_at) AS latest_message
-             FROM messages m
-             WHERE m.group_id = $1 AND m.type <> 'system'`,
-            [groupId]
+        // Determine cutoff: the later of when the group was created
+        // and when this repo was attached to the group.
+        // This guarantees we NEVER surface commits that predate the group's existence.
+        const cutoffRow = await pool.query(
+            `SELECT
+                gc.created_at           AS group_created_at,
+                gr.attached_at          AS repo_attached_at,
+                gr.last_checked_at      AS last_checked_at
+            FROM group_chats gc
+            JOIN group_repos gr
+                ON gr.group_id = gc.id
+                AND gr.repo_full_name = $2
+            WHERE gc.id = $1`,
+            [groupId, repoFullName]
         );
 
-        const latestUserMessage = userMessageCheck.rows[0]?.latest_message;
-        if (!latestUserMessage) {
-            console.log(`[POLLING] Group ${groupId} has no user messages yet, skipping system message insertion`);
+        if (cutoffRow.rows.length === 0) {
+            console.warn(`[POLLING] Could not find group/repo row for group ${groupId}, repo ${repoFullName}. Skipping.`);
             return;
         }
 
-        const cutoffAtRow = latestUserMessage;
-        const cutoffAtMs = new Date(cutoffAtRow).getTime();
-        console.log(`[POLLING] Latest non-system message: ${cutoffAtRow} (${cutoffAtMs}ms), using as cutoff for group ${groupId}`);
+
+        const { group_created_at, repo_attached_at, last_checked_at } = cutoffRow.rows[0];
+
+        // Use the latest of: group creation, repo attachment, or last successful poll.
+        // This is the earliest possible moment a commit could be relevant.
+        const candidates = [group_created_at, repo_attached_at, last_checked_at]
+            .filter(Boolean)
+            .map(t => new Date(t).getTime())
+            .filter(ms => !Number.isNaN(ms));
+
+        const cutoffAtMs = candidates.length > 0 ? Math.max(...candidates) : 0;
+        const cutoffAtRow = new Date(cutoffAtMs).toISOString();
+        console.log(`[POLLING] Cutoff for group ${groupId} / ${repoFullName}: ${cutoffAtRow} (group_created=${group_created_at}, repo_attached=${repo_attached_at}, last_checked=${last_checked_at})`);
+
 
         if (events.length === 0) {
             console.log(`[POLLING] No events found for ${repoFullName}`);
@@ -281,6 +298,12 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
                 console.log(`[POLLING] Emitted socket event for message ${msg.id}`);
             });
         }
+
+        await pool.query(
+            `UPDATE group_repos SET last_checked_at = NOW()
+            WHERE group_id = $1 AND repo_full_name = $2`,
+            [groupId, repoFullName]
+        );
 
     } catch (err) {
         console.error(`[POLLING] Error polling ${repoFullName}:`, err.message);

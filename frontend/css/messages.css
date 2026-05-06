@@ -1763,3 +1763,21 @@ body.messages-page {
         padding: 1px 8px;
     }
 }
+
+.panel-section--actions { border-top: 1px solid #30363d; padding-top: 1rem; }
+.group-actions { display: flex; flex-direction: column; gap: 8px; }
+.danger-button {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 6px; font-size: 13px;
+    font-weight: 500; cursor: pointer; border: none;
+    background: #da3633; color: #fff; width: 100%;
+}
+.danger-button--outline {
+    background: transparent; border: 1px solid #da3633; color: #da3633;
+}
+.danger-button:hover { opacity: 0.85; }
+.empty-feed-notice {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%; gap: 12px;
+    color: #8b949e; text-align: center;
+}
