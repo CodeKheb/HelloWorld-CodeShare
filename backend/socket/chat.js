@@ -35,10 +35,10 @@ export default function chatHandler(socket) {
                 }
 
                 const insertResult = await pool.query(
-                    `INSERT INTO messages (group_id, sender_id, content, type)
-                     VALUES ($1, $2, $3, 'text')
+                    `INSERT INTO messages (group_id, sender_id, content, type, created_at)
+                     VALUES ($1, $2, $3, 'text', $4)
                      RETURNING id, group_id, sender_id, content, type, created_at`,
-                    [dmGroupId, authUser.id, cleanText]
+                    [dmGroupId, authUser.id, cleanText, new Date().toISOString()]
                 );
 
                 const saved = insertResult.rows[0];
@@ -74,10 +74,10 @@ export default function chatHandler(socket) {
             }
 
             const insertResult = await pool.query(
-                `INSERT INTO messages (group_id, sender_id, content, type)
-                 VALUES ($1, $2, $3, 'text')
+                `INSERT INTO messages (group_id, sender_id, content, type, created_at)
+                 VALUES ($1, $2, $3, 'text', $4)
                  RETURNING id, group_id, sender_id, content, type, created_at`,
-                [activeGroupId, authUser.id, cleanText]
+                [activeGroupId, authUser.id, cleanText, new Date().toISOString()]
             );
 
             const saved = insertResult.rows[0];

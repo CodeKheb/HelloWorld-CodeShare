@@ -1,6 +1,25 @@
 import crypto from "crypto";
 import pool from "../db/pool.js";
 
+function getEventTimestampFromPayload(event, payload) {
+  try {
+    if (event === 'push') {
+      const commits = Array.isArray(payload?.commits) ? payload.commits : [];
+      const commitDates = commits.map(c => c?.timestamp).filter(Boolean);
+      if (commitDates.length > 0) {
+        // return the latest commit timestamp (ISO string)
+        return commitDates.reduce((latest, cur) => (new Date(cur).getTime() > new Date(latest).getTime() ? cur : latest));
+      }
+      return payload?.head_commit?.timestamp || payload?.created_at || null;
+    }
+
+    // For other events, prefer the payload timestamps or fallback to now
+    return payload?.created_at || payload?.updated_at || null;
+  } catch (err) {
+    return null;
+  }
+}
+
 export function verifyWebhookSignature(req) {
   const skip = process.env.WEBHOOK_SKIP_SIGNATURE === "true";
   if (skip) return true;
@@ -67,13 +86,55 @@ export async function saveSystemMessages(repoFullName, content, metadata = {}) {
       return [];
     }
 
+    // Determine event timestamp from payload (commit time for push events)
+    const eventTimestamp = getEventTimestampFromPayload(metadata.event, metadata.payload) || new Date().toISOString();
+    const eventMs = new Date(eventTimestamp).getTime();
+
     const savedMessages = [];
+
     for (const repo of repoRows.rows) {
+      // Only insert system messages if group has at least one non-system message.
+      const userMessageCheck = await client.query(
+        `SELECT MAX(m.created_at) AS latest_message
+         FROM messages m
+         WHERE m.group_id = $1 AND m.type <> 'system'`,
+        [repo.group_id]
+      );
+
+      const latestUserMessage = userMessageCheck.rows[0]?.latest_message;
+      if (!latestUserMessage) {
+        // No user messages yet, don't insert system message. Still mark as processed to avoid later insertion.
+        console.log(`[WEBHOOK] Group ${repo.group_id} has no user messages yet, skipping system message but marking processed`);
+        await client.query(
+          `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (github_event_id, group_id) DO NOTHING`,
+          [metadata.deliveryId ? `webhook_${metadata.deliveryId}` : `webhook_${Date.now()}`, metadata.event || null, repo.group_id, repoFullName]
+        );
+        continue;
+      }
+
+      const cutoffAt = latestUserMessage;
+      const cutoffMs = new Date(cutoffAt).getTime();
+
+      // If event is older or equal to cutoff, skip inserting but still mark processed to avoid future duplicates
+      if (Number.isFinite(eventMs) && eventMs <= cutoffMs) {
+        // Record processed_events so polling won't re-insert later
+        await client.query(
+          `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (github_event_id, group_id) DO NOTHING`,
+          [metadata.deliveryId ? `webhook_${metadata.deliveryId}` : `webhook_${Date.now()}`, metadata.event || null, repo.group_id, repoFullName]
+        );
+        continue;
+      }
+
+      // Insert message with the event's timestamp (UTC)
       const inserted = await client.query(
-        `INSERT INTO messages (group_id, sender_id, content, type)
-         VALUES ($1, NULL, $2, 'system')
+        `INSERT INTO messages (group_id, sender_id, content, type, created_at)
+         VALUES ($1, NULL, $2, 'system', $3)
          RETURNING id, group_id, sender_id, content, type, created_at`,
-        [repo.group_id, content]
+        [repo.group_id, content, eventTimestamp]
       );
 
       const saved = inserted.rows[0];
@@ -92,6 +153,14 @@ export async function saveSystemMessages(repoFullName, content, metadata = {}) {
           metadata.deliveryId || null,
           metadata.payload || null
         ]
+      );
+
+      // Mark processed per-group
+      await client.query(
+        `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (github_event_id, group_id) DO NOTHING`,
+        [metadata.deliveryId ? `webhook_${metadata.deliveryId}` : `webhook_${Date.now()}`, metadata.event || null, repo.group_id, repoFullName]
       );
     }
 
@@ -118,10 +187,10 @@ async function saveSystemMessagesWithoutMetadata(repoFullName, content) {
   const savedMessages = [];
   for (const repo of repoRows.rows) {
     const inserted = await pool.query(
-      `INSERT INTO messages (group_id, sender_id, content, type)
-       VALUES ($1, NULL, $2, 'system')
+      `INSERT INTO messages (group_id, sender_id, content, type, created_at)
+       VALUES ($1, NULL, $2, 'system', $3)
        RETURNING id, group_id, sender_id, content, type, created_at`,
-      [repo.group_id, content]
+      [repo.group_id, content, new Date().toISOString()]
     );
     savedMessages.push(inserted.rows[0]);
   }
@@ -148,23 +217,25 @@ export const handleGithubWebhook = async (req, res) => {
     // Use deliveryId as event ID for deduplication (unique per GitHub delivery)
     const webhookEventId = `webhook_${deliveryId}`;
 
-    // Record in processed_events to prevent duplicates
-    try {
-      await pool.query(
-        `INSERT INTO processed_events (github_event_id, event_type, repo_full_name)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (github_event_id) DO NOTHING`,
-        [webhookEventId, event, repoFullName]
-      );
-    } catch (err) {
-      console.warn(`[WEBHOOK] Warning: failed to record processed event:`, err.message);
-    }
-
     const savedMessages = await saveSystemMessages(repoFullName, transformed.content, {
       event,
       deliveryId,
       payload
     });
+
+    // After saving system messages for each group, mark the event as processed per group
+    try {
+      for (const saved of savedMessages) {
+        await pool.query(
+          `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (github_event_id, group_id) DO NOTHING`,
+          [webhookEventId, event, saved.group_id, repoFullName]
+        );
+      }
+    } catch (err) {
+      console.warn(`[WEBHOOK] Warning: failed to record processed event per group:`, err.message);
+    }
 
     const io = req.app.get("io");
     if (io) {

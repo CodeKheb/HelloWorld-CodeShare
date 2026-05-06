@@ -122,12 +122,22 @@ groupsRouter.post("/create", async (req, res) => {
                     `INSERT INTO group_repos (group_id, repo_full_name)
                      VALUES ($1, $2)
                      ON CONFLICT (group_id, repo_full_name) DO NOTHING
-                     RETURNING id, repo_full_name`,
+                     RETURNING id, repo_full_name, webhook_id, added_at, attached_at`,
                     [group.id, repoFullName.trim()]
                 );
 
-                const repoRow = insertedRepo.rows[0];
+                let repoRow = insertedRepo.rows[0];
                 if (repoRow) {
+                    // Stamp attached_at and last_checked_at to NOW() to prevent immediate backfill
+                    const stamped = await client.query(
+                        `UPDATE group_repos
+                         SET attached_at = NOW(), last_checked_at = NOW()
+                         WHERE id = $1
+                         RETURNING id, repo_full_name, webhook_id, added_at, attached_at, last_checked_at, use_polling`,
+                        [repoRow.id]
+                    );
+                    repoRow = stamped.rows[0] || repoRow;
+
                     try {
                         const webhookId = await createGithubWebhook({
                             repoFullName: repoRow.repo_full_name,
@@ -320,14 +330,14 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
                 `INSERT INTO group_repos (group_id, repo_full_name)
                  VALUES ($1, $2)
                  ON CONFLICT (group_id, repo_full_name) DO NOTHING
-                 RETURNING id, group_id, repo_full_name, webhook_id, added_at`,
+                     RETURNING id, group_id, repo_full_name, webhook_id, added_at, attached_at`,
                 [groupId, repoFullName.trim()]
             );
 
             repoRow = insertResult.rows[0];
             if (!repoRow) {
                 const existing = await client.query(
-                    `SELECT id, group_id, repo_full_name, webhook_id, added_at
+                    `SELECT id, group_id, repo_full_name, webhook_id, added_at, attached_at
                      FROM group_repos
                      WHERE group_id = $1 AND repo_full_name = $2`,
                     [groupId, repoFullName.trim()]
@@ -338,6 +348,17 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
             if (!repoRow) {
                 throw new Error("Failed to load repository attachment row");
             }
+
+            // Always update attached_at to NOW() to mark when this repo was attached to this group.
+            // This ensures the polling cutoff uses the correct baseline for the group.
+            const normalized = await client.query(
+                `UPDATE group_repos
+                 SET attached_at = NOW(), last_checked_at = NOW()
+                 WHERE id = $1
+                 RETURNING id, group_id, repo_full_name, webhook_id, added_at, attached_at, last_checked_at, use_polling`,
+                [repoRow.id]
+            );
+            repoRow = normalized.rows[0];
 
             // Create webhook automatically if missing, but don't block repo attachment if it fails
             if (!repoRow.webhook_id) {
@@ -351,7 +372,7 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
                         `UPDATE group_repos
                          SET webhook_id = $1
                          WHERE id = $2
-                         RETURNING id, group_id, repo_full_name, webhook_id, added_at, use_polling`,
+                         RETURNING id, group_id, repo_full_name, webhook_id, added_at, attached_at, use_polling`,
                         [webhookId, repoRow.id]
                     );
                     repoRow = updated.rows[0];
@@ -367,7 +388,7 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
                             `UPDATE group_repos
                              SET use_polling = TRUE
                              WHERE id = $1
-                             RETURNING id, group_id, repo_full_name, webhook_id, added_at, use_polling`,
+                             RETURNING id, group_id, repo_full_name, webhook_id, added_at, attached_at, use_polling`,
                             [repoRow.id]
                         );
                         repoRow = updated.rows[0];
