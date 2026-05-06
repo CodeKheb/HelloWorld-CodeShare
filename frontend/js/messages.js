@@ -834,7 +834,151 @@ function escapeHtml(text) {
 }
 
 function initializeResizablePanel() {
-    // Intentionally left empty; resizing is handled in-page (messages.html).
+    const resizeHandle = document.querySelector('.resize-handle');
+    const panel = document.querySelector('.group-panel');
+    const mobileToggle = document.getElementById('mobileGroupInfoToggle');
+    const mobileOverlay = document.getElementById('groupPanelOverlay');
+
+    if (!panel) return;
+
+    if (resizeHandle && window.innerWidth > 768) {
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        const savedWidth = localStorage.getItem('groupPanelWidth');
+        if (savedWidth) panel.style.setProperty('--panel-width', `${savedWidth}px`);
+
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = panel.offsetWidth;
+            resizeHandle.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            let newWidth = startWidth - (e.clientX - startX);
+            newWidth = Math.min(600, Math.max(250, newWidth));
+            panel.style.setProperty('--panel-width', `${newWidth}px`);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isResizing) return;
+
+            isResizing = false;
+            resizeHandle.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            localStorage.setItem('groupPanelWidth', panel.offsetWidth);
+            panel.scrollTop = panel.scrollHeight;
+        });
+    }
+
+    if (!mobileToggle || !mobileOverlay) return;
+
+    const isMobile = () => window.innerWidth <= 768;
+
+    const closePanel = () => {
+        panel.classList.remove('active');
+        panel.classList.remove('dragging');
+        mobileOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+        panel.style.transition = '';
+        panel.style.transform = '';
+    };
+
+    const openPanel = () => {
+        if (!isMobile()) return;
+
+        panel.classList.add('active');
+        mobileOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        panel.style.transition = '';
+        panel.style.transform = '';
+    };
+
+    mobileToggle.addEventListener('click', () => {
+        panel.classList.contains('active') ? closePanel() : openPanel();
+    });
+
+    mobileOverlay.addEventListener('click', closePanel);
+
+    const dragSources = [
+        document.querySelector('.group-panel-drag-handle'),
+        panel.querySelector('.group-panel__intro'),
+    ].filter(Boolean);
+
+    let dragState = null;
+
+    const startDrag = (clientY) => {
+        if (!panel.classList.contains('active') || !isMobile()) return;
+
+        dragState = {
+            startY: clientY,
+            lastY: clientY,
+            threshold: Math.max(80, Math.round(panel.offsetHeight * 0.2))
+        };
+
+        panel.classList.add('dragging');
+        panel.style.transition = 'none';
+    };
+
+    const updateDrag = (clientY) => {
+        if (!dragState) return;
+
+        const delta = Math.max(0, clientY - dragState.startY);
+        dragState.lastY = clientY;
+        panel.style.transform = `translateY(${delta}px)`;
+    };
+
+    const finishDrag = () => {
+        if (!dragState) return;
+
+        const delta = Math.max(0, dragState.lastY - dragState.startY);
+        const shouldClose = delta > dragState.threshold;
+
+        dragState = null;
+        panel.classList.remove('dragging');
+        panel.style.transition = '';
+        panel.style.transform = '';
+
+        if (shouldClose) {
+            closePanel();
+        }
+    };
+
+    dragSources.forEach((source) => {
+        source.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            if (!touch) return;
+
+            startDrag(touch.clientY);
+        }, { passive: true });
+
+        source.addEventListener('touchmove', (e) => {
+            if (!dragState) return;
+
+            const touch = e.touches[0];
+            if (!touch) return;
+
+            updateDrag(touch.clientY);
+            e.preventDefault();
+        }, { passive: false });
+
+        source.addEventListener('touchend', (e) => {
+            if (!dragState) return;
+
+            const touch = e.changedTouches[0];
+            if (touch) updateDrag(touch.clientY);
+            finishDrag();
+        }, { passive: true });
+
+        source.addEventListener('touchcancel', finishDrag, { passive: true });
+    });
 }
 
 function initializeSidebar() {

@@ -358,6 +358,19 @@ body.messages-page {
 	position: relative;
 }
 
+.messages-page .group-panel-drag-handle {
+	display: none;
+	border: 0;
+	padding: 0;
+	margin: 0;
+	background: transparent;
+}
+
+.messages-page .group-panel.dragging {
+	transition: none !important;
+	will-change: transform;
+}
+
 .messages-page .resize-handle {
 	position: absolute;
 	left: 0;
@@ -865,20 +878,35 @@ body.messages-page {
 		transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
-	.messages-page .group-panel.active {
-		transform: translateY(0);
+	.messages-page .group-panel-drag-handle {
+		display: block;
+		width: 100%;
+		height: 28px;
+		padding: 10px 0 0;
+		border: 0;
+		background: transparent;
+		cursor: grab;
+		touch-action: none;
+		flex-shrink: 0;
+		position: relative;
 	}
 
-	/* Drag handle pill at top of drawer */
-	.messages-page .group-panel::before {
+	.messages-page .group-panel-drag-handle::before {
 		content: '';
 		display: block;
 		width: 36px;
 		height: 4px;
+		margin: 0 auto;
 		background: rgba(139, 148, 158, 0.3);
 		border-radius: 999px;
-		margin: 10px auto 0;
-		flex-shrink: 0;
+	}
+
+	.messages-page .group-panel-drag-handle:active {
+		cursor: grabbing;
+	}
+
+	.messages-page .group-panel.active {
+		transform: translateY(0);
 	}
 
 	/* Overlay behind group panel drawer */

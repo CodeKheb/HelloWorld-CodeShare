@@ -1190,7 +1190,7 @@ a {
 		/* FIX: hard cap width */
 		width: 100%;
 		max-width: 100vw;
-		overflow: hidden;
+		overflow: visible;
 	}
 
 	.topbar-tabs {

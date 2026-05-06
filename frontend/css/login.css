@@ -128,16 +128,42 @@
 
     @media (max-width: 480px) {
         .page {
-            padding: 16px;
+            padding: 24px;
         }
-
         .login-card {
-            padding: 24px 20px;
+            padding: 20px 16px;
+            border-radius: 12px;
+            width: min(100%, 320px);  /* constrain max width */
+        }
+        h1 {
+            font-size: 20px;
+        }
+        .tagline {
+            font-size: 13px;
+            margin: 6px 0 16px;
+        }
+        .brand-mark {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+        }
+        .brand-icon {
+            width: 24px;
+            height: 24px;
+        }
+        .github-button {
+            padding: 11px 14px;
+            font-size: 14px;
+        }
+        .fine-print {
+            font-size: 12px;
+            margin: 12px 0 0;
         }
     }
 
-.brand-icon {
-    width: 48px;   /* adjust size */
-    height: 48px;
+
+    .brand-icon {
+        width: 48px;   /* adjust size */
+        height: 48px;
     object-fit: contain;
 }

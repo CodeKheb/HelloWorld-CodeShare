@@ -6,7 +6,7 @@ import pool from "../db/pool.js";
  */
 async function fetchGithubEvents({ owner, repo, accessToken }) {
     try {
-        const url = `https://api.github.com/repos/${owner}/${repo}/events`;
+        const url = `https://api.github.com/repos/${owner}/${repo}/events?per_page=10`;
         const response = await fetch(url, {
             method: "GET",
             headers: {
@@ -261,6 +261,22 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
                 );
 
                 const messageRow = msgResult.rows[0];
+
+                // Preserve the raw GitHub event payload so the dashboard can render
+                // polling activity using the same data path as webhook events.
+                await client.query(
+                    `INSERT INTO webhook_events (message_id, group_id, repo_full_name, webhook_id, github_event, delivery_id, payload)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                    [
+                        messageRow.id,
+                        groupId,
+                        repoFullName,
+                        null,
+                        event.type,
+                        null,
+                        event
+                    ]
+                );
 
                 // Record as processed
                 await client.query(
