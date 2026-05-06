@@ -37,17 +37,35 @@ app.use(express.json({
 }));
 
 // Resolve frontend path robustly for local and containerized environments.
+// Try: __dirname/../.., __dirname/.., cwd/frontend, cwd/../frontend, 
+// /app/frontend (Railway), /workspace/frontend (Render), /src/frontend (Glitch)
 const frontendCandidates = [
-    path.resolve(__dirname, "../../frontend"),
-    path.resolve(__dirname, "../frontend"),
-    path.resolve(process.cwd(), "frontend"),
-    path.resolve(process.cwd(), "../frontend")
+    path.resolve(__dirname, "../../frontend"),           // backend/express/... -> ../.. = root/frontend
+    path.resolve(__dirname, "../frontend"),              // backend/express/... -> .. = backend/frontend
+    path.resolve(process.cwd(), "frontend"),             // cwd = /app/backend -> /app/backend/frontend
+    path.resolve(process.cwd(), "../frontend"),          // cwd = /app/backend -> /app/frontend
+    "/app/frontend",                                      // Railway default
+    "/workspace/frontend",                               // Render default
+    "/src/frontend",                                      // Glitch default
+    path.resolve("/", "frontend")                        // Root fallback
 ];
 
-const frontendPath = frontendCandidates.find(candidate => fs.existsSync(candidate))
-    || path.resolve(process.cwd(), "frontend");
+let frontendPath = null;
+for (const candidate of frontendCandidates) {
+    if (fs.existsSync(candidate)) {
+        frontendPath = candidate;
+        console.log(`[EXPRESS] Found frontend at: ${frontendPath}`);
+        break;
+    }
+}
 
-console.log(`[EXPRESS] Resolved frontend path: ${frontendPath}`);
+if (!frontendPath) {
+    // Last resort: assume it's relative to where backend is deployed
+    frontendPath = path.resolve(__dirname, "../../frontend");
+    console.warn(`[EXPRESS] Could not locate frontend directory. Defaulting to: ${frontendPath}`);
+}
+
+console.log(`[EXPRESS] Using frontend path: ${frontendPath}`);
 app.use(express.static(frontendPath, { index: false }));
 
 
