@@ -61,6 +61,7 @@ function initCreateGroupModal(onSuccess) {
             const data = await res.json();
 
             if (res.ok) {
+                window.location.reload()
                 alert('Group created successfully!');
                 ModalManager.reset(modalId, fieldIds);
                 
@@ -210,6 +211,7 @@ function initJoinGroupModal(onSuccess) {
             const data = await res.json();
 
             if (res.ok) {
+                window.location.reload()
                 alert('Joined group successfully!');
                 ModalManager.reset(modalId, fieldIds);
                 

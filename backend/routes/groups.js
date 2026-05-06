@@ -520,4 +520,105 @@ groupsRouter.post("/:groupId/regenerate-invite", async (req, res) => {
     }
 });
 
+// DELETE /api/groups/:groupId/leave - Leave a group
+groupsRouter.delete("/:groupId/leave", async (req, res) => {
+    try {
+        if (!req.isAuthenticated()) {
+            return res.status(401).json({ error: "User not authenticated" });
+        }
+
+        const { groupId } = req.params;
+        const userId = req.user.id;
+        const userName = req.user.username;
+        const avatarUrl = req.user.avatar_url;
+
+        // Check if the user is the creator
+        const groupCheck = await pool.query(
+            `SELECT created_by FROM group_chats WHERE id = $1`,
+            [groupId]
+        );
+
+        if (groupCheck.rows.length === 0) {
+            return res.status(404).json({ error: "Group not found" });
+        }
+
+        // Logic choice: If the owner leaves, you might want to prevent it or delete the group.
+        // Here, we let them leave, but warn that the group persists.
+        if (groupCheck.rows[0].created_by === userId) {
+            return res.status(400).json({ error: "Owners cannot leave. Delete the group instead." });
+        }
+
+        const result = await pool.query(
+            `DELETE FROM group_members WHERE group_id = $1 AND user_id = $2`,
+            [groupId, userId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "You are not a member of this group" });
+        }
+
+        // Notify other members via Socket.io
+        io.to(String(groupId)).emit("server-group-text", {
+            id: null,
+            groupId: groupId,
+            senderId: userId,
+            text: `${userName} has left the group.`,
+            type: "system",
+            timestamp: new Date(),
+            author: "System",
+            authorName: "System",
+            avatar: "/default-avatar.png"
+        });
+
+        io.to(String(groupId)).emit("member-leave", {
+                userId: userId,
+                username: userName,
+                avatar_url: avatarUrl,
+                groupId
+            })
+        return res.json({ success: true, message: "Successfully left the group" });
+    } catch (error) {
+        console.error("Error leaving group:", error);
+        return res.status(500).json({ error: "Failed to leave group" });
+    }
+});
+
+// DELETE /api/groups/:groupId - Delete a group (Creator only)
+groupsRouter.delete("/:groupId", async (req, res) => {
+    try {
+        if (!req.isAuthenticated()) {
+            return res.status(401).json({ error: "User not authenticated" });
+        }
+
+        const { groupId } = req.params;
+        const userId = req.user.id;
+
+        // Verify ownership
+        const groupCheck = await pool.query(
+            `SELECT created_by FROM group_chats WHERE id = $1`,
+            [groupId]
+        );
+
+        if (groupCheck.rows.length === 0) {
+            return res.status(404).json({ error: "Group not found" });
+        }
+
+        if (groupCheck.rows[0].created_by !== userId) {
+            return res.status(403).json({ error: "Only the group creator can delete this group" });
+        }
+
+        // Because of ON DELETE CASCADE in your schema, 
+        // this will automatically delete group_members, group_repos, and messages.
+        await pool.query(`DELETE FROM group_chats WHERE id = $1`, [groupId]);
+
+        // Notify members the group is gone
+        io.to(String(groupId)).emit("group-deleted", { groupId });
+
+        return res.json({ success: true, message: "Group deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting group:", error);
+        return res.status(500).json({ error: "Failed to delete group" });
+    }
+});
+
 export default groupsRouter;
