@@ -132,6 +132,46 @@ authRouter.get("/repos", async (req, res) => {
     }
 });
 
+const isAuthenticated = (req, res, next) => {
+    if (req.isAuthenticated()) return next();
+    res.status(401).json({ message: "Not authenticated" });
+};
+
+authRouter.get('/room-secret/:groupId', isAuthenticated, async (req, res) => {
+    const { groupId } = req.params;
+
+    try {
+        const membership = await pool.query(
+            `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 LIMIT 1`,
+            [groupId, req.user.id]
+        );
+
+        if (membership.rows.length === 0) {
+            return res.status(403).json({ message: "Not a member of this group" });
+        }
+
+        const hmac = await crypto.subtle.importKey(
+            'raw',
+            new TextEncoder().encode(process.env.ROOM_SECRET_KEY),
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign']
+        );
+
+        const signature = await crypto.subtle.sign(
+            'HMAC',
+            hmac,
+            new TextEncoder().encode(String(groupId))
+        );
+
+        const roomSecret = btoa(String.fromCharCode(...new Uint8Array(signature)));
+        res.json({ roomSecret });
+    } catch (err) {
+        console.error('Room secret generation failed:', err);
+        res.status(500).json({ message: 'Failed to generate room secret' });
+    }
+});
+
 //TODO: Frontend redirect to login page after fetching /logout
 authRouter.post('/logout', async (req, res, next) => {
     const accessToken = req.user?.accessToken;
