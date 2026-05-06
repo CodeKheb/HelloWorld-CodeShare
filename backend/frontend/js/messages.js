@@ -22,7 +22,7 @@ async function fetchRoomSecret(groupId) {
     return roomSecret;
 }
 
-const socket = io("https://codeshare-ewmi.onrender.com", {
+const socket = io("https://helloworld-codeshare.onrender.com", {
     withCredentials: true
 });
 
