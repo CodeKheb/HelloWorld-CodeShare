@@ -1,5 +1,6 @@
 import express from 'express'
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import session from 'express-session';
 import passport from "passport";
@@ -35,8 +36,17 @@ app.use(express.json({
     }
 }));
 
-// Resolve frontend path robustly for both local and containerized environments
-const frontendPath = path.resolve(__dirname, "../../frontend");
+// Resolve frontend path robustly for local and containerized environments.
+const frontendCandidates = [
+    path.resolve(__dirname, "../../frontend"),
+    path.resolve(__dirname, "../frontend"),
+    path.resolve(process.cwd(), "frontend"),
+    path.resolve(process.cwd(), "../frontend")
+];
+
+const frontendPath = frontendCandidates.find(candidate => fs.existsSync(candidate))
+    || path.resolve(process.cwd(), "frontend");
+
 console.log(`[EXPRESS] Resolved frontend path: ${frontendPath}`);
 app.use(express.static(frontendPath, { index: false }));
 
@@ -87,22 +97,22 @@ passport.deserializeUser(async (id, done) => {
 });
 
 app.get('/', requireAuth, (req, res) => {
-    res.sendFile(path.join(__dirname, "../../frontend", 'index.html'));
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 app.get('/login', (req, res) => {
     if (req.isAuthenticated()) {
         return res.redirect('/');
     }
-    res.sendFile(path.join(__dirname, "../../frontend", 'login.html'));
+    res.sendFile(path.join(frontendPath, 'login.html'));
 });
 
 app.get('/messages', requireAuth, (req, res) => {
-    res.sendFile(path.join(__dirname, "../../frontend", 'messages.html'));
+    res.sendFile(path.join(frontendPath, 'messages.html'));
 });
 
 app.get('/groups', requireAuth, (req, res) => {
-    res.sendFile(path.join(__dirname, "../../frontend", 'groups.html'));
+    res.sendFile(path.join(frontendPath, 'groups.html'));
 });
 
 app.get("/hello", (req, res) => {
