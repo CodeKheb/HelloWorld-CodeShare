@@ -120,6 +120,13 @@ export default function chatHandler(socket) {
             clientState.active_group = groupId;
             socket.join(String(groupId));
 
+            io.to(String(groupId)).emit("member-joined", {
+                userId: authUser.id,
+                username: authUser.username,
+                avatar_url: authUser.avatar_url,
+                groupId
+            });
+
             console.log(socket.rooms);
             console.log(clientState);
         } catch (error) {

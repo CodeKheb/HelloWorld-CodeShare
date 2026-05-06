@@ -46,6 +46,16 @@ socket.on("server-group-text", async (message) => {
     displayMessage(message);
 });
 
+//Checks for new members
+socket.on("member-joined", (data) => {
+    console.log(`${data.username} joined group ${data.groupId}`);
+    
+    // Only update UI if it's the currently viewed group
+    if (String(data.groupId) === String(window.currentGroupId)) {
+        loadGroupDetails(data.groupId);
+    }
+});
+
 // incoming messages
 socket.on("server-direct-text", async (message) => {
      console.log("Received direct message:", message);
