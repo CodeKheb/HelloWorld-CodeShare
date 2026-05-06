@@ -227,6 +227,112 @@ function initJoinGroupModal(onSuccess) {
     });
 }
 
+// handler to show craete group modal
+function showModal() {
+    const overlay = document.getElementById('modalOverlay');
+    if (!overlay) return;
+    const modal = overlay.querySelector('.modal');
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => {
+        overlay.classList.add('anim-open');
+        if (modal) modal.classList.add('open');
+    });
+}
+
+function hideModal() {
+    const overlay = document.getElementById('modalOverlay');
+    if (!overlay) return;
+    const modal = overlay.querySelector('.modal');
+    if (modal) modal.classList.remove('open');
+    overlay.classList.remove('anim-open');
+    const onEnd = (e) => {
+        if (e.target !== overlay) return;
+        overlay.style.display = '';
+        overlay.classList.add('hidden');
+        overlay.removeEventListener('transitionend', onEnd);
+    };
+    overlay.addEventListener('transitionend', onEnd);
+}
+
+// Create group button
+document.getElementById('createGroupBtn')?.addEventListener('click', showModal);
+
+// Modal close buttons
+document.getElementById('closeModal')?.addEventListener('click', hideModal);
+document.getElementById('cancelBtn')?.addEventListener('click', hideModal);
+document.getElementById('modalOverlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'modalOverlay') hideModal();
+});
+
+// Submit handler
+document.getElementById('submitGroup')?.addEventListener('click', async () => {
+    const btn = document.getElementById('submitGroup');
+    const name = document.getElementById('groupName').value.trim();
+    const repoFullName = document.getElementById('repoName').value.trim();
+    if (!name) return alert('Group name is required');
+    btn.disabled = true;
+    const orig = btn.textContent;
+    btn.textContent = 'Creating...';
+    try {
+        const res = await fetch('/api/groups/create', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, repoFullName: repoFullName || null })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert('Group created');
+            document.getElementById('groupName').value = '';
+            document.getElementById('repoName').value = '';
+            hideModal();
+            loadGroups();
+        } else {
+            alert('Error: ' + (data.error || 'Failed'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = orig;
+    }
+});
+
+// Sidebar toggle
+(function () {
+    const toggle = document.getElementById('sidebarToggle');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (!toggle || !sidebar || !overlay) return;
+
+    function openSidebar() {
+        sidebar.classList.add('active');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    toggle.addEventListener('click', () => {
+        sidebar.classList.contains('active') ? closeSidebar() : openSidebar();
+    });
+
+    overlay.addEventListener('click', closeSidebar);
+
+    // Close sidebar when link is clicked
+    document.querySelectorAll('.sidebar-link').forEach((link) => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) closeSidebar();
+        });
+    });
+})();
+
 // ── ATTACH REPOSITORY MODAL ───────────────────────────────────
 
 /**
@@ -298,7 +404,10 @@ function initAttachRepoModal(onSuccess) {
             ModalManager.setButtonLoading(submitBtn, false);
         }
     });
+    
 }
+
+
 
 // ── Auto-initialize all modals ────────────────────────────────
 
