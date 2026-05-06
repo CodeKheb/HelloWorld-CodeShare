@@ -8,9 +8,9 @@ const roomSecrets = new Map();
 
 async function fetchRoomSecret(groupId) {
     if (roomSecrets.has(groupId)) return roomSecrets.get(groupId);
-    
+
     console.log(`Fetch groupId: ${groupId}`);
-    
+
     const res = await fetch(`/api/auth/room-secret/${groupId}`, {
         credentials: 'include'
     });
@@ -49,7 +49,7 @@ socket.on("server-group-text", async (message) => {
 //Checks for members leaving
 socket.on("member-leave", (data) => {
     console.log(`${data.username} left group ${data.groupId}`);
-    
+
     // Only update UI if it's the currently viewed group
     if (String(data.groupId) === String(window.currentGroupId)) {
         loadGroupDetails(data.groupId);
@@ -59,7 +59,7 @@ socket.on("member-leave", (data) => {
 //Checks for new members
 socket.on("member-joined", (data) => {
     console.log(`${data.username} joined group ${data.groupId}`);
-    
+
     // Only update UI if it's the currently viewed group
     if (String(data.groupId) === String(window.currentGroupId)) {
         loadGroupDetails(data.groupId);
@@ -68,7 +68,7 @@ socket.on("member-joined", (data) => {
 
 // incoming messages
 socket.on("server-direct-text", async (message) => {
-     console.log("Received direct message:", message);
+    console.log("Received direct message:", message);
     if (message.type !== 'system' && message.text) {
         const roomSecret = await fetchRoomSecret(message.DmId);
         message.text = await decryptMessage(message.text, roomSecret);
@@ -89,6 +89,29 @@ socket.on("dm-ready", async ({ dmGroupId, receiverId }) => {
         loadDmMessages(dmGroupId),
         loadDmDetails(dmGroupId)
     ]);
+});
+
+// Group deleted by owner — kick everyone out
+socket.on("group-deleted", ({ groupId }) => {
+    if (String(groupId) === String(window.currentGroupId)) {
+        window.currentGroupId = null;
+        window.currentInviteCode = null;
+
+        const messageFeed = document.querySelector('.message-feed');
+        if (messageFeed) {
+            messageFeed.innerHTML = `
+                <div class="empty-feed-notice">
+                    <span class="material-symbols-outlined">group_off</span>
+                    <p>This group has been deleted.</p>
+                </div>`;
+        }
+
+        const titleEl = document.querySelector('.chat-channel');
+        if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> deleted-group`;
+
+        // Re-render sidebar to remove the deleted group
+        fetchAndRenderSidebar();
+    }
 });
 
 async function loadDmMessages(dmGroupId) {
@@ -239,8 +262,8 @@ async function fetchAndRenderSidebar() {
                 a.innerHTML = `<span class="material-symbols-outlined">tag</span><span>${escapeHtml(g.name)}</span>`;
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
-                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-                    a.classList.add('active');
+                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('sidebar-link--active'));
+                    a.classList.add('sidebar-link--active');
                     updateGroupHeaderFromMembers(g);
                     selectGroup(g);
                     collapseSidebarOnMobile();
@@ -323,8 +346,8 @@ async function fetchAndRenderSidebar() {
 
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
-                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-                    a.classList.add('active');
+                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('sidebar-link--active'));
+                    a.classList.add('sidebar-link--active');
                     window.currentIsDm = true;
 
                     if (c.existingDmGroupId) {
@@ -375,6 +398,7 @@ function updateDmPanel(contact) {
     if (introText) introText.textContent = 'Direct message conversation.';
     renderMemberList([contact, window.currentUser].filter(Boolean));
     renderRepoList([]);
+    renderGroupActions(null); // No leave/delete for DMs
 }
 
 function updateGroupHeaderFromMembers(group) {
@@ -464,6 +488,7 @@ async function loadGroupDetails(groupId) {
 
         renderMemberList(members);
         renderRepoList(repos);
+        renderGroupActions(group);
     } catch (error) {
         console.error('Error loading group details:', error);
     }
@@ -537,6 +562,134 @@ function renderRepoList(repos) {
     });
 }
 
+// ── Leave / Delete group actions in the side panel ───────────────────────────
+
+function renderGroupActions(group) {
+    // Find or create the actions section at the bottom of the panel body
+    let actionsSection = document.getElementById('group-actions-section');
+    if (!actionsSection) {
+        actionsSection = document.createElement('section');
+        actionsSection.id = 'group-actions-section';
+        actionsSection.className = 'panel-section panel-section--actions';
+        const panelBody = document.querySelector('.group-panel__body');
+        if (panelBody) panelBody.appendChild(actionsSection);
+    }
+
+    // No group (e.g. DM view) — hide the section entirely
+    if (!group) {
+        actionsSection.innerHTML = '';
+        actionsSection.style.display = 'none';
+        return;
+    }
+
+    actionsSection.style.display = '';
+
+    const isOwner = window.currentUser && String(group.created_by) === String(window.currentUser.id);
+
+    actionsSection.innerHTML = `
+        <div class="panel-section__header">
+            <h4>Danger Zone</h4>
+        </div>
+        <div class="group-actions">
+            ${!isOwner ? `
+                <button id="leaveGroupBtn" class="danger-button danger-button--outline" type="button">
+                    <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+                    Leave Group
+                </button>` : ''}
+            ${isOwner ? `
+                <button id="deleteGroupBtn" class="danger-button" type="button">
+                    <span class="material-symbols-outlined" aria-hidden="true">delete_forever</span>
+                    Delete Group
+                </button>` : ''}
+        </div>
+    `;
+
+    document.getElementById('leaveGroupBtn')?.addEventListener('click', () => handleLeaveGroup(group));
+    document.getElementById('deleteGroupBtn')?.addEventListener('click', () => handleDeleteGroup(group));
+}
+
+async function handleLeaveGroup(group) {
+    const confirmed = confirm(`Leave "${group.name}"? You'll need an invite code to rejoin.`);
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`/api/groups/${encodeURIComponent(group.id)}/leave`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.error || 'Failed to leave group.');
+            return;
+        }
+
+        // Clear current group state
+        window.currentGroupId = null;
+        window.currentInviteCode = null;
+
+        // Clear message feed
+        const messageFeed = document.querySelector('.message-feed');
+        if (messageFeed) {
+            messageFeed.innerHTML = `
+                <div class="empty-feed-notice">
+                    <span class="material-symbols-outlined">waving_hand</span>
+                    <p>You left <strong>${escapeHtml(group.name)}</strong>.</p>
+                </div>`;
+        }
+
+        // Refresh sidebar to remove the group
+        await fetchAndRenderSidebar();
+
+    } catch (err) {
+        console.error('Error leaving group:', err);
+        alert('Something went wrong. Please try again.');
+    }
+}
+
+async function handleDeleteGroup(group) {
+    const confirmed = confirm(`Permanently delete "${group.name}"? This cannot be undone — all messages and repos will be removed.`);
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`/api/groups/${encodeURIComponent(group.id)}`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.error || 'Failed to delete group.');
+            return;
+        }
+
+        // Clear current group state
+        window.currentGroupId = null;
+        window.currentInviteCode = null;
+
+        // Clear message feed
+        const messageFeed = document.querySelector('.message-feed');
+        if (messageFeed) {
+            messageFeed.innerHTML = `
+                <div class="empty-feed-notice">
+                    <span class="material-symbols-outlined">delete_forever</span>
+                    <p><strong>${escapeHtml(group.name)}</strong> has been deleted.</p>
+                </div>`;
+        }
+
+        // Refresh sidebar
+        await fetchAndRenderSidebar();
+
+    } catch (err) {
+        console.error('Error deleting group:', err);
+        alert('Something went wrong. Please try again.');
+    }
+}
+
 function escapeAttr(s) {
     if (!s) return '';
     return String(s).replace(/"/g, '&quot;');
@@ -574,7 +727,7 @@ function initializeMessageComposer() {
             alert('Please log in to send messages');
             return;
         }
-        
+
         const roomSecret = await fetchRoomSecret(window.currentGroupId);
         const encryptedText = await encryptMessage(text.trim(), roomSecret);
         console.log(`Current GroupID: ${window.currentGroupId}`);

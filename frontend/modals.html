@@ -15,14 +15,22 @@
     </script>
 -->
 
-<!-- ========== CREATE GROUP MODAL ========== -->
+<!-- ========== CREATE / JOIN GROUP MODAL (combined) ========== -->
 <div id="createGroupModal" class="modal-overlay hidden">
     <div class="modal">
         <div class="modal-header">
-            <h2>Create Group</h2>
+            <h2 id="groupModalTitle">Create Group</h2>
             <button id="closeCreateGroupModal" class="modal-close">&times;</button>
         </div>
-        <div class="modal-body">
+
+        <!-- Tabs -->
+        <div style="display:flex; border-bottom:1px solid #30363d;">
+            <button id="tabCreate" onclick="groupModalSwitchTab('create')" style="flex:1;padding:10px;background:none;border:none;border-bottom:2px solid #3fb950;color:#3fb950;font-weight:600;cursor:pointer;font-size:0.875rem;">Create</button>
+            <button id="tabJoin"   onclick="groupModalSwitchTab('join')"   style="flex:1;padding:10px;background:none;border:none;border-bottom:2px solid transparent;color:#8b949e;font-weight:600;cursor:pointer;font-size:0.875rem;">Join</button>
+        </div>
+
+        <!-- Create pane -->
+        <div id="groupPaneCreate" class="modal-body">
             <label for="groupNameInput">GROUP NAME <span class="required">*</span></label>
             <input type="text" id="groupNameInput" placeholder="e.g. Project Discussion" />
 
@@ -30,9 +38,20 @@
             <input type="text" id="groupRepoInput" placeholder="owner/repo" />
             <small>Add a repository to the group upon creation.</small>
         </div>
-        <div class="modal-footer">
+        <div id="groupPaneCreateFooter" class="modal-footer">
             <button id="submitCreateGroupBtn" class="btn-primary">CREATE GROUP</button>
             <button id="cancelCreateGroupBtn" class="btn-cancel">Cancel</button>
+        </div>
+
+        <!-- Join pane -->
+        <div id="groupPaneJoin" class="modal-body" style="display:none;">
+            <label for="joinGroupCodeInput">INVITE CODE <span class="required">*</span></label>
+            <input type="text" id="joinGroupCodeInput" placeholder="e.g. ABC123" />
+            <small>Enter the invite code to join a group.</small>
+        </div>
+        <div id="groupPaneJoinFooter" class="modal-footer" style="display:none;">
+            <button id="submitJoinGroupBtn" class="btn-primary">JOIN GROUP</button>
+            <button id="cancelJoinGroupBtn" class="btn-cancel">Cancel</button>
         </div>
     </div>
 </div>
@@ -80,25 +99,6 @@
         <div class="modal-footer">
             <button id="submitCreateRepoBtn" class="btn-primary">CREATE REPOSITORY</button>
             <button id="cancelCreateRepoBtn" class="btn-cancel">Cancel</button>
-        </div>
-    </div>
-</div>
-
-<!-- ========== JOIN GROUP MODAL ========== -->
-<div id="joinGroupModal" class="modal-overlay hidden">
-    <div class="modal">
-        <div class="modal-header">
-            <h2>Join Group</h2>
-            <button id="closeJoinGroupModal" class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-            <label for="joinGroupCodeInput">INVITE CODE <span class="required">*</span></label>
-            <input type="text" id="joinGroupCodeInput" placeholder="e.g. ABC123" />
-            <small>Enter the invite code to join a group.</small>
-        </div>
-        <div class="modal-footer">
-            <button id="submitJoinGroupBtn" class="btn-primary">JOIN GROUP</button>
-            <button id="cancelJoinGroupBtn" class="btn-cancel">Cancel</button>
         </div>
     </div>
 </div>

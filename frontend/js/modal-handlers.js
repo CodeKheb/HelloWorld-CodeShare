@@ -14,18 +14,31 @@
  * Initialize Create Group Modal
  * @param {Function} onSuccess - Callback function when group is created successfully
  */
+function groupModalSwitchTab(tab) {
+    const isCreate = tab === 'create';
+    document.getElementById('groupPaneCreate').style.display = isCreate ? '' : 'none';
+    document.getElementById('groupPaneCreateFooter').style.display = isCreate ? '' : 'none';
+    document.getElementById('groupPaneJoin').style.display = isCreate ? 'none' : '';
+    document.getElementById('groupPaneJoinFooter').style.display = isCreate ? 'none' : '';
+    document.getElementById('groupModalTitle').textContent = isCreate ? 'Create Group' : 'Join Group';
+    document.getElementById('tabCreate').style.cssText = `flex:1;padding:10px;background:none;border:none;border-bottom:2px solid ${isCreate ? '#3fb950;color:#3fb950' : 'transparent;color:#8b949e'};font-weight:600;cursor:pointer;font-size:0.875rem;`;
+    document.getElementById('tabJoin').style.cssText = `flex:1;padding:10px;background:none;border:none;border-bottom:2px solid ${isCreate ? 'transparent;color:#8b949e' : '#3fb950;color:#3fb950'};font-weight:600;cursor:pointer;font-size:0.875rem;`;
+}
+
+
 function initCreateGroupModal(onSuccess) {
     const modalId = 'createGroupModal';
     const fieldIds = ['groupNameInput', 'groupRepoInput'];
 
-    // Register standard modal controls
-    ModalManager.registerModal(
-        modalId,
-        'newGroupSidebarBtn',      // open button
-        'closeCreateGroupModal',   // close button
-        fieldIds                   // fields to clear on close
-    );
-
+    // Replace the registerOpenButton line inside registerModal with manual wiring:
+    document.getElementById('newGroupSidebarBtn')?.addEventListener('click', () => {
+        groupModalSwitchTab('create');
+        ModalManager.open('createGroupModal');
+    });
+    ModalManager.registerCloseButton('closeCreateGroupModal', 'createGroupModal', fieldIds);
+    ModalManager.registerOverlayClose('createGroupModal', fieldIds);
+    ModalManager.registerEscapeKey('createGroupModal', fieldIds);
+    
     // Also register cancel button
     document.getElementById('cancelCreateGroupBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -174,15 +187,15 @@ function initJoinGroupModal(onSuccess) {
     const modalId = 'joinGroupModal';
     const fieldIds = ['joinGroupCodeInput'];
 
-    // Register standard modal controls
-    ModalManager.registerModal(
-        modalId,
-        'joinGroupSidebarBtn',     // open button
-        'closeJoinGroupModal',     // close button
-        fieldIds                   // fields to clear on close
-    );
+    // Join btn opens the combined modal on the Join tab
+    document.getElementById('joinGroupSidebarBtn')?.addEventListener('click', () => {
+        groupModalSwitchTab('join');
+        ModalManager.open('createGroupModal');
+    });
+    ModalManager.registerCloseButton('closeJoinGroupModal', 'createGroupModal', fieldIds);
+    ModalManager.registerOverlayClose('createGroupModal', fieldIds);
+    ModalManager.registerEscapeKey('createGroupModal', fieldIds);    // Also register cancel button
 
-    // Also register cancel button
     document.getElementById('cancelJoinGroupBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
         ModalManager.reset(modalId, fieldIds);
