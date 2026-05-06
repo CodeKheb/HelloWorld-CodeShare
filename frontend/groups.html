@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="css/groups.css"/>
+    <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
     <!-- Sidebar Overlay (Mobile) -->
@@ -36,7 +37,7 @@
 
             <!-- CTA Button -->
             <div class="sidebar-footer">
-                <button class="primary-button" type="button">New Repository</button>
+                <button class="primary-button" type="button" id="newRepoSidebarBtn">New Repository</button>
             </div>
         </nav>
 
@@ -213,6 +214,29 @@
         })();
     </script>
 
+    <!-- Modal System -->
+    <script src="js/modal.js"></script>
+    <script src="js/modal-handlers.js"></script>
     <script src="js/groups.js"></script>
+    <script>
+        // Load modals after page loads
+        (async function loadModals() {
+            try {
+                const response = await fetch('/modals.html');
+                const html = await response.text();
+                
+                // Create container and inject modals
+                const container = document.createElement('div');
+                container.id = 'modalsContainer';
+                container.innerHTML = html;
+                document.body.appendChild(container);
+
+                // Initialize all modal handlers after modals are loaded
+                initializeAllModals();
+            } catch (error) {
+                console.error('Failed to load modals:', error);
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -7,6 +7,9 @@
         <link href="https://fonts.googleapis.com" rel="preconnect"/>
         <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
         <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+        <!-- Modal System -->
+        <script src="/js/modal.js"></script>
+        <script src="/js/modal-handlers.js"></script>
         <script type="module" src="js/messages.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -33,7 +36,8 @@
                         <div class="sidebar-section">
                             <div class="section-header">
                                 <strong>Groups</strong>
-                                <button id="openCreateGroup" class="icon-button" aria-label="Create or Join Group"><span class="material-symbols-outlined">add</span></button>
+                                <button id="newGroupSidebarBtn" class="icon-button" aria-label="Create Group"><span class="material-symbols-outlined">add</span></button>
+                                <button id="joinGroupSidebarBtn" class="icon-button" aria-label="Join Group"><span class="material-symbols-outlined">login</span></button>
                             </div>
                             <ul id="sidebar-groups" class="sidebar-nav">
                                 <!-- Groups will be populated from the server -->
@@ -54,7 +58,7 @@
                 </ul>
 
                 <div class="sidebar-footer">
-                    <button class="primary-button" type="button">New Repository</button>
+                    <button class="primary-button" type="button" id="newRepoSidebarBtn">New Repository</button>
                 </div>
             </nav>
 
@@ -554,6 +558,25 @@
                         if (section) section.classList.toggle('collapsed');
                     });
                 });
+            })();
+
+            // ── Load Modal System ────────────────────────────────────────
+            (async function loadModals() {
+                try {
+                    const response = await fetch('/modals.html');
+                    const html = await response.text();
+                    
+                    // Create container and inject modals
+                    const container = document.createElement('div');
+                    container.id = 'modalsContainer';
+                    container.innerHTML = html;
+                    document.body.appendChild(container);
+
+                    // Initialize all modal handlers after modals are loaded
+                    initializeAllModals();
+                } catch (error) {
+                    console.error('Failed to load modals:', error);
+                }
             })();
         </script>
     </body>

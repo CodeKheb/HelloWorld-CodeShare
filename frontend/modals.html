@@ -1,0 +1,123 @@
+<!-- 
+    ========================================
+    REUSABLE MODAL COMPONENTS
+    ========================================
+    
+    This file contains all modal overlays and forms used throughout the application.
+    Include this file in pages that need modals:
+    
+    <div id="modals-container"></div>
+    <script>
+        fetch('/modals.html')
+            .then(res => res.text())
+            .then(html => document.getElementById('modals-container').innerHTML = html)
+            .catch(err => console.error('Failed to load modals:', err));
+    </script>
+-->
+
+<!-- ========== CREATE GROUP MODAL ========== -->
+<div id="createGroupModal" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Create Group</h2>
+            <button id="closeCreateGroupModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <label for="groupNameInput">GROUP NAME <span class="required">*</span></label>
+            <input type="text" id="groupNameInput" placeholder="e.g. Project Discussion" />
+
+            <label for="groupRepoInput">REPOSITORY (optional)</label>
+            <input type="text" id="groupRepoInput" placeholder="owner/repo" />
+            <small>Add a repository to the group upon creation.</small>
+        </div>
+        <div class="modal-footer">
+            <button id="submitCreateGroupBtn" class="btn-primary">CREATE GROUP</button>
+            <button id="cancelCreateGroupBtn" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== CREATE REPOSITORY MODAL ========== -->
+<div id="createRepoModal" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Create Repository</h2>
+            <button id="closeCreateRepoModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <label for="repoNameInput">REPOSITORY NAME <span class="required">*</span></label>
+            <input type="text" id="repoNameInput" placeholder="e.g. my-project" />
+
+            <label for="repoDescriptionInput">DESCRIPTION</label>
+            <input type="text" id="repoDescriptionInput" placeholder="What is this repository?" />
+
+            <label class="checkbox-label-alt">
+                <input type="checkbox" id="repoPrivateCheckbox" />
+                <span>Make repository private</span>
+            </label>
+
+            <label class="checkbox-label-alt">
+                <input type="checkbox" id="repoAutoInitCheckbox" checked />
+                <span>Initialize with README</span>
+            </label>
+
+            <label for="repoGitignoreSelect">GITIGNORE TEMPLATE</label>
+            <select id="repoGitignoreSelect">
+                <option value="">None</option>
+                <option value="Node">Node</option>
+                <option value="Python">Python</option>
+                <option value="Java">Java</option>
+            </select>
+
+            <label for="repoLicenseSelect">LICENSE</label>
+            <select id="repoLicenseSelect">
+                <option value="">None</option>
+                <option value="mit">MIT</option>
+                <option value="apache-2.0">Apache 2.0</option>
+                <option value="gpl-3.0">GPL 3.0</option>
+            </select>
+        </div>
+        <div class="modal-footer">
+            <button id="submitCreateRepoBtn" class="btn-primary">CREATE REPOSITORY</button>
+            <button id="cancelCreateRepoBtn" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== JOIN GROUP MODAL ========== -->
+<div id="joinGroupModal" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Join Group</h2>
+            <button id="closeJoinGroupModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <label for="joinGroupCodeInput">INVITE CODE <span class="required">*</span></label>
+            <input type="text" id="joinGroupCodeInput" placeholder="e.g. ABC123" />
+            <small>Enter the invite code to join a group.</small>
+        </div>
+        <div class="modal-footer">
+            <button id="submitJoinGroupBtn" class="btn-primary">JOIN GROUP</button>
+            <button id="cancelJoinGroupBtn" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== ATTACH REPOSITORY MODAL ========== -->
+<div id="attachRepoModal" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Attach Repository</h2>
+            <button id="closeAttachRepoModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <label for="attachRepoNameInput">REPOSITORY <span class="required">*</span></label>
+            <input type="text" id="attachRepoNameInput" placeholder="owner/repo" />
+            <small>Attach a GitHub repository to this group.</small>
+        </div>
+        <div class="modal-footer">
+            <button id="submitAttachRepoBtn" class="btn-primary">ATTACH REPOSITORY</button>
+            <button id="cancelAttachRepoBtn" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
