@@ -444,7 +444,11 @@ function updateDmPanel(contact) {
     const introText = document.querySelector('.group-panel__intro p');
     if (introTitle) introTitle.textContent = contact.username;
     if (introText) introText.textContent = 'Direct message conversation.';
-    renderMemberList([contact, window.currentUser].filter(Boolean));
+    
+    // Hide Members section for DMs
+    const membersSection = document.getElementById('members-section');
+    if (membersSection) membersSection.style.display = 'none';
+    
     renderRepoList([]);
     renderGroupActions(null); // No leave/delete for DMs
 }
@@ -533,6 +537,10 @@ async function loadGroupDetails(groupId) {
                 ? `${repos.length} ${repos.length === 1 ? 'repository' : 'repositories'} linked to this group.`
                 : 'No repository linked yet. Attach one to start receiving repository updates.';
         }
+
+        // Show Members section for groups
+        const membersSection = document.getElementById('members-section');
+        if (membersSection) membersSection.style.display = '';
 
         renderMemberList(members);
         renderRepoList(repos);
