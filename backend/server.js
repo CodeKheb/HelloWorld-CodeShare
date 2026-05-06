@@ -128,6 +128,6 @@ setTimeout(() => {
 }, 5 * 1000);
 
 // start server
-httpServer.listen(port, "0.0.0.0", () => {
-    console.log(`Server listening at port ${port} on 0.0.0.0`);
+httpServer.listen(port, () => {
+    console.log(`Server listening at port ${port}`);
 });
