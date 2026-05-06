@@ -203,9 +203,6 @@ async function fetchAndRenderSidebar() {
         const payload = await res.json();
         const allGroups = (payload && payload.groups) || [];
 
-        // Separate DM groups from regular groups.
-        // convention like "dm-<uuid>" if the server doesn't provide the flag.
-        // Adjust the condition below to match whatever your server sends.
         const groups = allGroups.filter(g => !g.is_direct);
         const dmGroups = allGroups.filter(g => g.is_direct);
 
@@ -268,7 +265,6 @@ async function fetchAndRenderSidebar() {
         }
 
         // ── Build contacts list ──────────────────────────────────────────
-        // Aggregate contacts from regular group members
         const contactsMap = new Map();
         groups.forEach(g => {
             if (Array.isArray(g.members)) {
@@ -280,14 +276,12 @@ async function fetchAndRenderSidebar() {
             }
         });
 
-        // Also surface the other participant from any existing DM groups
         dmGroups.forEach(g => {
             if (Array.isArray(g.members)) {
                 g.members.forEach(m => {
                     if (!m || !m.id) return;
                     if (m.id === window.currentUser.id) return;
                     if (!contactsMap.has(m.id)) {
-                        // Attach the dmGroupId so we can open the conversation directly
                         contactsMap.set(m.id, { ...m, existingDmGroupId: g.id });
                     }
                 });
@@ -314,14 +308,11 @@ async function fetchAndRenderSidebar() {
                     window.currentIsDm = true;
 
                     if (c.existingDmGroupId) {
-                        // We already know the DM group — open it directly without re-emitting
                         window.currentGroupId = c.existingDmGroupId;
                         loadDmMessages(c.existingDmGroupId);
-                        // Update header to show the contact
                         updateDmHeader(c);
                         updateDmPanel(c);
                     } else {
-                        // Let the server create / resolve the DM group
                         socket.emit('direct-connect', c.id);
                     }
 
@@ -341,7 +332,6 @@ async function fetchAndRenderSidebar() {
     }
 }
 
-// Update header to show a DM contact's avatar and name
 function updateDmHeader(contact) {
     const titleEl = document.querySelector('.chat-channel');
     if (titleEl) {
@@ -352,14 +342,12 @@ function updateDmHeader(contact) {
             ${escapeHtml(contact.username)}
         `;
     }
-    // Hide member count / avatar stack for DMs
     const stack = document.querySelector('.avatar-stack');
     const count = document.querySelector('.member-count');
     if (stack) stack.style.display = 'none';
     if (count) count.style.display = 'none';
 }
 
-// Update right panel to show DM info
 function updateDmPanel(contact) {
     const introTitle = document.querySelector('.group-panel__intro h3');
     const introText = document.querySelector('.group-panel__intro p');
@@ -369,11 +357,9 @@ function updateDmPanel(contact) {
     renderRepoList([]);
 }
 
-// Update the header avatar stack and member count using available group data
 function updateGroupHeaderFromMembers(group) {
     if (!group) return;
 
-    // Restore avatar stack / member count visibility in case they were hidden for a DM
     const stack = document.querySelector('.avatar-stack');
     const countEl = document.querySelector('.member-count');
     if (stack) stack.style.display = '';
@@ -406,16 +392,13 @@ function updateGroupHeaderFromMembers(group) {
 async function selectGroup(group) {
     if (!group) return;
     window.currentIsDm = false;
-    // Leave previous group if set
     if (window.currentInviteCode) socket.emit('leave-group', window.currentInviteCode);
     window.currentGroupId = group.id;
     window.currentInviteCode = group.invite_code;
 
-    // Restore channel icon for regular groups
     const titleEl = document.querySelector('.chat-channel');
     if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> ${escapeHtml(group.name)}`;
 
-    // Restore avatar stack / member count
     const stack = document.querySelector('.avatar-stack');
     const count = document.querySelector('.member-count');
     if (stack) stack.style.display = '';
@@ -572,7 +555,6 @@ function initializeMessageComposer() {
             return;
         }
         
-        
         const roomSecret = await fetchRoomSecret(window.currentGroupId);
         const encryptedText = await encryptMessage(text.trim(), roomSecret);
         console.log(`Current GroupID: ${window.currentGroupId}`);
@@ -713,7 +695,6 @@ function initializeSidebar() {
 
     overlay.addEventListener('click', closeSidebar);
 
-    // Sidebar links that are rendered server-side (static nav items)
     sidebar.querySelectorAll('.sidebar-link').forEach(link => {
         link.addEventListener('click', () => {
             if (window.innerWidth <= 768) closeSidebar();
@@ -725,12 +706,16 @@ function initializeSidebar() {
 
 let selectedCommits = new Set();
 
+// Track which "view" the commits modal is showing: 'list' | 'diff'
+let commitsModalView = 'list';
+
 function initializeCommitsModal() {
     const summarizeBtn = document.querySelector('.primary-button.action-button');
     const commitsOverlay = document.getElementById('commitsOverlay');
     const closeBtn = document.getElementById('closeCommits');
     const repoSelect = document.getElementById('commitRepoSelect');
     const compareBtn = document.getElementById('compareCommitsBtn');
+    const backBtn = document.getElementById('diffBackBtn');
 
     if (!summarizeBtn || !commitsOverlay) {
         console.warn('Summarize button or commits overlay not found');
@@ -767,6 +752,11 @@ function initializeCommitsModal() {
         }
         await compareCommits(commits[0], commits[1]);
     });
+
+    // Back button: return from diff view to list view
+    backBtn?.addEventListener('click', () => {
+        showCommitsList();
+    });
 }
 
 function showCommitsModal() {
@@ -776,6 +766,7 @@ function showCommitsModal() {
     selectedCommits.clear();
     document.getElementById('commitRepoSelect').value = '';
     hideCommitsContainer();
+    showCommitsList(); // ensure we start on list view
     loadGroupRepositories();
 
     const modal = overlay.querySelector('.modal');
@@ -800,6 +791,42 @@ function hideCommitsModal() {
         overlay.removeEventListener('transitionend', onEnd);
     };
     overlay.addEventListener('transitionend', onEnd);
+}
+
+// Switch modal body to show commit list / selector
+function showCommitsList() {
+    commitsModalView = 'list';
+    const listView = document.getElementById('commitsListView');
+    const diffView = document.getElementById('commitsDiffView');
+    const modalTitle = document.getElementById('commitsModalTitle');
+    const backBtn = document.getElementById('diffBackBtn');
+
+    if (listView) listView.style.display = '';
+    if (diffView) diffView.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = 'Repository Commits';
+    if (backBtn) backBtn.style.display = 'none';
+}
+
+// Switch modal body to show diff result
+function showDiffView(diffHtml, title, subtitle, statsHtml) {
+    commitsModalView = 'diff';
+    const listView = document.getElementById('commitsListView');
+    const diffView = document.getElementById('commitsDiffView');
+    const modalTitle = document.getElementById('commitsModalTitle');
+    const backBtn = document.getElementById('diffBackBtn');
+    const diffTitle = document.getElementById('diffViewTitle');
+    const diffSubtitle = document.getElementById('diffViewSubtitle');
+    const diffStats = document.getElementById('diffViewStats');
+    const diffContent = document.getElementById('diffViewContent');
+
+    if (listView) listView.style.display = 'none';
+    if (diffView) diffView.style.display = '';
+    if (modalTitle) modalTitle.textContent = 'Commit Comparison';
+    if (backBtn) backBtn.style.display = 'inline-flex';
+    if (diffTitle) diffTitle.textContent = title;
+    if (diffSubtitle) diffSubtitle.innerHTML = subtitle;
+    if (diffStats) diffStats.innerHTML = statsHtml;
+    if (diffContent) diffContent.innerHTML = diffHtml;
 }
 
 async function loadGroupRepositories() {
@@ -959,6 +986,13 @@ async function compareCommits(sha1, sha2) {
     const [owner, repo] = repoFullName.split('/');
     if (!owner || !repo) return;
 
+    // Show loading state inside the modal
+    const compareBtn = document.getElementById('compareCommitsBtn');
+    if (compareBtn) {
+        compareBtn.disabled = true;
+        compareBtn.textContent = 'Loading diff...';
+    }
+
     try {
         const [commit1Response, commit2Response] = await Promise.all([
             fetch(`/api/repos/${owner}/${repo}/commits/${sha1}`, { credentials: 'include' }),
@@ -972,27 +1006,24 @@ async function compareCommits(sha1, sha2) {
         const commit1 = await commit1Response.json();
         const commit2 = await commit2Response.json();
 
-        displayCommitDiff(commit1, commit2, repoFullName);
-        hideCommitsModal();
+        renderDiffInModal(commit1, commit2, repoFullName);
     } catch (error) {
         console.error('Error comparing commits:', error);
         alert('Failed to compare commits: ' + error.message);
+        updateCompareButton();
     }
 }
 
-function displayCommitDiff(commit1, commit2, repoFullName) {
-    const messageFeed = document.querySelector('.message-feed');
-    if (!messageFeed) return;
+// ── Render diff inside the modal (replaces displayCommitDiff) ────────────────
 
-    const diffElement = document.createElement('article');
-    diffElement.className = 'message message--diff';
-
+function renderDiffInModal(commit1, commit2, repoFullName) {
     const shortSha1 = commit1.sha.substring(0, 7);
     const shortSha2 = commit2.sha.substring(0, 7);
 
     const totalAdditions = commit1.stats.additions + commit2.stats.additions;
     const totalDeletions = commit1.stats.deletions + commit2.stats.deletions;
 
+    // Merge files from both commits
     const filesMap = new Map();
     commit1.files.forEach(file => {
         filesMap.set(file.filename, { ...file, commit: 1 });
@@ -1010,13 +1041,19 @@ function displayCommitDiff(commit1, commit2, repoFullName) {
         }
     });
 
+    // Build files HTML
     const filesHtml = Array.from(filesMap.values()).map(file => `
         <div class="diff-file">
             <div class="diff-file-header">
+                <span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:6px;color:#8b949e;">description</span>
                 ${escapeHtml(file.filename)}
-                <span style="margin-left: 1rem; color: #8b949e;">
-                    ${file.status} 
-                    (+${file.additions} -${file.deletions})
+                <span class="diff-file-badge diff-file-badge--${file.status || 'modified'}">
+                    ${file.status || 'modified'}
+                </span>
+                <span style="margin-left:auto;font-size:11px;color:#8b949e;font-weight:400;">
+                    <span style="color:#3fb950;">+${file.additions}</span>
+                    &nbsp;
+                    <span style="color:#f85149;">-${file.deletions}</span>
                 </span>
             </div>
             <div class="diff-file-content">
@@ -1025,28 +1062,35 @@ function displayCommitDiff(commit1, commit2, repoFullName) {
         </div>
     `).join('');
 
-    diffElement.innerHTML = `
-        <div class="diff-header">
-            <div class="diff-title">
-                <span class="material-symbols-outlined" style="vertical-align: middle;">compare_arrows</span>
-                Comparing commits in ${escapeHtml(repoFullName)}
-                <br>
-                <small style="color: #8b949e; font-weight: 400;">
-                    ${shortSha1} (${escapeHtml(commit1.message.split('\n')[0])}) 
-                    ↔ 
-                    ${shortSha2} (${escapeHtml(commit2.message.split('\n')[0])})
-                </small>
-            </div>
-            <div class="diff-stats">
-                <span class="diff-stat diff-stat--additions">+${totalAdditions}</span>
-                <span class="diff-stat diff-stat--deletions">-${totalDeletions}</span>
-            </div>
-        </div>
-        <div class="diff-files">${filesHtml}</div>
+    const statsHtml = `
+        <span class="diff-stat diff-stat--additions">
+            <span class="material-symbols-outlined" style="font-size:14px;">add</span>
+            ${totalAdditions} additions
+        </span>
+        <span class="diff-stat diff-stat--deletions">
+            <span class="material-symbols-outlined" style="font-size:14px;">remove</span>
+            ${totalDeletions} deletions
+        </span>
+        <span class="diff-stat" style="color:#8b949e;">
+            <span class="material-symbols-outlined" style="font-size:14px;">description</span>
+            ${filesMap.size} file${filesMap.size !== 1 ? 's' : ''}
+        </span>
     `;
 
-    messageFeed.appendChild(diffElement);
-    messageFeed.scrollTop = messageFeed.scrollHeight;
+    const subtitleHtml = `
+        <code class="diff-sha-pill">${shortSha1}</code>
+        <span class="diff-sha-label">${escapeHtml(commit1.message.split('\n')[0])}</span>
+        <span class="material-symbols-outlined" style="font-size:16px;color:#8b949e;flex-shrink:0;">compare_arrows</span>
+        <code class="diff-sha-pill">${shortSha2}</code>
+        <span class="diff-sha-label">${escapeHtml(commit2.message.split('\n')[0])}</span>
+    `;
+
+    showDiffView(
+        filesHtml,
+        repoFullName,
+        subtitleHtml,
+        statsHtml
+    );
 }
 
 function formatPatch(patch) {

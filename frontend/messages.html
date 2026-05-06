@@ -258,44 +258,72 @@
 
         <!-- Commits Modal -->
         <div id="commitsOverlay" class="modal-overlay hidden">
-            <div class="modal modal--large">
-                <div class="modal-header">
-                    <h2>Repository Commits</h2>
-                    <button id="closeCommits">&times;</button>
+    <div class="modal modal--large">
+ 
+        <!-- Header -->
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <!-- Back button — only visible in diff view -->
+                <button id="diffBackBtn" class="diff-back-btn" style="display:none;" aria-label="Back to commits">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <h2 id="commitsModalTitle">Repository Commits</h2>
+            </div>
+            <button id="closeCommits">&times;</button>
+        </div>
+ 
+        <!-- Modal body -->
+        <div class="modal-body" style="padding:0;">
+ 
+            <!-- ── LIST VIEW ── -->
+            <div id="commitsListView" style="padding:1.5rem;display:flex;flex-direction:column;gap:0;">
+                <div id="repoSelector" class="repo-selector">
+                    <label>SELECT REPOSITORY</label>
+                    <select id="commitRepoSelect">
+                        <option value="">-- Select a repository --</option>
+                    </select>
                 </div>
-                <div class="modal-body">
-                    <div id="repoSelector" class="repo-selector">
-                        <label>SELECT REPOSITORY</label>
-                        <select id="commitRepoSelect">
-                            <option value="">-- Select a repository --</option>
-                        </select>
-                    </div>
-
-                    <div id="commitsContainer" class="commits-container hidden">
-                        <div class="commits-header">
-                            <h3 id="selectedRepoName"></h3>
-                            <div class="commits-actions">
-                                <button id="compareCommitsBtn" class="btn-primary" disabled>
-                                    Compare Selected
-                                </button>
-                            </div>
+ 
+                <div id="commitsContainer" class="commits-container hidden">
+                    <div class="commits-header">
+                        <h3 id="selectedRepoName"></h3>
+                        <div class="commits-actions">
+                            <button id="compareCommitsBtn" class="btn-primary" disabled>
+                                Compare Selected
+                            </button>
                         </div>
-                        <div id="commitsList" class="commits-list"></div>
                     </div>
-
-                    <div id="commitsLoading" class="loading-state hidden">
-                        <span class="material-symbols-outlined spinning">progress_activity</span>
-                        <p>Loading commits...</p>
-                    </div>
-
-                    <div id="commitsError" class="error-state hidden">
-                        <span class="material-symbols-outlined">error</span>
-                        <p id="commitsErrorText"></p>
-                    </div>
+                    <div id="commitsList" class="commits-list"></div>
+                </div>
+ 
+                <div id="commitsLoading" class="loading-state hidden">
+                    <span class="material-symbols-outlined spinning">progress_activity</span>
+                    <p>Loading commits...</p>
+                </div>
+ 
+                <div id="commitsError" class="error-state hidden">
+                    <span class="material-symbols-outlined">error</span>
+                    <p id="commitsErrorText"></p>
                 </div>
             </div>
+ 
+            <!-- ── DIFF VIEW ── -->
+            <div id="commitsDiffView" style="display:none;flex-direction:column;height:100%;">
+ 
+                <!-- Diff meta bar -->
+                <div class="diff-meta-bar">
+                    <div class="diff-meta-bar__title" id="diffViewTitle"></div>
+                    <div class="diff-meta-bar__subtitle" id="diffViewSubtitle"></div>
+                    <div class="diff-meta-bar__stats" id="diffViewStats"></div>
+                </div>
+ 
+                <!-- Scrollable diff content -->
+                <div class="diff-scroll-area" id="diffViewContent"></div>
+            </div>
+ 
         </div>
-
+    </div>
+</div>
         <script>
             // ── Tab switching ────────────────────────────────────────────
             function switchTab(tab) {
