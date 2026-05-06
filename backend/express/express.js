@@ -26,7 +26,12 @@ const requireAuth = (req, res, next) => {
     if (req.isAuthenticated()) {
         return next();
     }
-    res.redirect('/login');
+
+    if (req.path.startsWith('/api/')) {
+        return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    return res.redirect('/login');
 };
 
 app.use(express.urlencoded({ extended: true }));
@@ -96,8 +101,13 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
-app.get('/', requireAuth, (req, res) => {
-    res.sendFile(path.join(frontendPath, 'index.html'));
+app.get('/', (req, res) => {
+    if (req.isAuthenticated()) {
+        return res.sendFile(path.join(frontendPath, 'index.html'));
+    }
+
+    // Return 200 for platform health checks and first-time visitors.
+    return res.sendFile(path.join(frontendPath, 'login.html'));
 });
 
 app.get('/login', (req, res) => {
