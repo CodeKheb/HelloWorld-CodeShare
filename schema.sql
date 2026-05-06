@@ -44,6 +44,7 @@ CREATE TABLE group_repos (
   repo_full_name VARCHAR(255) NOT NULL,
   webhook_id BIGINT,
   added_at TIMESTAMP DEFAULT NOW(),
+  attached_at TIMESTAMP DEFAULT NOW(),
   last_checked_at TIMESTAMP,
   last_commit_sha VARCHAR(40),
   use_polling BOOLEAN DEFAULT FALSE,
