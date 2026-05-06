@@ -40,14 +40,14 @@ app.use(express.json({
 // Try: __dirname/../.., __dirname/.., cwd/frontend, cwd/../frontend, 
 // /app/frontend (Railway), /workspace/frontend (Render), /src/frontend (Glitch)
 const frontendCandidates = [
-    path.resolve(__dirname, "../../frontend"),           // backend/express/... -> ../.. = root/frontend
-    path.resolve(__dirname, "../frontend"),              // backend/express/... -> .. = backend/frontend
-    path.resolve(process.cwd(), "frontend"),             // cwd = /app/backend -> /app/backend/frontend
-    path.resolve(process.cwd(), "../frontend"),          // cwd = /app/backend -> /app/frontend
-    "/app/frontend",                                      // Railway default
-    "/workspace/frontend",                               // Render default
-    "/src/frontend",                                      // Glitch default
-    path.resolve("/", "frontend")                        // Root fallback
+    path.resolve(__dirname, "../frontend"),
+    path.resolve(__dirname, "../frontend"),
+    path.resolve(process.cwd(), "frontend"),
+    path.resolve(process.cwd(), "frontend"),
+    "/app/backend/frontend",
+    "/workspace/backend/frontend",
+    "/src/backend/frontend",
+    path.resolve("/", "frontend")
 ];
 
 let frontendPath = null;
@@ -61,7 +61,7 @@ for (const candidate of frontendCandidates) {
 
 if (!frontendPath) {
     // Last resort: assume it's relative to where backend is deployed
-    frontendPath = path.resolve(__dirname, "../../frontend");
+    frontendPath = path.resolve(__dirname, "../frontend");
     console.warn(`[EXPRESS] Could not locate frontend directory. Defaulting to: ${frontendPath}`);
 }
 
