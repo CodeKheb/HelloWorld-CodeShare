@@ -1,4 +1,26 @@
 import { io } from "https://cdn.socket.io/4.5.4/socket.io.esm.min.js";
+import { encryptMessage, 
+    decryptMessage, 
+    clearKeyCache } from './encryption.js';
+
+// Room secrets stored in memory only — never persisted
+const roomSecrets = new Map();
+
+async function fetchRoomSecret(groupId) {
+    if (roomSecrets.has(groupId)) return roomSecrets.get(groupId);
+
+    console.log(`Fetch groupId: ${groupId}`);
+
+    const res = await fetch(`/api/auth/room-secret/${groupId}`, {
+        credentials: 'include'
+    });
+
+    if (!res.ok) throw new Error('Failed to fetch room secret');
+
+    const { roomSecret } = await res.json();
+    roomSecrets.set(groupId, roomSecret);
+    return roomSecret;
+}
 
 const socket = io("https://codeshare-ewmi.onrender.com", {
     withCredentials: true
@@ -15,14 +37,42 @@ window.requestedGroupId = _urlParams.get('groupId');
 window.requestedGroupName = _urlParams.get('groupName');
 
 // group messages 
-socket.on("server-group-text", (message) => {
+socket.on("server-group-text", async (message) => {
     console.log("Received group message:", message);
+    if (message.type !== 'system' && message.text) {
+        const roomSecret = await fetchRoomSecret(message.groupId);
+        message.text = await decryptMessage(message.text, roomSecret);
+    }
     displayMessage(message);
 });
 
+//Checks for members leaving
+socket.on("member-leave", (data) => {
+    console.log(`${data.username} left group ${data.groupId}`);
+
+    // Only update UI if it's the currently viewed group
+    if (String(data.groupId) === String(window.currentGroupId)) {
+        loadGroupDetails(data.groupId);
+    }
+});
+
+//Checks for new members
+socket.on("member-joined", (data) => {
+    console.log(`${data.username} joined group ${data.groupId}`);
+
+    // Only update UI if it's the currently viewed group
+    if (String(data.groupId) === String(window.currentGroupId)) {
+        loadGroupDetails(data.groupId);
+    }
+});
+
 // incoming messages
-socket.on("server-direct-text", (message) => {
+socket.on("server-direct-text", async (message) => {
     console.log("Received direct message:", message);
+    if (message.type !== 'system' && message.text) {
+        const roomSecret = await fetchRoomSecret(message.DmId);
+        message.text = await decryptMessage(message.text, roomSecret);
+    }
     displayMessage(message);
 });
 
@@ -39,6 +89,29 @@ socket.on("dm-ready", async ({ dmGroupId, receiverId }) => {
         loadDmMessages(dmGroupId),
         loadDmDetails(dmGroupId)
     ]);
+});
+
+// Group deleted by owner — kick everyone out
+socket.on("group-deleted", ({ groupId }) => {
+    if (String(groupId) === String(window.currentGroupId)) {
+        window.currentGroupId = null;
+        window.currentInviteCode = null;
+
+        const messageFeed = document.querySelector('.message-feed');
+        if (messageFeed) {
+            messageFeed.innerHTML = `
+                <div class="empty-feed-notice">
+                    <span class="material-symbols-outlined">group_off</span>
+                    <p>This group has been deleted.</p>
+                </div>`;
+        }
+
+        const titleEl = document.querySelector('.chat-channel');
+        if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> deleted-group`;
+
+        // Re-render sidebar to remove the deleted group
+        fetchAndRenderSidebar();
+    }
 });
 
 async function loadDmMessages(dmGroupId) {
@@ -59,11 +132,16 @@ async function loadDmMessages(dmGroupId) {
 
         const payload = await response.json();
         const messages = Array.isArray(payload.messages) ? payload.messages : [];
+        const roomSecret = await fetchRoomSecret(dmGroupId);
 
-        messages.forEach((m) => {
+        for (const m of messages) {
+            const decryptedText = m.type !== 'system'
+                ? await decryptMessage(m.content, roomSecret)
+                : m.content;
+
             displayMessage({
                 id: m.id,
-                text: m.content,
+                text: decryptedText,
                 type: m.type,
                 timestamp: m.created_at,
                 author: m.sender_username || 'Unknown',
@@ -71,7 +149,7 @@ async function loadDmMessages(dmGroupId) {
                 avatar: m.sender_avatar_url || '/default-avatar.png',
                 senderId: m.sender_id
             });
-        });
+        }
     } catch (error) {
         console.error('Error loading DM messages:', error);
     }
@@ -168,9 +246,6 @@ async function fetchAndRenderSidebar() {
         const payload = await res.json();
         const allGroups = (payload && payload.groups) || [];
 
-        // Separate DM groups from regular groups.
-        // convention like "dm-<uuid>" if the server doesn't provide the flag.
-        // Adjust the condition below to match whatever your server sends.
         const groups = allGroups.filter(g => !g.is_direct);
         const dmGroups = allGroups.filter(g => g.is_direct);
 
@@ -187,8 +262,8 @@ async function fetchAndRenderSidebar() {
                 a.innerHTML = `<span class="material-symbols-outlined">tag</span><span>${escapeHtml(g.name)}</span>`;
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
-                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-                    a.classList.add('active');
+                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('sidebar-link--active'));
+                    a.classList.add('sidebar-link--active');
                     updateGroupHeaderFromMembers(g);
                     selectGroup(g);
                     collapseSidebarOnMobile();
@@ -233,7 +308,6 @@ async function fetchAndRenderSidebar() {
         }
 
         // ── Build contacts list ──────────────────────────────────────────
-        // Aggregate contacts from regular group members
         const contactsMap = new Map();
         groups.forEach(g => {
             if (Array.isArray(g.members)) {
@@ -245,14 +319,12 @@ async function fetchAndRenderSidebar() {
             }
         });
 
-        // Also surface the other participant from any existing DM groups
         dmGroups.forEach(g => {
             if (Array.isArray(g.members)) {
                 g.members.forEach(m => {
                     if (!m || !m.id) return;
                     if (m.id === window.currentUser.id) return;
                     if (!contactsMap.has(m.id)) {
-                        // Attach the dmGroupId so we can open the conversation directly
                         contactsMap.set(m.id, { ...m, existingDmGroupId: g.id });
                     }
                 });
@@ -274,19 +346,16 @@ async function fetchAndRenderSidebar() {
 
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
-                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-                    a.classList.add('active');
+                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('sidebar-link--active'));
+                    a.classList.add('sidebar-link--active');
                     window.currentIsDm = true;
 
                     if (c.existingDmGroupId) {
-                        // We already know the DM group — open it directly without re-emitting
                         window.currentGroupId = c.existingDmGroupId;
                         loadDmMessages(c.existingDmGroupId);
-                        // Update header to show the contact
                         updateDmHeader(c);
                         updateDmPanel(c);
                     } else {
-                        // Let the server create / resolve the DM group
                         socket.emit('direct-connect', c.id);
                     }
 
@@ -306,7 +375,6 @@ async function fetchAndRenderSidebar() {
     }
 }
 
-// Update header to show a DM contact's avatar and name
 function updateDmHeader(contact) {
     const titleEl = document.querySelector('.chat-channel');
     if (titleEl) {
@@ -317,14 +385,12 @@ function updateDmHeader(contact) {
             ${escapeHtml(contact.username)}
         `;
     }
-    // Hide member count / avatar stack for DMs
     const stack = document.querySelector('.avatar-stack');
     const count = document.querySelector('.member-count');
     if (stack) stack.style.display = 'none';
     if (count) count.style.display = 'none';
 }
 
-// Update right panel to show DM info
 function updateDmPanel(contact) {
     const introTitle = document.querySelector('.group-panel__intro h3');
     const introText = document.querySelector('.group-panel__intro p');
@@ -332,13 +398,12 @@ function updateDmPanel(contact) {
     if (introText) introText.textContent = 'Direct message conversation.';
     renderMemberList([contact, window.currentUser].filter(Boolean));
     renderRepoList([]);
+    renderGroupActions(null); // No leave/delete for DMs
 }
 
-// Update the header avatar stack and member count using available group data
 function updateGroupHeaderFromMembers(group) {
     if (!group) return;
 
-    // Restore avatar stack / member count visibility in case they were hidden for a DM
     const stack = document.querySelector('.avatar-stack');
     const countEl = document.querySelector('.member-count');
     if (stack) stack.style.display = '';
@@ -371,16 +436,13 @@ function updateGroupHeaderFromMembers(group) {
 async function selectGroup(group) {
     if (!group) return;
     window.currentIsDm = false;
-    // Leave previous group if set
     if (window.currentInviteCode) socket.emit('leave-group', window.currentInviteCode);
     window.currentGroupId = group.id;
     window.currentInviteCode = group.invite_code;
 
-    // Restore channel icon for regular groups
     const titleEl = document.querySelector('.chat-channel');
     if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> ${escapeHtml(group.name)}`;
 
-    // Restore avatar stack / member count
     const stack = document.querySelector('.avatar-stack');
     const count = document.querySelector('.member-count');
     if (stack) stack.style.display = '';
@@ -426,6 +488,7 @@ async function loadGroupDetails(groupId) {
 
         renderMemberList(members);
         renderRepoList(repos);
+        renderGroupActions(group);
     } catch (error) {
         console.error('Error loading group details:', error);
     }
@@ -499,6 +562,134 @@ function renderRepoList(repos) {
     });
 }
 
+// ── Leave / Delete group actions in the side panel ───────────────────────────
+
+function renderGroupActions(group) {
+    // Find or create the actions section at the bottom of the panel body
+    let actionsSection = document.getElementById('group-actions-section');
+    if (!actionsSection) {
+        actionsSection = document.createElement('section');
+        actionsSection.id = 'group-actions-section';
+        actionsSection.className = 'panel-section panel-section--actions';
+        const panelBody = document.querySelector('.group-panel__body');
+        if (panelBody) panelBody.appendChild(actionsSection);
+    }
+
+    // No group (e.g. DM view) — hide the section entirely
+    if (!group) {
+        actionsSection.innerHTML = '';
+        actionsSection.style.display = 'none';
+        return;
+    }
+
+    actionsSection.style.display = '';
+
+    const isOwner = window.currentUser && String(group.created_by) === String(window.currentUser.id);
+
+    actionsSection.innerHTML = `
+        <div class="panel-section__header">
+            <h4>Danger Zone</h4>
+        </div>
+        <div class="group-actions">
+            ${!isOwner ? `
+                <button id="leaveGroupBtn" class="danger-button danger-button--outline" type="button">
+                    <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+                    Leave Group
+                </button>` : ''}
+            ${isOwner ? `
+                <button id="deleteGroupBtn" class="danger-button" type="button">
+                    <span class="material-symbols-outlined" aria-hidden="true">delete_forever</span>
+                    Delete Group
+                </button>` : ''}
+        </div>
+    `;
+
+    document.getElementById('leaveGroupBtn')?.addEventListener('click', () => handleLeaveGroup(group));
+    document.getElementById('deleteGroupBtn')?.addEventListener('click', () => handleDeleteGroup(group));
+}
+
+async function handleLeaveGroup(group) {
+    const confirmed = confirm(`Leave "${group.name}"? You'll need an invite code to rejoin.`);
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`/api/groups/${encodeURIComponent(group.id)}/leave`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.error || 'Failed to leave group.');
+            return;
+        }
+
+        // Clear current group state
+        window.currentGroupId = null;
+        window.currentInviteCode = null;
+
+        // Clear message feed
+        const messageFeed = document.querySelector('.message-feed');
+        if (messageFeed) {
+            messageFeed.innerHTML = `
+                <div class="empty-feed-notice">
+                    <span class="material-symbols-outlined">waving_hand</span>
+                    <p>You left <strong>${escapeHtml(group.name)}</strong>.</p>
+                </div>`;
+        }
+
+        // Refresh sidebar to remove the group
+        await fetchAndRenderSidebar();
+
+    } catch (err) {
+        console.error('Error leaving group:', err);
+        alert('Something went wrong. Please try again.');
+    }
+}
+
+async function handleDeleteGroup(group) {
+    const confirmed = confirm(`Permanently delete "${group.name}"? This cannot be undone — all messages and repos will be removed.`);
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`/api/groups/${encodeURIComponent(group.id)}`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.error || 'Failed to delete group.');
+            return;
+        }
+
+        // Clear current group state
+        window.currentGroupId = null;
+        window.currentInviteCode = null;
+
+        // Clear message feed
+        const messageFeed = document.querySelector('.message-feed');
+        if (messageFeed) {
+            messageFeed.innerHTML = `
+                <div class="empty-feed-notice">
+                    <span class="material-symbols-outlined">delete_forever</span>
+                    <p><strong>${escapeHtml(group.name)}</strong> has been deleted.</p>
+                </div>`;
+        }
+
+        // Refresh sidebar
+        await fetchAndRenderSidebar();
+
+    } catch (err) {
+        console.error('Error deleting group:', err);
+        alert('Something went wrong. Please try again.');
+    }
+}
+
 function escapeAttr(s) {
     if (!s) return '';
     return String(s).replace(/"/g, '&quot;');
@@ -513,18 +704,18 @@ function initializeMessageComposer() {
         return;
     }
 
-    sendButton.addEventListener('click', () => {
-        sendMessage(messageInput.value);
+    sendButton.addEventListener('click', async () => {
+        await sendMessage(messageInput.value);
     });
 
-    messageInput.addEventListener('keypress', (e) => {
+    messageInput.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage(messageInput.value);
+            await sendMessage(messageInput.value);
         }
     });
 
-    function sendMessage(text) {
+    async function sendMessage(text) {
         if (!text.trim()) return;
 
         if (!window.currentGroupId) {
@@ -537,8 +728,11 @@ function initializeMessageComposer() {
             return;
         }
 
+        const roomSecret = await fetchRoomSecret(window.currentGroupId);
+        const encryptedText = await encryptMessage(text.trim(), roomSecret);
+        console.log(`Current GroupID: ${window.currentGroupId}`);
         socket.emit("client-message", {
-            text: text.trim(),
+            text: encryptedText,
             groupId: window.currentGroupId
         });
 
@@ -565,11 +759,16 @@ async function loadGroupMessages(groupId) {
 
         const payload = await response.json();
         const messages = Array.isArray(payload.messages) ? payload.messages : [];
+        const roomSecret = await fetchRoomSecret(groupId);
 
-        messages.forEach((m) => {
+        for (const m of messages) {
+            const decryptedText = m.type !== 'system'
+                ? await decryptMessage(m.content, roomSecret)
+                : m.content;
+
             displayMessage({
                 id: m.id,
-                text: m.content,
+                text: decryptedText,
                 type: m.type,
                 timestamp: m.created_at,
                 author: m.sender_username || 'Unknown',
@@ -577,7 +776,7 @@ async function loadGroupMessages(groupId) {
                 avatar: m.sender_avatar_url || '/default-avatar.png',
                 senderId: m.sender_id
             });
-        });
+        }
     } catch (error) {
         console.error('Error loading persisted messages:', error);
     }
@@ -669,7 +868,6 @@ function initializeSidebar() {
 
     overlay.addEventListener('click', closeSidebar);
 
-    // Sidebar links that are rendered server-side (static nav items)
     sidebar.querySelectorAll('.sidebar-link').forEach(link => {
         link.addEventListener('click', () => {
             if (window.innerWidth <= 768) closeSidebar();
@@ -681,12 +879,16 @@ function initializeSidebar() {
 
 let selectedCommits = new Set();
 
+// Track which "view" the commits modal is showing: 'list' | 'diff'
+let commitsModalView = 'list';
+
 function initializeCommitsModal() {
     const summarizeBtn = document.querySelector('.primary-button.action-button');
     const commitsOverlay = document.getElementById('commitsOverlay');
     const closeBtn = document.getElementById('closeCommits');
     const repoSelect = document.getElementById('commitRepoSelect');
     const compareBtn = document.getElementById('compareCommitsBtn');
+    const backBtn = document.getElementById('diffBackBtn');
 
     if (!summarizeBtn || !commitsOverlay) {
         console.warn('Summarize button or commits overlay not found');
@@ -723,6 +925,11 @@ function initializeCommitsModal() {
         }
         await compareCommits(commits[0], commits[1]);
     });
+
+    // Back button: return from diff view to list view
+    backBtn?.addEventListener('click', () => {
+        showCommitsList();
+    });
 }
 
 function showCommitsModal() {
@@ -732,6 +939,7 @@ function showCommitsModal() {
     selectedCommits.clear();
     document.getElementById('commitRepoSelect').value = '';
     hideCommitsContainer();
+    showCommitsList(); // ensure we start on list view
     loadGroupRepositories();
 
     const modal = overlay.querySelector('.modal');
@@ -756,6 +964,42 @@ function hideCommitsModal() {
         overlay.removeEventListener('transitionend', onEnd);
     };
     overlay.addEventListener('transitionend', onEnd);
+}
+
+// Switch modal body to show commit list / selector
+function showCommitsList() {
+    commitsModalView = 'list';
+    const listView = document.getElementById('commitsListView');
+    const diffView = document.getElementById('commitsDiffView');
+    const modalTitle = document.getElementById('commitsModalTitle');
+    const backBtn = document.getElementById('diffBackBtn');
+
+    if (listView) listView.style.display = '';
+    if (diffView) diffView.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = 'Repository Commits';
+    if (backBtn) backBtn.style.display = 'none';
+}
+
+// Switch modal body to show diff result
+function showDiffView(diffHtml, title, subtitle, statsHtml) {
+    commitsModalView = 'diff';
+    const listView = document.getElementById('commitsListView');
+    const diffView = document.getElementById('commitsDiffView');
+    const modalTitle = document.getElementById('commitsModalTitle');
+    const backBtn = document.getElementById('diffBackBtn');
+    const diffTitle = document.getElementById('diffViewTitle');
+    const diffSubtitle = document.getElementById('diffViewSubtitle');
+    const diffStats = document.getElementById('diffViewStats');
+    const diffContent = document.getElementById('diffViewContent');
+
+    if (listView) listView.style.display = 'none';
+    if (diffView) diffView.style.display = '';
+    if (modalTitle) modalTitle.textContent = 'Commit Comparison';
+    if (backBtn) backBtn.style.display = 'inline-flex';
+    if (diffTitle) diffTitle.textContent = title;
+    if (diffSubtitle) diffSubtitle.innerHTML = subtitle;
+    if (diffStats) diffStats.innerHTML = statsHtml;
+    if (diffContent) diffContent.innerHTML = diffHtml;
 }
 
 async function loadGroupRepositories() {
@@ -915,6 +1159,13 @@ async function compareCommits(sha1, sha2) {
     const [owner, repo] = repoFullName.split('/');
     if (!owner || !repo) return;
 
+    // Show loading state inside the modal
+    const compareBtn = document.getElementById('compareCommitsBtn');
+    if (compareBtn) {
+        compareBtn.disabled = true;
+        compareBtn.textContent = 'Loading diff...';
+    }
+
     try {
         const [commit1Response, commit2Response] = await Promise.all([
             fetch(`/api/repos/${owner}/${repo}/commits/${sha1}`, { credentials: 'include' }),
@@ -928,27 +1179,24 @@ async function compareCommits(sha1, sha2) {
         const commit1 = await commit1Response.json();
         const commit2 = await commit2Response.json();
 
-        displayCommitDiff(commit1, commit2, repoFullName);
-        hideCommitsModal();
+        renderDiffInModal(commit1, commit2, repoFullName);
     } catch (error) {
         console.error('Error comparing commits:', error);
         alert('Failed to compare commits: ' + error.message);
+        updateCompareButton();
     }
 }
 
-function displayCommitDiff(commit1, commit2, repoFullName) {
-    const messageFeed = document.querySelector('.message-feed');
-    if (!messageFeed) return;
+// ── Render diff inside the modal (replaces displayCommitDiff) ────────────────
 
-    const diffElement = document.createElement('article');
-    diffElement.className = 'message message--diff';
-
+function renderDiffInModal(commit1, commit2, repoFullName) {
     const shortSha1 = commit1.sha.substring(0, 7);
     const shortSha2 = commit2.sha.substring(0, 7);
 
     const totalAdditions = commit1.stats.additions + commit2.stats.additions;
     const totalDeletions = commit1.stats.deletions + commit2.stats.deletions;
 
+    // Merge files from both commits
     const filesMap = new Map();
     commit1.files.forEach(file => {
         filesMap.set(file.filename, { ...file, commit: 1 });
@@ -966,13 +1214,19 @@ function displayCommitDiff(commit1, commit2, repoFullName) {
         }
     });
 
+    // Build files HTML
     const filesHtml = Array.from(filesMap.values()).map(file => `
         <div class="diff-file">
             <div class="diff-file-header">
+                <span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:6px;color:#8b949e;">description</span>
                 ${escapeHtml(file.filename)}
-                <span style="margin-left: 1rem; color: #8b949e;">
-                    ${file.status} 
-                    (+${file.additions} -${file.deletions})
+                <span class="diff-file-badge diff-file-badge--${file.status || 'modified'}">
+                    ${file.status || 'modified'}
+                </span>
+                <span style="margin-left:auto;font-size:11px;color:#8b949e;font-weight:400;">
+                    <span style="color:#3fb950;">+${file.additions}</span>
+                    &nbsp;
+                    <span style="color:#f85149;">-${file.deletions}</span>
                 </span>
             </div>
             <div class="diff-file-content">
@@ -981,28 +1235,35 @@ function displayCommitDiff(commit1, commit2, repoFullName) {
         </div>
     `).join('');
 
-    diffElement.innerHTML = `
-        <div class="diff-header">
-            <div class="diff-title">
-                <span class="material-symbols-outlined" style="vertical-align: middle;">compare_arrows</span>
-                Comparing commits in ${escapeHtml(repoFullName)}
-                <br>
-                <small style="color: #8b949e; font-weight: 400;">
-                    ${shortSha1} (${escapeHtml(commit1.message.split('\n')[0])}) 
-                    ↔ 
-                    ${shortSha2} (${escapeHtml(commit2.message.split('\n')[0])})
-                </small>
-            </div>
-            <div class="diff-stats">
-                <span class="diff-stat diff-stat--additions">+${totalAdditions}</span>
-                <span class="diff-stat diff-stat--deletions">-${totalDeletions}</span>
-            </div>
-        </div>
-        <div class="diff-files">${filesHtml}</div>
+    const statsHtml = `
+        <span class="diff-stat diff-stat--additions">
+            <span class="material-symbols-outlined" style="font-size:14px;">add</span>
+            ${totalAdditions} additions
+        </span>
+        <span class="diff-stat diff-stat--deletions">
+            <span class="material-symbols-outlined" style="font-size:14px;">remove</span>
+            ${totalDeletions} deletions
+        </span>
+        <span class="diff-stat" style="color:#8b949e;">
+            <span class="material-symbols-outlined" style="font-size:14px;">description</span>
+            ${filesMap.size} file${filesMap.size !== 1 ? 's' : ''}
+        </span>
     `;
 
-    messageFeed.appendChild(diffElement);
-    messageFeed.scrollTop = messageFeed.scrollHeight;
+    const subtitleHtml = `
+        <code class="diff-sha-pill">${shortSha1}</code>
+        <span class="diff-sha-label">${escapeHtml(commit1.message.split('\n')[0])}</span>
+        <span class="material-symbols-outlined" style="font-size:16px;color:#8b949e;flex-shrink:0;">compare_arrows</span>
+        <code class="diff-sha-pill">${shortSha2}</code>
+        <span class="diff-sha-label">${escapeHtml(commit2.message.split('\n')[0])}</span>
+    `;
+
+    showDiffView(
+        filesHtml,
+        repoFullName,
+        subtitleHtml,
+        statsHtml
+    );
 }
 
 function formatPatch(patch) {

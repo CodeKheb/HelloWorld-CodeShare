@@ -63,6 +63,44 @@ async function isEventNew({ eventId, groupId, repoFullName }) {
     }
 }
 
+function getEventTimestamp(event) {
+    const payload = event?.payload || {};
+
+    if (event?.type === "PushEvent") {
+        const commitDates = Array.isArray(payload.commits)
+            ? payload.commits
+                .map(commit => commit?.timestamp)
+                .filter(Boolean)
+            : [];
+
+        if (commitDates.length > 0) {
+            return commitDates.reduce((latest, current) => {
+                return new Date(current).getTime() > new Date(latest).getTime() ? current : latest;
+            });
+        }
+
+        return payload.head_commit?.timestamp || event.created_at || null;
+    }
+
+    return event?.created_at || event?.updated_at || null;
+}
+
+function isAfterCutoff(eventTimestamp, cutoffTimestamp) {
+    if (!cutoffTimestamp) return false;
+    if (!eventTimestamp) return false;
+
+    // Normalize both timestamps to UTC milliseconds to avoid timezone mismatches
+    // GitHub events are in UTC; database timestamps may vary, so always normalize
+    const eventMs = new Date(eventTimestamp).getTime();
+    const cutoffMs = new Date(cutoffTimestamp).getTime();
+
+    if (Number.isNaN(eventMs) || Number.isNaN(cutoffMs)) {
+        return true;
+    }
+
+    return eventMs > cutoffMs;
+}
+
 /**
  * Transform GitHub event to system message
  * Supports: PushEvent, PullRequestEvent, IssuesEvent, CreateEvent, DeleteEvent
@@ -124,6 +162,42 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
             accessToken
         });
 
+        // Determine cutoff: the later of when the group was created
+        // and when this repo was attached to the group.
+        // This guarantees we NEVER surface commits that predate the group's existence.
+        const cutoffRow = await pool.query(
+            `SELECT
+                gc.created_at           AS group_created_at,
+                gr.attached_at          AS repo_attached_at,
+                gr.last_checked_at      AS last_checked_at
+            FROM group_chats gc
+            JOIN group_repos gr
+                ON gr.group_id = gc.id
+                AND gr.repo_full_name = $2
+            WHERE gc.id = $1`,
+            [groupId, repoFullName]
+        );
+
+        if (cutoffRow.rows.length === 0) {
+            console.warn(`[POLLING] Could not find group/repo row for group ${groupId}, repo ${repoFullName}. Skipping.`);
+            return;
+        }
+
+
+        const { group_created_at, repo_attached_at, last_checked_at } = cutoffRow.rows[0];
+
+        // Use the latest of: group creation, repo attachment, or last successful poll.
+        // This is the earliest possible moment a commit could be relevant.
+        const candidates = [group_created_at, repo_attached_at, last_checked_at]
+            .filter(Boolean)
+            .map(t => new Date(t).getTime())
+            .filter(ms => !Number.isNaN(ms));
+
+        const cutoffAtMs = candidates.length > 0 ? Math.max(...candidates) : 0;
+        const cutoffAtRow = new Date(cutoffAtMs).toISOString();
+        console.log(`[POLLING] Cutoff for group ${groupId} / ${repoFullName}: ${cutoffAtRow} (group_created=${group_created_at}, repo_attached=${repo_attached_at}, last_checked=${last_checked_at})`);
+
+
         if (events.length === 0) {
             console.log(`[POLLING] No events found for ${repoFullName}`);
             return;
@@ -138,6 +212,30 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
         for (const event of events.reverse()) {
             const eventId = event.id?.toString();
             if (!eventId) continue;
+
+            const eventTimestamp = getEventTimestamp(event);
+
+            // Normalize event timestamp and log decision context
+            const eventMs = eventTimestamp ? new Date(eventTimestamp).getTime() : NaN;
+            const eventLocal = eventTimestamp || 'unknown';
+            const cmpResult = Number.isNaN(eventMs) || Number.isNaN(cutoffAtMs) ? 'invalid' : (eventMs > cutoffAtMs ? 'after' : 'before');
+            console.log(`[POLLING] Event ${eventId} timestamp=${eventLocal} (${eventMs}ms) cutoff=${cutoffAtRow} (${cutoffAtMs}ms) => ${cmpResult}`);
+
+            if (!isAfterCutoff(eventTimestamp, cutoffAtMs)) {
+                console.log(`[POLLING] Skipping event ${eventId} for ${repoFullName} because ${eventTimestamp || 'unknown time'} is not after cutoff ${cutoffAtRow || 'none'}`);
+                // still mark processed to avoid re-processing across polls
+                try {
+                    await pool.query(
+                        `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
+                         VALUES ($1, $2, $3, $4)
+                         ON CONFLICT (github_event_id, group_id) DO NOTHING`,
+                        [eventId, event.type, groupId, repoFullName]
+                    );
+                } catch (e) {
+                    console.warn(`[POLLING] Failed to mark skipped event ${eventId} processed:`, e.message);
+                }
+                continue;
+            }
 
             // Check deduplication
             const isNew = await isEventNew({ eventId, groupId, repoFullName });
@@ -156,10 +254,10 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
 
                 // Insert message
                 const msgResult = await client.query(
-                    `INSERT INTO messages (group_id, sender_id, content, type)
-                     VALUES ($1, NULL, $2, 'system')
-                     RETURNING id, content, created_at`,
-                    [groupId, content]
+                    `INSERT INTO messages (group_id, sender_id, content, type, created_at)
+                    VALUES ($1, NULL, $2, 'system', $3)
+                    RETURNING id, content, created_at`,
+                    [groupId, content, new Date(eventTimestamp).toISOString()]
                 );
 
                 const messageRow = msgResult.rows[0];
@@ -168,7 +266,7 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
                 await client.query(
                     `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
                      VALUES ($1, $2, $3, $4)
-                     ON CONFLICT (github_event_id) DO NOTHING`,
+                     ON CONFLICT (github_event_id, group_id) DO NOTHING`,
                     [eventId, event.type, groupId, repoFullName]
                 );
 
@@ -201,6 +299,12 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
             });
         }
 
+        await pool.query(
+            `UPDATE group_repos SET last_checked_at = NOW()
+            WHERE group_id = $1 AND repo_full_name = $2`,
+            [groupId, repoFullName]
+        );
+
     } catch (err) {
         console.error(`[POLLING] Error polling ${repoFullName}:`, err.message);
     }
@@ -213,15 +317,24 @@ async function pollAllReposWithPolling(io) {
     try {
         console.log(`[POLLING] Starting polling cycle at ${new Date().toISOString()}...`);
 
-        // Get all repos that need polling
-        // For each group with a polling repo, get one user's access token
+        // Get all repos that need polling.
+        // For each group, use one authenticated member's token.
         const repos = await pool.query(
-            `SELECT DISTINCT gr.group_id, gr.repo_full_name, u.access_token
+            `SELECT gr.group_id,
+                    gr.repo_full_name,
+                    auth_user.access_token
              FROM group_repos gr
              JOIN group_chats gc ON gr.group_id = gc.id
-             JOIN group_members gm ON gc.id = gm.group_id
-             JOIN users u ON gm.user_id = u.id
-             WHERE gr.use_polling = TRUE AND u.access_token IS NOT NULL
+             JOIN LATERAL (
+                 SELECT u.access_token
+                 FROM group_members gm
+                 JOIN users u ON gm.user_id = u.id
+                 WHERE gm.group_id = gc.id
+                   AND u.access_token IS NOT NULL
+                 ORDER BY gm.joined_at ASC
+                 LIMIT 1
+             ) auth_user ON TRUE
+             WHERE gr.use_polling = TRUE
              LIMIT 20
             `
         );

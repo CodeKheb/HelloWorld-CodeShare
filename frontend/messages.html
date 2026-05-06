@@ -4,9 +4,13 @@
         <meta charset="utf-8"/>
         <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
         <title>CodeShare - Chat View</title>
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
         <link href="https://fonts.googleapis.com" rel="preconnect"/>
         <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
         <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+        <!-- Modal System -->
+        <script src="/js/modal.js"></script>
+        <script src="/js/modal-handlers.js"></script>
         <script type="module" src="js/messages.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -33,7 +37,7 @@
                         <div class="sidebar-section">
                             <div class="section-header">
                                 <strong>Groups</strong>
-                                <button id="openCreateGroup" class="icon-button" aria-label="Create or Join Group"><span class="material-symbols-outlined">add</span></button>
+                                <button id="newGroupSidebarBtn" class="icon-button" aria-label="Create Group"><span class="material-symbols-outlined">add</span></button>
                             </div>
                             <ul id="sidebar-groups" class="sidebar-nav">
                                 <!-- Groups will be populated from the server -->
@@ -54,7 +58,7 @@
                 </ul>
 
                 <div class="sidebar-footer">
-                    <button class="primary-button" type="button">New Repository</button>
+                    <button class="primary-button" type="button" id="newRepoSidebarBtn">New Repository</button>
                 </div>
             </nav>
 
@@ -86,7 +90,7 @@
                             <button class="primary-button action-button" type="button">
                                 <span class="material-symbols-outlined icon-filled" aria-hidden="true">compare_arrows</span>
                                 <span class="mobile-hide">Compare</span>
-                            </button>                        
+                            </button>
                         </div>
                     </header>
 
@@ -123,27 +127,7 @@
                             </div>
 
                             <ul id="group-member-list" class="member-list">
-                                <li class="member-item">
-                                    <div class="status-avatar">
-                                        <img alt="Alex" class="avatar avatar--small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSp9Jxkj77ORjzVshfbYE9WD0_PZV59V7Pks20hW4xqsr4BtR0SDcKsdIui6kK5OxgO6sOOWksXjwrjHOvUYDo2l-On87g1ItYd1uV-woZtaQxjnm5j0fzf76VfYJ7T9Xmf8R0pPPE44MNeeXMVH0YM4Dwf0UIavYbZPhu9-pfmOf-aig27rkt8N3C3LqnrlXpOjQFdTBkxDd8pHHypED2y6FRWjU5xVvbkfTSlZEY0tZd7MoxdkqP6oO73Z8BRPt8eiuSskwjRNI"/>
-                                        <span class="presence-dot presence-dot--online"></span>
-                                    </div>
-                                    <span>Alex Chen</span>
-                                </li>
-                                <li class="member-item">
-                                    <div class="status-avatar">
-                                        <img alt="Maya" class="avatar avatar--small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3dXRrfff0EfnFmzK8MRRscQZi8EKH9CIxN91yeWfQQB3f-ep6l_S6_JKbE_7S_STRnDyWy29PdMjyzDIlNp-moakKkor9Qc28g57KqW-jdyIkHoTzVaI0y40DbEPGpCXyRc7qUR619O3nmIHCRX_yvsuZS-ClYSxenk_cejwgTRxM9PaY0UV1Opk9UurqNcDlbNZO7oRrsmjLqHTsZOGxd0COuCH1oy6sRucFB5a5Ziq_vzPz0FFYIYpltxBezCMHrWQbTKHrMWg"/>
-                                        <span class="presence-dot presence-dot--online"></span>
-                                    </div>
-                                    <span>Maya Patel</span>
-                                </li>
-                                <li class="member-item">
-                                    <div class="status-avatar">
-                                        <img alt="David" class="avatar avatar--small avatar--dimmed" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAF1yGQj9z4cRa0WIq27KzvTgkvY3qLntoRPHTmu3vIXkdmgIGfShR_Us1LeC0Suwq0PG4ihZd23f_eOPAFSKhZby6obtUXqAlwlznGUAsPGgInO_6XF5KcGWTgxgFECZZHNsKntLgSSxh6fsaIVnwSSE7XojD0Vp6fnWabtSdXCt8Cu0C1vlpDZ62FS6BkAomf7wRSIziaKdQwx9P9NhnkwfBN4QwYz7wZQWu1qVf-g8CrrK39kMJEvIMYOSSy_VZl8AN_KQ13oVE"/>
-                                        <span class="presence-dot presence-dot--away"></span>
-                                    </div>
-                                    <span class="member-muted">David Kim</span>
-                                </li>
+                                <h3><span class="skeleton skeleton--text" style="width:160px;height:20px;border-radius:4px;display:inline-block;"></span></h3>
                             </ul>
 
                             <button class="secondary-button panel-action" type="button" id="showGroupIdBtn">
@@ -185,174 +169,77 @@
         <!-- Modal Overlay -->
         <div id="groupPanelOverlay" class="group-panel-overlay hidden"></div>
 
-        <!-- Create / Join Group Modal (combined) -->
-        <div id="modalOverlay" class="modal-overlay hidden">
-            <div class="modal">
-                <div class="modal-header">
-                    <h2 id="modalTitle">Create Group</h2>
-                    <button id="closeModal">&times;</button>
-                </div>
-
-                <!-- Tab toggle -->
-                <div style="display:flex; border-bottom:1px solid #30363d; margin-bottom: 0;">
-                    <button id="tabCreate" onclick="switchTab('create')" style="flex:1;padding:10px;background:none;border:none;border-bottom:2px solid #3fb950;color:#3fb950;font-weight:600;cursor:pointer;font-size:0.875rem;">Create</button>
-                    <button id="tabJoin" onclick="switchTab('join')" style="flex:1;padding:10px;background:none;border:none;border-bottom:2px solid transparent;color:#8b949e;font-weight:600;cursor:pointer;font-size:0.875rem;">Join</button>
-                </div>
-
-                <!-- Create pane -->
-                <div id="paneCreate" class="modal-body">
-                    <label>GROUP NAME <span class="required">*</span></label>
-                    <input type="text" id="groupName" placeholder="e.g. Frontend Architecture" />
-                    <small>This will be the display name for your new team.</small>
-
-                    <label>ATTACH A REPO <span class="optional">(Optional)</span></label>
-                    <div class="repo-input-wrapper">
-                        <span class="repo-icon">🔗</span>
-                        <input type="text" id="repoName" placeholder="owner/repo-name" />
-                    </div>
-                    <small>Link an initial repository to kickstart discussions.</small>
-                </div>
-                <div id="paneCreateFooter" class="modal-footer">
-                    <button id="submitGroup" class="btn-primary">CREATE GROUP</button>
-                    <button id="cancelBtn" class="btn-cancel">Cancel</button>
-                </div>
-
-                <!-- Join pane -->
-                <div id="paneJoin" class="modal-body" style="display:none;">
-                    <label>INVITE CODE <span class="required">*</span></label>
-                    <input type="text" id="joinGroupId" placeholder="e.g. ABC123" />
-                    <small>Enter the invite code shared by the group owner.</small>
-                </div>
-                <div id="paneJoinFooter" class="modal-footer" style="display:none;">
-                    <button id="submitJoinGroup" class="btn-primary">JOIN GROUP</button>
-                    <button id="cancelJoinGroup" class="btn-cancel">Cancel</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Attach Repo Modal -->
-        <div id="attachRepoOverlay" class="modal-overlay hidden">
-            <div class="modal">
-                <div class="modal-header">
-                    <h2>Attach Repository</h2>
-                    <button id="closeAttachRepo">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <label>REPOSITORY <span class="required">*</span></label>
-                    <div class="repo-input-wrapper">
-                        <span class="repo-icon">🔗</span>
-                        <input type="text" id="attachRepoName" placeholder="owner/repo-name" />
-                    </div>
-                    <small>Attach a GitHub repository to this group.</small>
-                </div>
-                <div class="modal-footer">
-                    <button id="submitAttachRepo" class="btn-primary">ATTACH REPO</button>
-                    <button id="cancelAttachRepo" class="btn-cancel">Cancel</button>
-                </div>
-            </div>
-        </div>
-
         <!-- Commits Modal -->
         <div id="commitsOverlay" class="modal-overlay hidden">
             <div class="modal modal--large">
+
+                <!-- Header -->
                 <div class="modal-header">
-                    <h2>Repository Commits</h2>
+                    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                        <!-- Back button — only visible in diff view -->
+                        <button id="diffBackBtn" class="diff-back-btn" style="display:none;" aria-label="Back to commits">
+                            <span class="material-symbols-outlined">arrow_back</span>
+                        </button>
+                        <h2 id="commitsModalTitle">Repository Commits</h2>
+                    </div>
                     <button id="closeCommits">&times;</button>
                 </div>
-                <div class="modal-body">
-                    <div id="repoSelector" class="repo-selector">
-                        <label>SELECT REPOSITORY</label>
-                        <select id="commitRepoSelect">
-                            <option value="">-- Select a repository --</option>
-                        </select>
-                    </div>
 
-                    <div id="commitsContainer" class="commits-container hidden">
-                        <div class="commits-header">
-                            <h3 id="selectedRepoName"></h3>
-                            <div class="commits-actions">
-                                <button id="compareCommitsBtn" class="btn-primary" disabled>
-                                    Compare Selected
-                                </button>
-                            </div>
+                <!-- Modal body -->
+                <div class="modal-body" style="padding:0;">
+
+                    <!-- ── LIST VIEW ── -->
+                    <div id="commitsListView" style="padding:1.5rem;display:flex;flex-direction:column;gap:0;">
+                        <div id="repoSelector" class="repo-selector">
+                            <label>SELECT REPOSITORY</label>
+                            <select id="commitRepoSelect">
+                                <option value="">-- Select a repository --</option>
+                            </select>
                         </div>
-                        <div id="commitsList" class="commits-list"></div>
+
+                        <div id="commitsContainer" class="commits-container hidden">
+                            <div class="commits-header">
+                                <h3 id="selectedRepoName"></h3>
+                                <div class="commits-actions">
+                                    <button id="compareCommitsBtn" class="btn-primary" disabled>
+                                        Compare Selected
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="commitsList" class="commits-list"></div>
+                        </div>
+
+                        <div id="commitsLoading" class="loading-state hidden">
+                            <span class="material-symbols-outlined spinning">progress_activity</span>
+                            <p>Loading commits...</p>
+                        </div>
+
+                        <div id="commitsError" class="error-state hidden">
+                            <span class="material-symbols-outlined">error</span>
+                            <p id="commitsErrorText"></p>
+                        </div>
                     </div>
 
-                    <div id="commitsLoading" class="loading-state hidden">
-                        <span class="material-symbols-outlined spinning">progress_activity</span>
-                        <p>Loading commits...</p>
+                    <!-- ── DIFF VIEW ── -->
+                    <div id="commitsDiffView" style="display:none;flex-direction:column;height:100%;">
+
+                        <!-- Diff meta bar -->
+                        <div class="diff-meta-bar">
+                            <div class="diff-meta-bar__title" id="diffViewTitle"></div>
+                            <div class="diff-meta-bar__subtitle" id="diffViewSubtitle"></div>
+                            <div class="diff-meta-bar__stats" id="diffViewStats"></div>
+                        </div>
+
+                        <!-- Scrollable diff content -->
+                        <div class="diff-scroll-area" id="diffViewContent"></div>
                     </div>
 
-                    <div id="commitsError" class="error-state hidden">
-                        <span class="material-symbols-outlined">error</span>
-                        <p id="commitsErrorText"></p>
-                    </div>
                 </div>
             </div>
         </div>
 
         <script>
-            // ── Tab switching ────────────────────────────────────────────
-            function switchTab(tab) {
-                const isCreate = tab === 'create';
-                document.getElementById('paneCreate').style.display = isCreate ? '' : 'none';
-                document.getElementById('paneCreateFooter').style.display = isCreate ? '' : 'none';
-                document.getElementById('paneJoin').style.display = isCreate ? 'none' : '';
-                document.getElementById('paneJoinFooter').style.display = isCreate ? 'none' : '';
-                document.getElementById('modalTitle').textContent = isCreate ? 'Create Group' : 'Join Group';
-                document.getElementById('tabCreate').style.cssText = isCreate
-                    ? 'flex:1;padding:10px;background:none;border:none;border-bottom:2px solid #3fb950;color:#3fb950;font-weight:600;cursor:pointer;font-size:0.875rem;'
-                    : 'flex:1;padding:10px;background:none;border:none;border-bottom:2px solid transparent;color:#8b949e;font-weight:600;cursor:pointer;font-size:0.875rem;';
-                document.getElementById('tabJoin').style.cssText = isCreate
-                    ? 'flex:1;padding:10px;background:none;border:none;border-bottom:2px solid transparent;color:#8b949e;font-weight:600;cursor:pointer;font-size:0.875rem;'
-                    : 'flex:1;padding:10px;background:none;border:none;border-bottom:2px solid #3fb950;color:#3fb950;font-weight:600;cursor:pointer;font-size:0.875rem;';
-            }
-
-            // ── Modal open/close ─────────────────────────────────────────
-            function showModal(tab) {
-                switchTab(tab || 'create');
-                const overlay = document.getElementById('modalOverlay');
-                if (!overlay) return;
-                const modal = overlay.querySelector('.modal');
-                overlay.classList.remove('hidden');
-                overlay.style.display = 'flex';
-                requestAnimationFrame(() => {
-                    overlay.classList.add('anim-open');
-                    if (modal) modal.classList.add('open');
-                });
-            }
-
-            function hideModal() {
-                const overlay = document.getElementById('modalOverlay');
-                if (!overlay) return;
-                const modal = overlay.querySelector('.modal');
-                if (modal) modal.classList.remove('open');
-                overlay.classList.remove('anim-open');
-                const onEnd = (e) => {
-                    if (e.target !== overlay) return;
-                    overlay.style.display = '';
-                    overlay.classList.add('hidden');
-                    overlay.removeEventListener('transitionend', onEnd);
-                };
-                overlay.addEventListener('transitionend', onEnd);
-            }
-
-            // Open button — always opens to Create tab
-            document.getElementById('openCreateGroup')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                showModal('create');
-            });
-
-            // Close / cancel buttons
-            document.getElementById('closeModal')?.addEventListener('click', hideModal);
-            document.getElementById('cancelBtn')?.addEventListener('click', hideModal);
-            document.getElementById('cancelJoinGroup')?.addEventListener('click', hideModal);
-            document.getElementById('modalOverlay')?.addEventListener('click', (e) => {
-                if (e.target.id === 'modalOverlay') hideModal();
-            });
-
-            // when user clicks "add member"
+            // ── "Add Member" invite code display ────────────────────────
             document.getElementById('showGroupIdBtn')?.addEventListener('click', () => {
                 const display = document.getElementById('groupIdDisplay');
                 const val = document.getElementById('inviteCodeValue');
@@ -360,134 +247,10 @@
                 display.classList.toggle('hidden');
             });
 
-            // ── Create group submit ──────────────────────────────────────
-            document.getElementById('submitGroup')?.addEventListener('click', async () => {
-                const btn = document.getElementById('submitGroup');
-                const name = document.getElementById('groupName').value.trim();
-                const repoFullName = document.getElementById('repoName').value.trim();
-                if (!name) return alert('Group name is required');
-                btn.disabled = true;
-                const orig = btn.textContent;
-                btn.textContent = 'Creating...';
-                try {
-                    const res = await fetch('/api/groups/create', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, repoFullName: repoFullName || null })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        hideModal();
-                        window.location.href = `/messages?groupId=${encodeURIComponent(data.group.id)}`;
-                    } else {
-                        alert('Error: ' + (data.error || 'Failed'));
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert('Error: ' + err.message);
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = orig;
-                }
-            });
-
-            // ── Join group submit ────────────────────────────────────────
-            document.getElementById('submitJoinGroup')?.addEventListener('click', async () => {
-                const btn = document.getElementById('submitJoinGroup');
-                const inviteCode = document.getElementById('joinGroupId').value.trim();
-                if (!inviteCode) return alert('Invite code is required');
-                btn.disabled = true;
-                const orig = btn.textContent;
-                btn.textContent = 'Joining...';
-                try {
-                    const res = await fetch(`/api/groups/join/${encodeURIComponent(inviteCode)}`, {
-                        method: 'POST',
-                        credentials: 'include'
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        hideModal();
-                        window.location.href = `/messages?groupId=${encodeURIComponent(data.groupId)}`;
-                    } else {
-                        alert('Error: ' + (data.error || 'Failed'));
-                    }
-                } catch (err) {
-                    alert('Error: ' + err.message);
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = orig;
-                }
-            });
-
-            // ── Attach Repo Modal ────────────────────────────────────────
-            function showAttachRepoModal() {
-                const overlay = document.getElementById('attachRepoOverlay');
-                if (!overlay) return;
-                const modal = overlay.querySelector('.modal');
-                overlay.classList.remove('hidden');
-                overlay.style.display = 'flex';
-                requestAnimationFrame(() => {
-                    overlay.classList.add('anim-open');
-                    if (modal) modal.classList.add('open');
-                });
-            }
-
-            function hideAttachRepoModal() {
-                const overlay = document.getElementById('attachRepoOverlay');
-                if (!overlay) return;
-                const modal = overlay.querySelector('.modal');
-                if (modal) modal.classList.remove('open');
-                overlay.classList.remove('anim-open');
-                const onEnd = (e) => {
-                    if (e.target !== overlay) return;
-                    overlay.style.display = '';
-                    overlay.classList.add('hidden');
-                    overlay.removeEventListener('transitionend', onEnd);
-                };
-                overlay.addEventListener('transitionend', onEnd);
-            }
-
+            // ── "Attach Repo" header button ──────────────────────────────
             document.getElementById('openAttachRepoModal')?.addEventListener('click', () => {
                 if (!window.currentGroupId) { alert('Select a group first'); return; }
-                showAttachRepoModal();
-            });
-
-            document.getElementById('closeAttachRepo')?.addEventListener('click', hideAttachRepoModal);
-            document.getElementById('cancelAttachRepo')?.addEventListener('click', hideAttachRepoModal);
-            document.getElementById('attachRepoOverlay')?.addEventListener('click', (e) => {
-                if (e.target.id === 'attachRepoOverlay') hideAttachRepoModal();
-            });
-
-            document.getElementById('submitAttachRepo')?.addEventListener('click', async () => {
-                const btn = document.getElementById('submitAttachRepo');
-                const repoFullName = document.getElementById('attachRepoName').value.trim();
-                if (!window.currentGroupId) { alert('Select a group first'); return; }
-                if (!repoFullName) { alert('Repository is required'); return; }
-                btn.disabled = true;
-                const originalText = btn.textContent;
-                btn.textContent = 'Attaching...';
-                try {
-                    const response = await fetch(`/api/groups/${encodeURIComponent(window.currentGroupId)}/repos`, {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ repoFullName })
-                    });
-                    const data = await response.json();
-                    if (!response.ok) { alert('Error: ' + (data.error || 'Failed to attach repository')); return; }
-                    document.getElementById('attachRepoName').value = '';
-                    hideAttachRepoModal();
-                    if (typeof window.refreshCurrentGroupDetails === 'function') {
-                        await window.refreshCurrentGroupDetails();
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert('Error: ' + err.message);
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                }
+                ModalManager.open('attachRepoModal');
             });
 
             // ── Resizable group panel ────────────────────────────────────
@@ -554,6 +317,25 @@
                         if (section) section.classList.toggle('collapsed');
                     });
                 });
+            })();
+
+            // ── Load Modal System ────────────────────────────────────────
+            (async function loadModals() {
+                try {
+                    const response = await fetch('/modals.html');
+                    const html = await response.text();
+
+                    // Create container and inject modals
+                    const container = document.createElement('div');
+                    container.id = 'modalsContainer';
+                    container.innerHTML = html;
+                    document.body.appendChild(container);
+
+                    // Initialize all modal handlers after modals are loaded
+                    initializeAllModals();
+                } catch (error) {
+                    console.error('Failed to load modals:', error);
+                }
             })();
         </script>
     </body>

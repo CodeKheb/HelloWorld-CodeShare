@@ -35,10 +35,10 @@ export default function chatHandler(socket) {
                 }
 
                 const insertResult = await pool.query(
-                    `INSERT INTO messages (group_id, sender_id, content, type)
-                     VALUES ($1, $2, $3, 'text')
+                    `INSERT INTO messages (group_id, sender_id, content, type, created_at)
+                     VALUES ($1, $2, $3, 'text', $4)
                      RETURNING id, group_id, sender_id, content, type, created_at`,
-                    [dmGroupId, authUser.id, cleanText]
+                    [dmGroupId, authUser.id, cleanText, new Date().toISOString()]
                 );
 
                 const saved = insertResult.rows[0];
@@ -51,7 +51,8 @@ export default function chatHandler(socket) {
                     timestamp: saved.created_at,
                     author: authUser.username,
                     authorName: authUser.username,
-                    avatar: authUser.avatar_url
+                    avatar: authUser.avatar_url,
+                    DmId: dmGroupId
                 };
 
                 io.to(dmRoom).emit("server-direct-text", outbound);
@@ -73,10 +74,10 @@ export default function chatHandler(socket) {
             }
 
             const insertResult = await pool.query(
-                `INSERT INTO messages (group_id, sender_id, content, type)
-                 VALUES ($1, $2, $3, 'text')
+                `INSERT INTO messages (group_id, sender_id, content, type, created_at)
+                 VALUES ($1, $2, $3, 'text', $4)
                  RETURNING id, group_id, sender_id, content, type, created_at`,
-                [activeGroupId, authUser.id, cleanText]
+                [activeGroupId, authUser.id, cleanText, new Date().toISOString()]
             );
 
             const saved = insertResult.rows[0];
@@ -118,6 +119,27 @@ export default function chatHandler(socket) {
             clientState.active_dm_group_id = null;
             clientState.active_group = groupId;
             socket.join(String(groupId));
+
+        //     const joinNotification = {
+        //         id: null, // Temporary unique ID for frontend keys
+        //         groupId: groupId,
+        //         senderId: null,          // Null indicates it's a system message
+        //         text: `--- ${authUser.username} joined this group ---`,
+        //         type: 'system',          // Changed type to distinguish from user 'text'
+        //         timestamp: new Date(),
+        //         author: "System",
+        //         authorName: "System",
+        //         avatar: null
+        //     };
+
+        // // 2. Emit the structured object instead of a raw string
+        //     io.to(String(groupId)).emit("server-group-text", joinNotification);
+            io.to(String(groupId)).emit("member-joined", {
+                userId: authUser.id,
+                username: authUser.username,
+                avatar_url: authUser.avatar_url,
+                groupId
+            });
 
             console.log(socket.rooms);
             console.log(clientState);

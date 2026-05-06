@@ -38,8 +38,6 @@
     const logoutBtn = document.getElementById('logoutButton');
     if (!btn || !menu || !backdrop) return;
 
-    document.body.appendChild(menu);
-
     function open() {
         menu.classList.add('show');
         backdrop.classList.add('show');
@@ -79,6 +77,8 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (res.ok) {
+                    if (typeof clearKeyCache === 'function') clearKeyCache();
+                    if (typeof roomSecrets !== 'undefined' && roomSecrets instanceof Map) roomSecrets.clear();
                     window.location.href = '/login';
                 } else {
                     const data = await res.json();
@@ -92,158 +92,24 @@
     }
 })();
 
-// ── Modal Helper ─────────────────────────────
-function showModal(modalId) {
-    const overlay = document.getElementById(modalId);
-    if (!overlay) return;
-    const modal = overlay.querySelector('.modal');
-    overlay.classList.remove('hidden');
-    overlay.style.display = 'flex';
-    requestAnimationFrame(() => {
-        overlay.classList.add('anim-open');
-        if (modal) modal.classList.add('open');
-    });
-}
+// ── Load Modals ──────────────────────────────
+// Load the modals.html file and inject it into the page
+(async function loadModals() {
+    try {
+        const response = await fetch('/modals.html');
+        const html = await response.text();
+        
+        // Create container and inject modals
+        const container = document.createElement('div');
+        container.id = 'modalsContainer';
+        container.innerHTML = html;
+        document.body.appendChild(container);
 
-function hideModal(modalId) {
-    const overlay = document.getElementById(modalId);
-    if (!overlay) return;
-    const modal = overlay.querySelector('.modal');
-    if (modal) modal.classList.remove('open');
-    overlay.classList.remove('anim-open');
-    const onEnd = (e) => {
-        if (e.target !== overlay) return;
-        overlay.style.display = '';
-        overlay.classList.add('hidden');
-        overlay.removeEventListener('transitionend', onEnd);
-    };
-    overlay.addEventListener('transitionend', onEnd);
-}
-
-// ── Create Group Modal ───────────────────────
-(function initGroupModal() {
-    const openBtn   = document.getElementById('createGroupBtn');
-    const closeBtn  = document.getElementById('closeModal');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const submitBtn = document.getElementById('submitGroup');
-    const overlay   = document.getElementById('modalOverlay');
-    if (!overlay) return;
-
-    function close() {
-        document.getElementById('groupName').value = '';
-        document.getElementById('repoName').value  = '';
-        hideModal('modalOverlay');
+        // Initialize all modal handlers after modals are loaded
+        initializeAllModals();
+    } catch (error) {
+        console.error('Failed to load modals:', error);
     }
-
-    openBtn?.addEventListener('click',  () => showModal('modalOverlay'));
-    closeBtn?.addEventListener('click', close);
-    cancelBtn?.addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target.id === 'modalOverlay') close(); });
-
-    submitBtn?.addEventListener('click', async () => {
-        const name        = document.getElementById('groupName').value.trim();
-        const repoFullName = document.getElementById('repoName').value.trim();
-        if (!name) return alert('Group name is required');
-
-        submitBtn.disabled = true;
-        const orig = submitBtn.textContent;
-        submitBtn.textContent = 'Creating...';
-
-        try {
-            const res  = await fetch('/api/groups/create', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, repoFullName: repoFullName || null })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert('Group created successfully!');
-                close();
-            } else {
-                alert('Error: ' + (data.error || 'Failed to create group'));
-            }
-        } catch (err) {
-            console.error('Error creating group:', err);
-            alert('Error: ' + err.message);
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = orig;
-        }
-    });
-})();
-
-// ── Create Repository Modal ──────────────────
-(function initRepoModal() {
-    // Sidebar button
-    const sidebarBtn = document.getElementById('newRepoSidebarBtn');
-    const closeBtn   = document.getElementById('closeRepoModal');
-    const cancelBtn  = document.getElementById('cancelRepoBtn');
-    const submitBtn  = document.getElementById('submitRepo');
-    const overlay    = document.getElementById('repoModalOverlay');
-    if (!overlay) return;
-
-    function close() {
-        document.getElementById('newRepoName').value        = '';
-        document.getElementById('newRepoDescription').value = '';
-        document.getElementById('newRepoPrivate').checked   = false;
-        document.getElementById('newRepoAutoInit').checked  = true;
-        document.getElementById('newRepoGitignore').value   = '';
-        document.getElementById('newRepoLicense').value     = '';
-        hideModal('repoModalOverlay');
-    }
-
-    sidebarBtn?.addEventListener('click', () => showModal('repoModalOverlay'));
-    closeBtn?.addEventListener('click',  close);
-    cancelBtn?.addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target.id === 'repoModalOverlay') close(); });
-
-    submitBtn?.addEventListener('click', async () => {
-        const name        = document.getElementById('newRepoName').value.trim();
-        const description = document.getElementById('newRepoDescription').value.trim();
-        const isPrivate   = document.getElementById('newRepoPrivate').checked;
-        const autoInit    = document.getElementById('newRepoAutoInit').checked;
-        const gitignore   = document.getElementById('newRepoGitignore').value;
-        const license     = document.getElementById('newRepoLicense').value;
-        if (!name) return alert('Repository name is required');
-
-        submitBtn.disabled = true;
-        const orig = submitBtn.textContent;
-        submitBtn.textContent = 'Creating...';
-
-        try {
-            const res  = await fetch('/api/repos/create', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name,
-                    description: description || undefined,
-                    private: isPrivate,
-                    auto_init: autoInit,
-                    gitignore_template: gitignore || undefined,
-                    license_template: license || undefined
-                })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert('Repository created successfully!');
-                close();
-                // Refresh repo list
-                const repoRes = await fetch('/api/repos');
-                allRepos = await repoRes.json();
-                renderRepos(showingAll);
-            } else {
-                alert('Error: ' + (data.error || 'Failed to create repository'));
-            }
-        } catch (err) {
-            console.error('Error creating repository:', err);
-            alert('Error: ' + err.message);
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = orig;
-        }
-    });
 })();
 
 // ── Route Links ──────────────────────────────

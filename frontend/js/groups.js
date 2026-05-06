@@ -22,6 +22,10 @@ async function initializeSidebar() {
 
 initializeSidebar();
 
+if (typeof initSettingsDropdown === 'function') {
+  initSettingsDropdown();
+}
+
 // Load groups from backend
 async function loadGroups() {
   try {
@@ -36,8 +40,9 @@ async function loadGroups() {
 
     const data = await response.json();
     const groupsGrid = document.getElementById('groups-grid');
+    const groups = (data.groups || []).filter(g => !g.is_direct);
 
-    if (!data.groups || data.groups.length === 0) {
+    if (groups.length === 0) {
       groupsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8b949e;">No groups yet. Create one to get started!</p>';
       return;
     }
@@ -46,7 +51,7 @@ async function loadGroups() {
     groupsGrid.innerHTML = '';
 
     // Render each group as a card
-    data.groups.forEach(group => {
+    groups.forEach(group => {
       const card = document.createElement('article');
       card.className = 'group-card';
 
@@ -76,8 +81,7 @@ async function loadGroups() {
           membersHtml = `<div class="member-more">${group.member_count}</div>`;
         }
       }
-
-
+         
       card.innerHTML = `
         <div class="card-header">
           <div class="card-title">

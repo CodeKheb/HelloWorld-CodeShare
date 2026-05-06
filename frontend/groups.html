@@ -1,15 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CodeShare - Groups</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com"/>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="css/groups.css"/>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap"
+          rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet" />
+    <link rel="stylesheet" href="css/groups.css" />
+    <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
     <!-- Sidebar Overlay (Mobile) -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
@@ -19,7 +25,7 @@
         <nav class="sidebar" aria-label="Primary">
             <div class="sidebar-brand">
                 <div class="avatar avatar--brand" aria-hidden="true">
-                    <img id="user-avatar" alt="User Avatar" src=""/>
+                    <img id="user-avatar" alt="User Avatar" src="" />
                 </div>
                 <div>
                     <h1 id="user-name">Loading...</h1>
@@ -29,14 +35,18 @@
 
             <!-- Navigation Links -->
             <ul class="sidebar-nav">
-                <li><a class="sidebar-link" href="/" data-route="home"><span class="material-symbols-outlined">home</span><span>Home</span></a></li>
-                <li><a class="sidebar-link" href="/messages" data-route="messages"><span class="material-symbols-outlined">chat_bubble</span><span>Direct Messages</span></a></li>
-                <li><a class="sidebar-link sidebar-link--active" href="#" data-route="groups"><span class="material-symbols-outlined icon-filled">groups</span><span>People & Groups</span></a></li>
+                <li><a class="sidebar-link" href="/" data-route="home"><span
+                            class="material-symbols-outlined">home</span><span>Home</span></a></li>
+                <li><a class="sidebar-link" href="/messages" data-route="messages"><span
+                            class="material-symbols-outlined">chat_bubble</span><span>Direct Messages</span></a></li>
+                <li><a class="sidebar-link sidebar-link--active" href="#" data-route="groups"><span
+                            class="material-symbols-outlined icon-filled">groups</span><span>People & Groups</span></a>
+                </li>
             </ul>
 
             <!-- CTA Button -->
             <div class="sidebar-footer">
-                <button class="primary-button" type="button">New Repository</button>
+                <button class="primary-button" type="button" id="newRepoSidebarBtn">New Repository</button>
             </div>
         </nav>
 
@@ -54,9 +64,21 @@
 
                 <!-- Actions -->
                 <div class="topbar-actions">
-                    <button class="icon-button" type="button" aria-label="Notifications"><span class="material-symbols-outlined">notifications</span></button>
-                    <button class="icon-button" type="button" aria-label="Settings"><span class="material-symbols-outlined">settings</span></button>
-                    <button class="secondary-button" type="button" id="createGroupBtn">Create Group</button>
+                    <button class="icon-button" type="button" aria-label="Notifications"><span
+                            class="material-symbols-outlined">notifications</span></button>
+                    <div class="dropdown">
+                        <button class="icon-button" type="button" aria-label="Settings" id="settingsButton">
+                            <span class="material-symbols-outlined">settings</span>
+                        </button>
+                        <div class="dropdown-backdrop" id="settingsBackdrop"></div>
+                        <div class="dropdown-menu" id="settingsDropdown">
+                            <button class="dropdown-item danger" id="logoutButton">
+                                <span class="material-symbols-outlined">logout</span>
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="secondary-button" type="button" id="newGroupSidebarBtn">Create Group</button>
                 </div>
             </header>
 
@@ -77,142 +99,27 @@
         </div>
     </div>
 
-    <!-- Modal Overlay -->
-    <div id="modalOverlay" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Create Group</h2>
-                <button id="closeModal">&times;</button>
-            </div>
-
-            <div class="modal-body">
-                <label>GROUP NAME <span class="required">*</span></label>
-                <input type="text" id="groupName" placeholder="e.g. Frontend Architecture" />
-                <small>This will be the display name for your new team.</small>
-
-                <label>ATTACH A REPO <span class="optional">(Optional)</span></label>
-                <div class="repo-input-wrapper">
-                    <span class="repo-icon">🔗</span>
-                    <input type="text" id="repoName" placeholder="owner/repo-name" />
-                </div>
-                <small>Link an initial repository to kickstart discussions.</small>
-            </div>
-
-            <div class="modal-footer">
-                <button id="submitGroup" class="btn-primary">CREATE GROUP</button>
-                <button id="cancelBtn" class="btn-cancel">Cancel</button>
-            </div>
-        </div>
-    </div>
-
+   <!-- Modal System -->
+    <script src="js/modal.js"></script>
+    <script src="js/modal-handlers.js"></script>
+    <script src="js/groups.js"></script>
     <script>
-        // Modal handlers
-        function showModal() {
-            const overlay = document.getElementById('modalOverlay');
-            if (!overlay) return;
-            const modal = overlay.querySelector('.modal');
-            overlay.classList.remove('hidden');
-            overlay.style.display = 'flex';
-            requestAnimationFrame(() => {
-                overlay.classList.add('anim-open');
-                if (modal) modal.classList.add('open');
-            });
-        }
-
-        function hideModal() {
-            const overlay = document.getElementById('modalOverlay');
-            if (!overlay) return;
-            const modal = overlay.querySelector('.modal');
-            if (modal) modal.classList.remove('open');
-            overlay.classList.remove('anim-open');
-            const onEnd = (e) => {
-                if (e.target !== overlay) return;
-                overlay.style.display = '';
-                overlay.classList.add('hidden');
-                overlay.removeEventListener('transitionend', onEnd);
-            };
-            overlay.addEventListener('transitionend', onEnd);
-        }
-
-        // Create group button
-        document.getElementById('createGroupBtn')?.addEventListener('click', showModal);
-        
-        // Modal close buttons
-        document.getElementById('closeModal')?.addEventListener('click', hideModal);
-        document.getElementById('cancelBtn')?.addEventListener('click', hideModal);
-        document.getElementById('modalOverlay')?.addEventListener('click', (e) => {
-            if (e.target.id === 'modalOverlay') hideModal();
-        });
-
-        // Submit handler
-        document.getElementById('submitGroup')?.addEventListener('click', async () => {
-            const btn = document.getElementById('submitGroup');
-            const name = document.getElementById('groupName').value.trim();
-            const repoFullName = document.getElementById('repoName').value.trim();
-            if (!name) return alert('Group name is required');
-            btn.disabled = true;
-            const orig = btn.textContent;
-            btn.textContent = 'Creating...';
+        (async function loadModals() {
             try {
-                const res = await fetch('/api/groups/create', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, repoFullName: repoFullName || null })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert('Group created');
-                    document.getElementById('groupName').value = '';
-                    document.getElementById('repoName').value = '';
-                    hideModal();
-                    loadGroups();
-                } else {
-                    alert('Error: ' + (data.error || 'Failed'));
-                }
+                const response = await fetch('/modals.html');
+                const html = await response.text();
+
+                const container = document.createElement('div');
+                container.id = 'modalsContainer';
+                container.innerHTML = html;
+                document.body.appendChild(container);
+
+                initializeAllModals();
             } catch (err) {
-                console.error(err);
-                alert('Error: ' + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = orig;
+                console.error('Failed to load modals:', err);
             }
-        });
-
-        // Sidebar toggle
-        (function () {
-            const toggle = document.getElementById('sidebarToggle');
-            const sidebar = document.querySelector('.sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            if (!toggle || !sidebar || !overlay) return;
-
-            function openSidebar() {
-                sidebar.classList.add('active');
-                overlay.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
-
-            function closeSidebar() {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-
-            toggle.addEventListener('click', () => {
-                sidebar.classList.contains('active') ? closeSidebar() : openSidebar();
-            });
-
-            overlay.addEventListener('click', closeSidebar);
-
-            // Close sidebar when link is clicked
-            document.querySelectorAll('.sidebar-link').forEach((link) => {
-                link.addEventListener('click', () => {
-                    if (window.innerWidth <= 768) closeSidebar();
-                });
-            });
         })();
     </script>
-
-    <script src="js/groups.js"></script>
 </body>
+
 </html>

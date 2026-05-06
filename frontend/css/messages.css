@@ -1529,3 +1529,255 @@ body.messages-page {
     justify-content: space-between;
     padding: 8px 12px;
 }
+
+.diff-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: none;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #8b949e;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+ 
+.diff-back-btn:hover,
+.diff-back-btn:focus-visible {
+    background: #21262d;
+    border-color: #8b949e;
+    color: #e6edf3;
+}
+ 
+/* ── Diff meta bar (repo name + commit pills) ─────── */
+.diff-meta-bar {
+    flex-shrink: 0;
+    padding: 14px 20px;
+    border-bottom: 1px solid #21262d;
+    background: #0d1117;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+ 
+.diff-meta-bar__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #c9d1d9;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+ 
+.diff-meta-bar__subtitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: #8b949e;
+    line-height: 1.5;
+}
+ 
+.diff-sha-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #58a6ff;
+    white-space: nowrap;
+}
+ 
+.diff-sha-label {
+    color: #8b949e;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+ 
+.diff-meta-bar__stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+ 
+/* ── Scrollable diff area ─────────────────────────── */
+.diff-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #0d1117;
+    min-height: 0;
+}
+ 
+/* ── Individual diff file card ────────────────────── */
+.diff-file {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    overflow: hidden;
+}
+ 
+.diff-file-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #21262d;
+    font-size: 12px;
+    font-weight: 600;
+    color: #c9d1d9;
+    font-family: 'Courier New', monospace;
+    word-break: break-all;
+    border-bottom: 1px solid #30363d;
+    flex-wrap: wrap;
+}
+ 
+/* Status badge on file header */
+.diff-file-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+ 
+.diff-file-badge--modified  { background: rgba(210,153,34,0.15);  color: #d29922; border: 1px solid rgba(210,153,34,0.3); }
+.diff-file-badge--added     { background: rgba(63,185,80,0.12);   color: #3fb950; border: 1px solid rgba(63,185,80,0.3); }
+.diff-file-badge--removed   { background: rgba(248,81,73,0.12);   color: #f85149; border: 1px solid rgba(248,81,73,0.3); }
+.diff-file-badge--renamed   { background: rgba(88,166,255,0.12);  color: #58a6ff; border: 1px solid rgba(88,166,255,0.3); }
+ 
+.diff-file-content {
+    padding: 4px 0;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    overflow-x: auto;
+    max-height: 360px;
+    overflow-y: auto;
+}
+ 
+.diff-line {
+    padding: 1px 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    line-height: 1.55;
+    font-size: 12px;
+}
+ 
+.diff-line--addition {
+    background: rgba(63, 185, 80, 0.1);
+    color: #3fb950;
+}
+ 
+.diff-line--deletion {
+    background: rgba(248, 81, 73, 0.1);
+    color: #f85149;
+}
+ 
+.diff-line--context {
+    color: #8b949e;
+}
+ 
+/* ── Stat chips reused in diff meta bar ───────────── */
+.diff-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+ 
+.diff-stat--additions { color: #3fb950; }
+.diff-stat--deletions { color: #f85149; }
+ 
+/* ── Make the diff view fill the modal body ─────────
+   The modal--large body needs to flex-column so the
+   diff scroll area can grow/shrink properly.          */
+.modal--large .modal-body {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden; /* children handle their own scroll */
+}
+ 
+#commitsListView {
+    flex: 1;
+    overflow-y: auto;
+}
+ 
+#commitsDiffView {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+ 
+/* ── Mobile tweaks ────────────────────────────────── */
+@media (max-width: 768px) {
+    .diff-meta-bar {
+        padding: 10px 14px;
+        gap: 6px;
+    }
+ 
+    .diff-sha-label {
+        max-width: 120px;
+    }
+ 
+    .diff-meta-bar__stats {
+        gap: 10px;
+    }
+ 
+    .diff-scroll-area {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+ 
+    .diff-file-content {
+        font-size: 11px;
+        max-height: 240px;
+    }
+ 
+    .diff-line {
+        font-size: 11px;
+        padding: 1px 8px;
+    }
+}
+
+.panel-section--actions { border-top: 1px solid #30363d; padding-top: 1rem; }
+.group-actions { display: flex; flex-direction: column; gap: 8px; }
+.danger-button {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 6px; font-size: 13px;
+    font-weight: 500; cursor: pointer; border: none;
+    background: #da3633; color: #fff; width: 100%;
+}
+.danger-button--outline {
+    background: transparent; border: 1px solid #da3633; color: #da3633;
+}
+.danger-button:hover { opacity: 0.85; }
+.empty-feed-notice {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%; gap: 12px;
+    color: #8b949e; text-align: center;
+}
