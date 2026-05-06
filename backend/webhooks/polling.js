@@ -374,7 +374,8 @@ async function pollAllReposWithPolling(io) {
 
         console.log(`[POLLING] Polling cycle complete`);
     } catch (err) {
-        console.error(`[POLLING] Error in polling cycle:`, err.message);
+        console.error(`[POLLING] Error in polling cycle:`, err?.message || err || 'Unknown error');
+        if (err?.stack) console.error(err.stack);
     }
 }
 
