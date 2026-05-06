@@ -119,6 +119,10 @@ app.get("/hello", (req, res) => {
     res.send({ message: "hello" });
 });
 
+app.get('/healthz', (_req, res) => {
+    res.status(200).json({ ok: true, service: 'backend' });
+});
+
 app.get('/api/user', requireAuth, (req, res) => {
     res.json({
         authenticated: true,
