@@ -149,6 +149,9 @@ async function initializeDashboard() {
         // 4. "View all" toggle
         setupViewAllHandler();
 
+        // 5. Recent Activity
+        loadRecentActivity();
+
     } catch (err) {
         console.error('Dashboard load failed:', err);
         document.getElementById('repo-grid').innerHTML = '<p style="color:var(--muted)">Error loading repositories.</p>';
@@ -157,7 +160,7 @@ async function initializeDashboard() {
 
 function renderRepos(showAll) {
     const grid        = document.getElementById('repo-grid');
-    const reposToShow = showAll ? allRepos : allRepos.slice(0, 3);
+    const reposToShow = showAll ? allRepos : allRepos.slice(0, 4);
 
     if (reposToShow.length === 0) {
         grid.innerHTML = '<p style="color:var(--muted)">No repositories found.</p>';
@@ -213,6 +216,95 @@ function setupViewAllHandler() {
         renderRepos(showingAll);
         link.textContent = showingAll ? 'Show less' : 'View all';
     });
+}
+
+/**
+ * Fetch and display recent GitHub activity
+ * Displays activity cards with commit info, avatar, and timestamps
+ */
+async function loadRecentActivity() {
+    const activityList = document.getElementById('activity-list');
+    if (!activityList) return;
+
+    try {
+        const res = await fetch('/api/dashboard/recent-activity');
+        const data = await res.json();
+
+        if (!data.success || !data.activities || data.activities.length === 0) {
+            activityList.innerHTML = '<p style="color:var(--muted);padding:16px;text-align:center;">No recent activity yet.</p>';
+            return;
+        }
+
+        activityList.innerHTML = data.activities.map(activity => {
+            const timestamp = new Date(activity.timestamp);
+            const relativeTime = getRelativeTime(timestamp);
+            const safedMessage = escapeHtml(activity.message);
+            const commitLink = activity.commitUrl ? activity.commitUrl : '#';
+            const isClickable = activity.commitUrl ? 'cursor:pointer;' : '';
+            
+            // Build stats line
+            let statsLine = '';
+            if (activity.additions || activity.deletions) {
+                statsLine = `<p class="commit-box">`;
+                if (activity.additions > 0) statsLine += `<span style="color:#3fb950;">+${activity.additions}</span> `;
+                if (activity.deletions > 0) statsLine += `<span style="color:#f85149;">-${activity.deletions}</span>`;
+                statsLine += `</p>`;
+            }
+
+            return `
+                <div class="activity-card" onclick="if('${activity.commitUrl}') window.open('${activity.commitUrl}', '_blank')" style="${isClickable}">
+                    <div class="activity-icon-wrap">
+                        <img src="${activity.avatar}" alt="${activity.author}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.src='https://avatars.githubusercontent.com/u/0?v=4'" />
+                    </div>
+                    <div class="activity-body">
+                        <div class="activity-line">
+                            <span class="activity-user">${activity.author}</span>
+                            <span>pushed to</span>
+                            <span class="branch-pill">${activity.branch}</span>
+                            <span>in</span>
+                            <strong>${activity.repo}</strong>
+                        </div>
+                        ${safedMessage ? `<h3 class="activity-title">${safedMessage}</h3>` : ''}
+                        ${statsLine}
+                        <p class="activity-time">${relativeTime}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('Failed to load recent activity:', err);
+        activityList.innerHTML = '<p style="color:var(--muted);padding:16px;text-align:center;">Error loading activity.</p>';
+    }
+}
+
+/**
+ * Convert timestamp to relative time string (e.g., "2 hours ago")
+ */
+function getRelativeTime(date) {
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    
+    return date.toLocaleDateString();
+}
+
+/**
+ * Escape HTML special characters to prevent XSS
+ */
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 function getLangColor(lang) {

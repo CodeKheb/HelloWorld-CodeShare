@@ -6,7 +6,7 @@ import pool from "../db/pool.js";
  */
 async function fetchGithubEvents({ owner, repo, accessToken }) {
     try {
-        const url = `https://api.github.com/repos/${owner}/${repo}/events`;
+        const url = `https://api.github.com/repos/${owner}/${repo}/events?per_page=10`;
         const response = await fetch(url, {
             method: "GET",
             headers: {
