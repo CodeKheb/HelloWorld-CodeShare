@@ -365,6 +365,30 @@ a {
 	max-width: 100%;
 }
 
+/* Contacts list styling */
+.contacts-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 12px;
+}
+.contact-card {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	padding: 10px 12px;
+	border-radius: 6px;
+	background: transparent;
+	border-bottom: 1px solid rgba(16,24,40,0.06);
+	width: 100%;
+	cursor: pointer;
+}
+.contact-card:hover { background: rgba(16,24,40,0.02); }
+.contact-avatar img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.contact-body { display: flex; flex-direction: column; }
+.contact-body strong { font-size: 14px; }
+.contact-body .contact-meta { color: var(--muted); font-size: 12px; }
+
 /* ── Repository Card ───────────────────────── */
 
 .group-card {

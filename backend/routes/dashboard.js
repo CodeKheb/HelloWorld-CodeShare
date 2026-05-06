@@ -147,7 +147,7 @@ router.get("/recent-activity", async (req, res) => {
                 message: commitData.message || messageContent || "No commit message",
                 additions: commitData.additions,
                 deletions: commitData.deletions,
-                timestamp: row.created_at,
+                timestamp: new Date(row.created_at).toISOString(),
                 repo: row.repo_full_name,
                 repoShort: repo,
                 branch: commitData.branch,

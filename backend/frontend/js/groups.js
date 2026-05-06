@@ -42,6 +42,47 @@ async function loadGroups() {
     const groupsGrid = document.getElementById('groups-grid');
     const groups = (data.groups || []).filter(g => !g.is_direct);
 
+    // Build contacts list from group members (exclude current user)
+    const contactsMap = new Map();
+    groups.forEach(g => {
+      if (!Array.isArray(g.members)) return;
+      g.members.forEach(m => {
+        if (!m || !m.id) return;
+        // skip current user
+        const currentUserName = document.getElementById('user-name')?.textContent || '';
+        if (m.username && m.username === currentUserName) return;
+        if (!contactsMap.has(m.id)) contactsMap.set(m.id, m);
+      });
+    });
+
+    const contacts = Array.from(contactsMap.values()).sort((a,b) => (a.username||'').localeCompare(b.username||''));
+
+    // Render contacts section
+    const contactsGrid = document.getElementById('contacts-grid');
+    if (contactsGrid) {
+      if (contacts.length === 0) {
+        contactsGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#8b949e">No contacts yet</p>';
+      } else {
+        contactsGrid.innerHTML = '';
+        contacts.forEach(c => {
+          const card = document.createElement('article');
+          card.className = 'contact-card';
+          card.innerHTML = `
+            <div class="contact-avatar"><img src="${c.avatar_url||'/default-avatar.png'}" alt="${c.username||'User'}"/></div>
+            <div class="contact-body">
+              <strong>${c.username || 'Unknown'}</strong>
+              <div class="contact-meta">${c.username ? `@${c.username}` : ''}</div>
+            </div>
+          `;
+          card.addEventListener('click', () => {
+            // Navigate to messages page; include user id for convenience
+            window.location.href = `/messages?contactId=${encodeURIComponent(c.id)}`;
+          });
+          contactsGrid.appendChild(card);
+        });
+      }
+    }
+
     if (groups.length === 0) {
       groupsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8b949e;">No groups yet. Create one to get started!</p>';
       return;

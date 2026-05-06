@@ -76,13 +76,15 @@ CREATE TABLE webhook_events (
 );
 
 -- Deduplication: tracks processed GitHub event IDs to prevent duplicate system messages
+-- Uses composite key (github_event_id, group_id) because same event can be relevant to multiple groups
 CREATE TABLE processed_events (
   id SERIAL PRIMARY KEY,
-  github_event_id VARCHAR(128) UNIQUE NOT NULL,
+  github_event_id VARCHAR(128) NOT NULL,
   group_id UUID REFERENCES group_chats(id) ON DELETE CASCADE,
   repo_full_name VARCHAR(255) NOT NULL,
   event_type VARCHAR(64),
-  processed_at TIMESTAMP DEFAULT NOW()
+  processed_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (github_event_id, group_id)
 );
 
 CREATE INDEX ON processed_events (github_event_id);

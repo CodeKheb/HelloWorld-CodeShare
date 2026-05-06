@@ -249,6 +249,25 @@ async function fetchAndRenderSidebar() {
         const groups = allGroups.filter(g => !g.is_direct);
         const dmGroups = allGroups.filter(g => g.is_direct);
 
+        // If user has no groups or DMs, show an informative empty state instead of leaving the feed blank
+        const messageFeed = document.querySelector('.message-feed');
+        const composerEl = document.querySelector('.composer');
+        const titleEl = document.querySelector('.chat-channel');
+
+        if ((groups.length === 0) && (dmGroups.length === 0)) {
+            if (messageFeed) {
+                messageFeed.innerHTML = `
+                    <div class="empty-feed-notice">
+                        <span class="material-symbols-outlined">groups</span>
+                        <p>You are not a member of any groups yet. Create one or ask someone for an invite to start chatting.</p>
+                    </div>`;
+            }
+            if (composerEl) composerEl.style.display = 'none';
+            if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> No groups`;
+        } else {
+            if (composerEl) composerEl.style.display = '';
+        }
+
         // ── Render regular groups in sidebar ────────────────────────────
         const groupsList = document.getElementById('sidebar-groups');
         if (groupsList) {

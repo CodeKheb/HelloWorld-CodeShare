@@ -237,6 +237,13 @@ async function loadRecentActivity() {
 
         activityList.innerHTML = data.activities.map(activity => {
             const timestamp = new Date(activity.timestamp);
+            
+            // Fallback if timestamp is invalid
+            if (Number.isNaN(timestamp.getTime())) {
+                console.warn('Invalid timestamp for activity:', activity.timestamp);
+                activity.timestamp = new Date().toISOString();
+            }
+            
             const relativeTime = getRelativeTime(timestamp);
             const safedMessage = escapeHtml(activity.message);
             const commitLink = activity.commitUrl || '';
@@ -289,12 +296,19 @@ function getRelativeTime(date) {
     const now = new Date();
     const seconds = Math.floor((now - date) / 1000);
 
+    // Handle invalid dates
+    if (Number.isNaN(seconds)) {
+        return 'recently';
+    }
+
     if (seconds < 60) return 'just now';
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
     if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    
-    return date.toLocaleDateString();
+
+    // For older dates, show as "May 6" format
+    const options = { month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
 }
 
 /**
