@@ -22,6 +22,10 @@ async function initializeSidebar() {
 
 initializeSidebar();
 
+if (typeof initSettingsDropdown === 'function') {
+  initSettingsDropdown();
+}
+
 // Load groups from backend
 async function loadGroups() {
   try {

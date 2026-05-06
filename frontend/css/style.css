@@ -241,7 +241,7 @@ a {
 	flex-wrap: nowrap;
 	/* FIX: never wider than viewport */
 	width: 100%;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .topbar-tabs {

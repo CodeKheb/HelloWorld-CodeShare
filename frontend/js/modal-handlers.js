@@ -421,10 +421,70 @@ function initAttachRepoModal(onSuccess) {
     });
     
 }
-
-
-
 // ── Auto-initialize all modals ────────────────────────────────
+
+// ── Messages Settings Dropdown ────────────────────────
+function initSettingsDropdown() {
+    const btn = document.getElementById('settingsButton');
+    const menu = document.getElementById('settingsDropdown');
+    const backdrop = document.getElementById('settingsBackdrop');
+    const logoutBtn = document.getElementById('logoutButton');
+
+    if (!btn || !menu || !backdrop) return;
+
+    function open() {
+        menu.classList.add('show');
+        backdrop.classList.add('show');
+    }
+
+    function close() {
+        menu.classList.remove('show');
+        backdrop.classList.remove('show');
+    }
+
+    btn.addEventListener('click', () => {
+        menu.classList.contains('show') ? close() : open();
+    });
+
+    backdrop.addEventListener('click', close);
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#settingsDropdown') && !e.target.closest('#settingsButton')) {
+            close();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') close();
+    });
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (res.ok) {
+                    if (typeof clearKeyCache === 'function') clearKeyCache();
+                    if (typeof roomSecrets !== 'undefined' && roomSecrets instanceof Map) roomSecrets.clear();
+                    window.location.href = '/login';
+                } else {
+                    const data = await res.json();
+                    alert(data.message || 'Logout failed. Please try again.');
+                }
+            } catch (err) {
+                console.error('Logout error:', err);
+                alert('An error occurred during logout. Please try again.');
+            }
+        });
+    }
+}
+
+
+
 
 /**
  * Initialize all modals on page load

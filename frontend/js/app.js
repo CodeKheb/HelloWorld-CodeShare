@@ -38,8 +38,6 @@
     const logoutBtn = document.getElementById('logoutButton');
     if (!btn || !menu || !backdrop) return;
 
-    document.body.appendChild(menu);
-
     function open() {
         menu.classList.add('show');
         backdrop.classList.add('show');
@@ -79,8 +77,8 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (res.ok) {
-                    clearKeyCache();
-                    roomSecrets.clear()
+                    if (typeof clearKeyCache === 'function') clearKeyCache();
+                    if (typeof roomSecrets !== 'undefined' && roomSecrets instanceof Map) roomSecrets.clear();
                     window.location.href = '/login';
                 } else {
                     const data = await res.json();
