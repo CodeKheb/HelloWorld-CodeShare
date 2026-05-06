@@ -33,7 +33,7 @@
                         <div class="sidebar-section">
                             <div class="section-header">
                                 <strong>Groups</strong>
-                                <button id="openCreateGroup" class="icon-button" aria-label="Create Group"><span class="material-symbols-outlined">add</span></button>
+                                <button id="openCreateGroup" class="icon-button" aria-label="Create or Join Group"><span class="material-symbols-outlined">add</span></button>
                             </div>
                             <ul id="sidebar-groups" class="sidebar-nav">
                                 <!-- Groups will be populated from the server -->
@@ -43,7 +43,6 @@
                         <div class="sidebar-section">
                             <div class="section-header">
                                 <strong>Direct Messages</strong>
-                                <button class="icon-button" aria-label="Join Group" id="openJoinGroup"><span class="material-symbols-outlined">add</span></button>
                             </div>
                             <ul id="sidebar-contacts" class="sidebar-nav">
                                 <!-- Contacts will be populated from group member lists -->
@@ -53,7 +52,6 @@
                     </li>
                     <li><a class="sidebar-link" href="/groups" data-route="/groups"><span class="material-symbols-outlined">groups</span><span>People and Groups</span></a></li>
                 </ul>
-
 
                 <div class="sidebar-footer">
                     <button class="primary-button" type="button">New Repository</button>
@@ -69,14 +67,14 @@
                             </button>
                             <h2 class="chat-channel">
                                 <span class="material-symbols-outlined" aria-hidden="true">tag</span>
-                                frontend-architecture
+                                <span class="skeleton skeleton--text" style="width:140px;height:18px;border-radius:4px;"></span>
                             </h2>
                             <div class="avatar-stack" aria-label="Group members">
-                                <img alt="User" class="avatar avatar--stacked" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVb9lYE7wLif9Wr66X5dCt7N6wQsGmIgFOKae9rfB0pr-OF3MSv1A30RD8Za7qlK-EdgEek2cocVK2INQRPc1Rd7ecQdLEA-DSDV7n6t7zV4NTD-ou0ZnThoeuxi-8LPItqcek_DqVN8H3m_c2NhcIKV5GJw50G8b6zfsvkJoaISt0OI2vUJlCTMnL8m-QDtQXTk_op6UP30K2aMW5vt70c_-Z4HZjieuep8THCKMrNhbJif042ZqEafhPSnWiE4MT5lHDPZej2IY"/>
-                                <img alt="User" class="avatar avatar--stacked" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuirEXs_MY0nZFC3DzxEsDhKTgnTQENPkhnOKkZkhyVh2pgsIzTy6D-2Ww_pwDWcarcZRvNT5y2I38p0grZay3jfFBE4Dm27ME9qKySQ2zVINKvzrMx1OnwSeiMHzhTTJRHAGIzhTScro2i2YK2Cq_F3ZKW_MKOdSMmfuVlBOqQkQbVZSU6tNWqdQr-YLlk0OJF9qOALN5DXk8Vga-3qA0_YPjke7vIB7jRhwLC8ij7IUzuBppQILfUAN0jRm88E-OyFFjNnlh1m4"/>
-                                <img alt="User" class="avatar avatar--stacked" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYrrMrc2ttheGySJTqVOCyYlh0wF3oUN2uqEMEDSXwsU4bTSsAAUHQprOnKuM8vzPXI5L55nS3Tz7Vil61_GBA9tj8olimXUZC6tWfweMGXvzpn36PY0N1wOcEghDp1ooWXmvfbWvzfmgQCaocpc_PFNxrTf4i9DubS--KtMWo7EDzMjBqHlRy89jO_7sHGLasFHrhnV5o_j7Rhxz3LL2YgsSCMKXfI9zfrVcHME7eT9dlj2fnmtOrFRM3MyGo1Myy00gJ7sOCUE4"/>
+                                <span class="skeleton avatar avatar--stacked"></span>
+                                <span class="skeleton avatar avatar--stacked"></span>
+                                <span class="skeleton avatar avatar--stacked"></span>
                             </div>
-                            <span class="member-count">12 members</span>
+                            <span class="member-count" style="width:64px;height:12px;border-radius:4px;"></span>
                         </div>
 
                         <div class="chat-header__actions">
@@ -110,12 +108,11 @@
                     </footer>
                 </main>
 
-
                 <aside class="group-panel" aria-label="Group information">
                     <section class="group-panel__intro">
                         <div class="section-label">Group Info</div>
-                        <h3>frontend-architecture</h3>
-                        <p>Core discussion channel for UI layer patterns, component libraries, and client-side state management.</p>
+                        <h3><span class="skeleton skeleton--text" style="width:160px;height:20px;border-radius:4px;display:inline-block;"></span></h3>
+                        <p><span class="skeleton skeleton--text" style="width:100%;height:14px;border-radius:4px;display:inline-block;"></span></p>
                     </section>
 
                     <div class="group-panel__body">
@@ -187,13 +184,23 @@
 
         <!-- Modal Overlay -->
         <div id="groupPanelOverlay" class="group-panel-overlay hidden"></div>
+
+        <!-- Create / Join Group Modal (combined) -->
         <div id="modalOverlay" class="modal-overlay hidden">
             <div class="modal">
                 <div class="modal-header">
-                    <h2>Create Group</h2>
+                    <h2 id="modalTitle">Create Group</h2>
                     <button id="closeModal">&times;</button>
                 </div>
-                <div class="modal-body">
+
+                <!-- Tab toggle -->
+                <div style="display:flex; border-bottom:1px solid #30363d; margin-bottom: 0;">
+                    <button id="tabCreate" onclick="switchTab('create')" style="flex:1;padding:10px;background:none;border:none;border-bottom:2px solid #3fb950;color:#3fb950;font-weight:600;cursor:pointer;font-size:0.875rem;">Create</button>
+                    <button id="tabJoin" onclick="switchTab('join')" style="flex:1;padding:10px;background:none;border:none;border-bottom:2px solid transparent;color:#8b949e;font-weight:600;cursor:pointer;font-size:0.875rem;">Join</button>
+                </div>
+
+                <!-- Create pane -->
+                <div id="paneCreate" class="modal-body">
                     <label>GROUP NAME <span class="required">*</span></label>
                     <input type="text" id="groupName" placeholder="e.g. Frontend Architecture" />
                     <small>This will be the display name for your new team.</small>
@@ -205,9 +212,20 @@
                     </div>
                     <small>Link an initial repository to kickstart discussions.</small>
                 </div>
-                <div class="modal-footer">
+                <div id="paneCreateFooter" class="modal-footer">
                     <button id="submitGroup" class="btn-primary">CREATE GROUP</button>
                     <button id="cancelBtn" class="btn-cancel">Cancel</button>
+                </div>
+
+                <!-- Join pane -->
+                <div id="paneJoin" class="modal-body" style="display:none;">
+                    <label>INVITE CODE <span class="required">*</span></label>
+                    <input type="text" id="joinGroupId" placeholder="e.g. ABC123" />
+                    <small>Enter the invite code shared by the group owner.</small>
+                </div>
+                <div id="paneJoinFooter" class="modal-footer" style="display:none;">
+                    <button id="submitJoinGroup" class="btn-primary">JOIN GROUP</button>
+                    <button id="cancelJoinGroup" class="btn-cancel">Cancel</button>
                 </div>
             </div>
         </div>
@@ -233,24 +251,7 @@
                 </div>
             </div>
         </div>
-        <!-- Join Group Modal -->
-        <div id="joinGroupOverlay" class="modal-overlay hidden">
-            <div class="modal">
-                <div class="modal-header">
-                    <h2>Join Group</h2>
-                    <button id="closeJoinGroup">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <label>INVITE CODE <span class="required">*</span></label>
-                    <input type="text" id="joinGroupId" placeholder="e.g. ABC123" />
-                    <small>Enter the invite code to join a group.</small>
-                </div>
-                <div class="modal-footer">
-                    <button id="submitJoinGroup" class="btn-primary">JOIN GROUP</button>
-                    <button id="cancelJoinGroup" class="btn-cancel">Cancel</button>
-                </div>
-            </div>
-        </div>
+
         <!-- Commits Modal -->
         <div id="commitsOverlay" class="modal-overlay hidden">
             <div class="modal modal--large">
@@ -275,10 +276,7 @@
                                 </button>
                             </div>
                         </div>
-
-                        <div id="commitsList" class="commits-list">
-                            <!-- Commits will be populated here -->
-                        </div>
+                        <div id="commitsList" class="commits-list"></div>
                     </div>
 
                     <div id="commitsLoading" class="loading-state hidden">
@@ -295,8 +293,25 @@
         </div>
 
         <script>
-            // Local modal helpers for messages page
-            function showModal() {
+            // ── Tab switching ────────────────────────────────────────────
+            function switchTab(tab) {
+                const isCreate = tab === 'create';
+                document.getElementById('paneCreate').style.display = isCreate ? '' : 'none';
+                document.getElementById('paneCreateFooter').style.display = isCreate ? '' : 'none';
+                document.getElementById('paneJoin').style.display = isCreate ? 'none' : '';
+                document.getElementById('paneJoinFooter').style.display = isCreate ? 'none' : '';
+                document.getElementById('modalTitle').textContent = isCreate ? 'Create Group' : 'Join Group';
+                document.getElementById('tabCreate').style.cssText = isCreate
+                    ? 'flex:1;padding:10px;background:none;border:none;border-bottom:2px solid #3fb950;color:#3fb950;font-weight:600;cursor:pointer;font-size:0.875rem;'
+                    : 'flex:1;padding:10px;background:none;border:none;border-bottom:2px solid transparent;color:#8b949e;font-weight:600;cursor:pointer;font-size:0.875rem;';
+                document.getElementById('tabJoin').style.cssText = isCreate
+                    ? 'flex:1;padding:10px;background:none;border:none;border-bottom:2px solid transparent;color:#8b949e;font-weight:600;cursor:pointer;font-size:0.875rem;'
+                    : 'flex:1;padding:10px;background:none;border:none;border-bottom:2px solid #3fb950;color:#3fb950;font-weight:600;cursor:pointer;font-size:0.875rem;';
+            }
+
+            // ── Modal open/close ─────────────────────────────────────────
+            function showModal(tab) {
+                switchTab(tab || 'create');
                 const overlay = document.getElementById('modalOverlay');
                 if (!overlay) return;
                 const modal = overlay.querySelector('.modal');
@@ -323,14 +338,18 @@
                 overlay.addEventListener('transitionend', onEnd);
             }
 
-            // Wire sidebar add button
+            // Open button — always opens to Create tab
             document.getElementById('openCreateGroup')?.addEventListener('click', (e) => {
                 e.preventDefault();
-                showModal();
+                showModal('create');
             });
-            document.getElementById('openJoinGroup')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                showJoinGroupModal();
+
+            // Close / cancel buttons
+            document.getElementById('closeModal')?.addEventListener('click', hideModal);
+            document.getElementById('cancelBtn')?.addEventListener('click', hideModal);
+            document.getElementById('cancelJoinGroup')?.addEventListener('click', hideModal);
+            document.getElementById('modalOverlay')?.addEventListener('click', (e) => {
+                if (e.target.id === 'modalOverlay') hideModal();
             });
 
             // when user clicks "add member"
@@ -341,31 +360,67 @@
                 display.classList.toggle('hidden');
             });
 
-            // Close buttons
-            document.getElementById('closeModal')?.addEventListener('click', hideModal);
-            document.getElementById('cancelBtn')?.addEventListener('click', hideModal);
-            document.getElementById('modalOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'modalOverlay') hideModal(); });
-
-            // Submit handler (simple POST to /api/groups/create)
+            // ── Create group submit ──────────────────────────────────────
             document.getElementById('submitGroup')?.addEventListener('click', async () => {
                 const btn = document.getElementById('submitGroup');
                 const name = document.getElementById('groupName').value.trim();
                 const repoFullName = document.getElementById('repoName').value.trim();
                 if (!name) return alert('Group name is required');
-                btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Creating...';
+                btn.disabled = true;
+                const orig = btn.textContent;
+                btn.textContent = 'Creating...';
                 try {
-                    const res = await fetch('/api/groups/create', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, repoFullName: repoFullName || null }) });
+                    const res = await fetch('/api/groups/create', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, repoFullName: repoFullName || null })
+                    });
                     const data = await res.json();
                     if (res.ok) {
-                        alert('Group created');
                         hideModal();
+                        window.location.href = `/messages?groupId=${encodeURIComponent(data.group.id)}`;
                     } else {
                         alert('Error: ' + (data.error || 'Failed'));
                     }
-                } catch (err) { console.error(err); alert('Error: ' + err.message); }
-                finally { btn.disabled = false; btn.textContent = orig; }
+                } catch (err) {
+                    console.error(err);
+                    alert('Error: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = orig;
+                }
             });
 
+            // ── Join group submit ────────────────────────────────────────
+            document.getElementById('submitJoinGroup')?.addEventListener('click', async () => {
+                const btn = document.getElementById('submitJoinGroup');
+                const inviteCode = document.getElementById('joinGroupId').value.trim();
+                if (!inviteCode) return alert('Invite code is required');
+                btn.disabled = true;
+                const orig = btn.textContent;
+                btn.textContent = 'Joining...';
+                try {
+                    const res = await fetch(`/api/groups/join/${encodeURIComponent(inviteCode)}`, {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        hideModal();
+                        window.location.href = `/messages?groupId=${encodeURIComponent(data.groupId)}`;
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed'));
+                    }
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = orig;
+                }
+            });
+
+            // ── Attach Repo Modal ────────────────────────────────────────
             function showAttachRepoModal() {
                 const overlay = document.getElementById('attachRepoOverlay');
                 if (!overlay) return;
@@ -394,10 +449,7 @@
             }
 
             document.getElementById('openAttachRepoModal')?.addEventListener('click', () => {
-                if (!window.currentGroupId) {
-                    alert('Select a group first');
-                    return;
-                }
+                if (!window.currentGroupId) { alert('Select a group first'); return; }
                 showAttachRepoModal();
             });
 
@@ -410,21 +462,11 @@
             document.getElementById('submitAttachRepo')?.addEventListener('click', async () => {
                 const btn = document.getElementById('submitAttachRepo');
                 const repoFullName = document.getElementById('attachRepoName').value.trim();
-
-                if (!window.currentGroupId) {
-                    alert('Select a group first');
-                    return;
-                }
-
-                if (!repoFullName) {
-                    alert('Repository is required');
-                    return;
-                }
-
+                if (!window.currentGroupId) { alert('Select a group first'); return; }
+                if (!repoFullName) { alert('Repository is required'); return; }
                 btn.disabled = true;
                 const originalText = btn.textContent;
                 btn.textContent = 'Attaching...';
-
                 try {
                     const response = await fetch(`/api/groups/${encodeURIComponent(window.currentGroupId)}/repos`, {
                         method: 'POST',
@@ -433,12 +475,7 @@
                         body: JSON.stringify({ repoFullName })
                     });
                     const data = await response.json();
-
-                    if (!response.ok) {
-                        alert('Error: ' + (data.error || 'Failed to attach repository'));
-                        return;
-                    }
-
+                    if (!response.ok) { alert('Error: ' + (data.error || 'Failed to attach repository')); return; }
                     document.getElementById('attachRepoName').value = '';
                     hideAttachRepoModal();
                     if (typeof window.refreshCurrentGroupDetails === 'function') {
@@ -452,87 +489,20 @@
                     btn.textContent = originalText;
                 }
             });
-            function showJoinGroupModal() {
-                const overlay = document.getElementById('joinGroupOverlay');
-                if (!overlay) return;
-                const modal = overlay.querySelector('.modal');
-                overlay.classList.remove('hidden');
-                overlay.style.display = 'flex';
-                requestAnimationFrame(() => {
-                    overlay.classList.add('anim-open');
-                    if (modal) modal.classList.add('open');
-                });
-            }
-            function hideJoinGroupModal() {
-                const overlay = document.getElementById('joinGroupOverlay');
-                if (!overlay) return;
-                const modal = overlay.querySelector('.modal');
-                if (modal) modal.classList.remove('open');
-                overlay.classList.remove('anim-open');
-                const onEnd = (e) => {
-                    if (e.target !== overlay) return;
-                    overlay.style.display = '';
-                    overlay.classList.add('hidden');
-                    overlay.removeEventListener('transitionend', onEnd);
-                };
-                overlay.addEventListener('transitionend', onEnd);
-            }
 
-            document.getElementById('closeJoinGroup')?.addEventListener('click', hideJoinGroupModal);
-            document.getElementById('cancelJoinGroup')?.addEventListener('click', hideJoinGroupModal);
-            document.getElementById('joinGroupOverlay')?.addEventListener('click', (e) => {
-                if (e.target.id === 'joinGroupOverlay') hideJoinGroupModal();
-            });
-            document.getElementById('submitJoinGroup')?.addEventListener('click', async () => {
-                const btn = document.getElementById('submitJoinGroup');
-                const inviteCode = document.getElementById('joinGroupId').value.trim();
-                if (!inviteCode) return alert('Invite code is required');
-                btn.disabled = true;
-                const orig = btn.textContent;
-                btn.textContent = 'Joining...';
-                try {
-                    const res = await fetch(`/api/groups/join/${encodeURIComponent(inviteCode)}`, {
-                        method: 'POST',
-                        credentials: 'include'
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        alert('Joined group successfully');
-                        hideJoinGroupModal();
-                        // Reload groups
-                        if (typeof window.loadGroups === 'function') {
-                            window.loadGroups();
-                        }
-                    } else {
-                        alert('Error: ' + (data.error || 'Failed'));
-                    }
-                } catch (err) {
-                    alert('Error: ' + err.message);
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = orig;
-                }
-            });
-
-            // Resizable group panel: implement drag-to-resize here (keeps behavior local to page)
+            // ── Resizable group panel ────────────────────────────────────
             (function() {
                 const resizeHandle = document.querySelector('.resize-handle');
                 const panel = document.querySelector('.group-panel');
                 if (!resizeHandle || !panel) return;
 
-                let isResizing = false;
-                let startX = 0;
-                let startWidth = 0;
+                let isResizing = false, startX = 0, startWidth = 0;
 
                 const savedWidth = localStorage.getItem('groupPanelWidth');
-                if (savedWidth) {
-                    panel.style.setProperty('--panel-width', `${savedWidth}px`);
-                }
+                if (savedWidth) panel.style.setProperty('--panel-width', `${savedWidth}px`);
 
                 resizeHandle.addEventListener('mousedown', (e) => {
-                    isResizing = true;
-                    startX = e.clientX;
-                    startWidth = panel.offsetWidth;
+                    isResizing = true; startX = e.clientX; startWidth = panel.offsetWidth;
                     resizeHandle.classList.add('dragging');
                     document.body.style.cursor = 'col-resize';
                     document.body.style.userSelect = 'none';
@@ -540,10 +510,8 @@
 
                 document.addEventListener('mousemove', (e) => {
                     if (!isResizing) return;
-                    const delta = e.clientX - startX;
-                    let newWidth = startWidth - delta;
-                    if (newWidth < 250) newWidth = 250;
-                    if (newWidth > 600) newWidth = 600;
+                    let newWidth = startWidth - (e.clientX - startX);
+                    newWidth = Math.min(600, Math.max(250, newWidth));
                     panel.style.setProperty('--panel-width', `${newWidth}px`);
                 });
 
@@ -553,64 +521,40 @@
                     resizeHandle.classList.remove('dragging');
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
-                    const finalWidth = panel.offsetWidth;
-                    localStorage.setItem('groupPanelWidth', finalWidth);
+                    localStorage.setItem('groupPanelWidth', panel.offsetWidth);
                     panel.scrollTop = panel.scrollHeight;
                 });
             })();
 
+            // ── Mobile group info drawer ─────────────────────────────────
             (function () {
-                const toggleBtn  = document.getElementById('mobileGroupInfoToggle');
-                const panel      = document.querySelector('.messages-page .group-panel');
-                const overlay    = document.getElementById('groupPanelOverlay');
+                const toggleBtn = document.getElementById('mobileGroupInfoToggle');
+                const panel = document.querySelector('.messages-page .group-panel');
+                const overlay = document.getElementById('groupPanelOverlay');
                 if (!toggleBtn || !panel || !overlay) return;
 
-                function openPanel() {
-                    panel.classList.add('active');
-                    overlay.classList.add('active');
-                    document.body.style.overflow = 'hidden';
-                }
+                const openPanel = () => { panel.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow = 'hidden'; };
+                const closePanel = () => { panel.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow = ''; };
 
-                function closePanel() {
-                    panel.classList.remove('active');
-                    overlay.classList.remove('active');
-                    document.body.style.overflow = '';
-                }
-
-                toggleBtn.addEventListener('click', () => {
-                    panel.classList.contains('active') ? closePanel() : openPanel();
-                });
-
+                toggleBtn.addEventListener('click', () => panel.classList.contains('active') ? closePanel() : openPanel());
                 overlay.addEventListener('click', closePanel);
 
-                // Swipe-down to close
                 let touchStartY = 0;
-                panel.addEventListener('touchstart', (e) => {
-                    touchStartY = e.touches[0].clientY;
-                }, { passive: true });
-                panel.addEventListener('touchend', (e) => {
-                    const dy = e.changedTouches[0].clientY - touchStartY;
-                    if (dy > 60) closePanel();
-                }, { passive: true });
+                panel.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
+                panel.addEventListener('touchend', (e) => { if (e.changedTouches[0].clientY - touchStartY > 60) closePanel(); }, { passive: true });
             })();
 
-            // ── Mobile: Sidebar section collapse toggle ──────────
+            // ── Mobile sidebar section collapse ──────────────────────────
             (function () {
-                // Only activate on mobile
                 if (window.innerWidth > 768) return;
-
                 document.querySelectorAll('.messages-page .sidebar .section-header').forEach((header) => {
                     header.addEventListener('click', (e) => {
-                        // Don't collapse if the + (add) button was clicked
                         if (e.target.closest('button')) return;
                         const section = header.closest('.sidebar-section');
                         if (section) section.classList.toggle('collapsed');
                     });
                 });
             })();
-
         </script>
-
-
     </body>
 </html>
