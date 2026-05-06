@@ -239,8 +239,7 @@ async function loadRecentActivity() {
             const timestamp = new Date(activity.timestamp);
             const relativeTime = getRelativeTime(timestamp);
             const safedMessage = escapeHtml(activity.message);
-            const commitLink = activity.commitUrl ? activity.commitUrl : '#';
-            const isClickable = activity.commitUrl ? 'cursor:pointer;' : '';
+            const commitLink = activity.commitUrl || '';
             
             // Build stats line
             let statsLine = '';
@@ -251,8 +250,13 @@ async function loadRecentActivity() {
                 statsLine += `</p>`;
             }
 
+            const cardTagStart = commitLink
+                ? `<a class="activity-card activity-card--link" href="${commitLink}" target="_blank" rel="noreferrer noopener">`
+                : `<div class="activity-card">`;
+            const cardTagEnd = commitLink ? `</a>` : `</div>`;
+
             return `
-                <div class="activity-card" onclick="if('${activity.commitUrl}') window.open('${activity.commitUrl}', '_blank')" style="${isClickable}">
+                ${cardTagStart}
                     <div class="activity-icon-wrap">
                         <img src="${activity.avatar}" alt="${activity.author}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.src='https://avatars.githubusercontent.com/u/0?v=4'" />
                     </div>
@@ -268,7 +272,7 @@ async function loadRecentActivity() {
                         ${statsLine}
                         <p class="activity-time">${relativeTime}</p>
                     </div>
-                </div>
+                ${cardTagEnd}
             `;
         }).join('');
 

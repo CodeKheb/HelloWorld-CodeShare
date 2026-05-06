@@ -556,6 +556,12 @@ a {
 	transition: border-color 160ms ease, background-color 160ms ease;
 }
 
+.activity-card--link {
+	color: inherit;
+	text-decoration: none;
+	cursor: pointer;
+}
+
 .activity-card:hover {
 	border-color: var(--brand);
 	background: rgba(24, 28, 34, 0.8);
