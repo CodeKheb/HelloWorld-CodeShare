@@ -211,6 +211,7 @@ async function saveSystemMessagesWithoutMetadata(repoFullName, content) {
 export const handleGithubWebhook = async (req, res) => {
   try {
     if (!verifyWebhookSignature(req)) {
+      console.warn('[WEBHOOK] Missing/invalid signature for delivery', req.headers['x-github-delivery'], 'signatureHeaderPresent=', !!req.headers['x-hub-signature-256']);
       return res.status(401).send("Signatures did not match");
     }
 

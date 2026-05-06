@@ -273,6 +273,8 @@ async function fetchAndRenderSidebar() {
             });
             if (groups.length === 0) {
                 groupsList.innerHTML = '<li class="muted" style="padding:8px 12px;color:#8b949e">No groups yet</li>';
+                // Show a friendly empty state when there are no groups
+                showNoGroupsView();
             }
         }
 
@@ -305,6 +307,11 @@ async function fetchAndRenderSidebar() {
                 updateGroupHeaderFromMembers(first);
                 selectGroup(first);
             }
+        }
+
+        // If there are no groups at all, ensure a clean empty UI is shown
+        if ((!groups || groups.length === 0) && (!dmGroups || dmGroups.length === 0)) {
+            showNoGroupsView();
         }
 
         // ── Build contacts list ──────────────────────────────────────────
@@ -373,6 +380,28 @@ async function fetchAndRenderSidebar() {
     } catch (err) {
         console.error('Error populating sidebar:', err);
     }
+}
+
+function showNoGroupsView() {
+    // Message feed
+    const messageFeed = document.querySelector('.message-feed');
+    if (messageFeed) {
+        messageFeed.innerHTML = `
+            <div class="empty-feed-notice">
+                <span class="material-symbols-outlined">waving_hand</span>
+                <p>Welcome — you have no groups yet. Create one or attach a repository to start receiving updates.</p>
+            </div>`;
+    }
+
+    // Group panel intro
+    const introTitle = document.querySelector('.group-panel__intro h3');
+    if (introTitle) introTitle.textContent = 'No group selected';
+    const introText = document.querySelector('.group-panel__intro p');
+    if (introText) introText.textContent = 'Select or create a group to view messages and repositories.';
+
+    // Repo list fallback
+    const repoList = document.getElementById('group-repo-list') || document.querySelector('.repo-list');
+    if (repoList) repoList.innerHTML = '<article class="repo-card"><div class="repo-card__title"><span class="material-symbols-outlined">folder_off</span><span>No attached repositories</span></div><div class="repo-card__meta">Attach one from the header button</div></article>';
 }
 
 function updateDmHeader(contact) {

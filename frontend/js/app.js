@@ -131,7 +131,7 @@ let showingAll = false;
 async function initializeDashboard() {
     try {
         // 1. User data
-        const userRes  = await fetch('/api/auth/user');
+        const userRes  = await fetch('/api/auth/user', { credentials: 'include' });
         const userData = await userRes.json();
         if (userData.authenticated) {
             document.getElementById('user-avatar').src    = userData.user.avatar || userData.user.avatar_url || '';
@@ -140,7 +140,7 @@ async function initializeDashboard() {
         }
 
         // 2. Repositories
-        const repoRes = await fetch('/api/repos');
+        const repoRes = await fetch('/api/repos', { credentials: 'include' });
         allRepos      = await repoRes.json();
 
         // 3. Render first 3
@@ -227,7 +227,7 @@ async function loadRecentActivity() {
     if (!activityList) return;
 
     try {
-        const res = await fetch('/api/dashboard/recent-activity');
+        const res = await fetch('/api/dashboard/recent-activity', { credentials: 'include' });
         const data = await res.json();
 
         if (!data.success || !data.activities || data.activities.length === 0) {

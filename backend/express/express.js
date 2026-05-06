@@ -8,6 +8,10 @@ import { handleGithubWebhook } from '../webhooks/github.js';
 
 export const app = express()
 
+// When behind a reverse proxy (Render, Heroku, etc.) enable trust proxy
+// so that secure cookies and req.protocol are detected correctly.
+app.set('trust proxy', 1);
+
 const __filename = fileURLToPath(import.meta.url)
 export const __dirname = path.dirname(__filename)
 
@@ -37,9 +41,11 @@ export const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET || "trial-secret",
     resave: false,
     saveUninitialized: false,
+        proxy: true,
     cookie: {
         httpOnly: true,
-        secure: false,
+        secure: process.env.NODE_ENV === 'production' ? true : false,
+        sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 });

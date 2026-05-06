@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import crypto from "crypto";
 dotenv.config();
 
 import { Router } from "express";
@@ -13,51 +14,64 @@ const authRouter = Router();
 
 authRouter.use(cookieParser());
 
-passport.use(new GitHubStrategy(
-    {
-        clientID: process.env.GITHUB_CLIENT_ID,
-        clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        callbackURL: process.env.GITHUB_CALLBACK,
-        scope: ['user', 'repo', 'admin:repo_hook'],
-    },
-    // Make the verify callback async so we can run DB queries.
-    async (accessToken, refreshToken, profile, done) => {
-        try {
-            // Extract canonical fields from the GitHub profile.
-            const githubId = profile.id;
-            const username = profile.username || profile.displayName || null;
-            const avatarUrl = profile.photos?.[0]?.value || null;
+const githubClientId = process.env.GITHUB_CLIENT_ID?.trim();
+const githubClientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
+const githubCallbackURL = process.env.GITHUB_CALLBACK?.trim()
+    || (process.env.APP_BASE_URL ? `${process.env.APP_BASE_URL.replace(/\/$/, "")}/api/auth/github/callback` : "");
+const githubAuthEnabled = Boolean(githubClientId && githubClientSecret && githubCallbackURL);
 
-            // Upsert the user into the `users` table using the github_id as the unique key.
-            // This creates the row on first login and updates the access token/username on subsequent logins.
-            const result = await pool.query(
-                `INSERT INTO users (github_id, username, avatar_url, access_token)
-                 VALUES ($1, $2, $3, $4)
-                 ON CONFLICT (github_id) DO UPDATE SET
-                     access_token = EXCLUDED.access_token,
-                     username = EXCLUDED.username,
-                     avatar_url = EXCLUDED.avatar_url
-                 RETURNING *`,
-                [githubId, username, avatarUrl, accessToken]
-            );
+if (githubAuthEnabled) {
+    passport.use(new GitHubStrategy(
+        {
+            clientID: githubClientId,
+            clientSecret: githubClientSecret,
+            callbackURL: githubCallbackURL,
+            scope: ['user', 'repo', 'admin:repo_hook'],
+        },
+        // Make the verify callback async so we can run DB queries.
+        async (accessToken, refreshToken, profile, done) => {
+            try {
+                // Extract canonical fields from the GitHub profile.
+                const githubId = profile.id;
+                const username = profile.username || profile.displayName || null;
+                const avatarUrl = profile.photos?.[0]?.value || null;
 
-            const userRow = result.rows[0];
+                // Upsert the user into the `users` table using the github_id as the unique key.
+                // This creates the row on first login and updates the access token/username on subsequent logins.
+                const result = await pool.query(
+                    `INSERT INTO users (github_id, username, avatar_url, access_token)
+                     VALUES ($1, $2, $3, $4)
+                     ON CONFLICT (github_id) DO UPDATE SET
+                         access_token = EXCLUDED.access_token,
+                         username = EXCLUDED.username,
+                         avatar_url = EXCLUDED.avatar_url
+                     RETURNING *`,
+                    [githubId, username, avatarUrl, accessToken]
+                );
 
-            // Build a user object to attach to the session. Include accessToken if you need API calls later.
-            const user = {
-                id: userRow.id,
-                github_id: userRow.github_id,
-                username: userRow.username,
-                avatar_url: userRow.avatar_url,
-                accessToken
-            };
+                const userRow = result.rows[0];
 
-            return done(null, user);
-        } catch (err) {
-            return done(err);
+                // Build a user object to attach to the session. Include accessToken if you need API calls later.
+                const user = {
+                    id: userRow.id,
+                    github_id: userRow.github_id,
+                    username: userRow.username,
+                    avatar_url: userRow.avatar_url,
+                    accessToken
+                };
+
+                return done(null, user);
+            } catch (err) {
+                return done(err);
+            }
         }
-    }
-));
+    ));
+} else {
+    console.warn(
+        "[AUTH] GitHub OAuth is disabled at startup because one or more env vars are missing: " +
+        `clientID=${Boolean(githubClientId)} clientSecret=${Boolean(githubClientSecret)} callbackURL=${Boolean(githubCallbackURL)}`
+    );
+}
 
 authRouter.get("/auth", async (req, res) => {
     try {
@@ -82,18 +96,28 @@ authRouter.get("/user", async (req, res) => {
     return res.json({ authenticated: true, user: req.user });
 });
 
-authRouter.get("/github",
-    passport.authenticate("github", { 
-        scope: ["user", "repo", "admin:repo_hook"]
-    })
-);
-
-authRouter.get("/github/callback",
-    passport.authenticate("github", { failureRedirect: "/login" }),
-    (req, res) => {
-        res.redirect("/");
+authRouter.get("/github", (req, res, next) => {
+    if (!githubAuthEnabled) {
+        return res.status(503).json({
+            error: "GitHub OAuth is not configured on this deployment",
+            configured: false
+        });
     }
-);
+
+    return passport.authenticate("github", {
+        scope: ["user", "repo", "admin:repo_hook"]
+    })(req, res, next);
+});
+
+authRouter.get("/github/callback", (req, res, next) => {
+    if (!githubAuthEnabled) {
+        return res.status(503).send("GitHub OAuth is not configured on this deployment");
+    }
+
+    return passport.authenticate("github", { failureRedirect: "/login" })(req, res, () => {
+        res.redirect("/");
+    });
+});
 
 authRouter.get("/repos", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -150,21 +174,12 @@ authRouter.get('/room-secret/:groupId', isAuthenticated, async (req, res) => {
             return res.status(403).json({ message: "Not a member of this group" });
         }
 
-        const hmac = await crypto.subtle.importKey(
-            'raw',
-            new TextEncoder().encode(process.env.ROOM_SECRET_KEY),
-            { name: 'HMAC', hash: 'SHA-256' },
-            false,
-            ['sign']
-        );
+        // Generate HMAC-based room secret using Node's crypto and return base64
+        const key = process.env.ROOM_SECRET_KEY || '';
+        const hmac = crypto.createHmac('sha256', String(key));
+        hmac.update(String(groupId));
+        const roomSecret = hmac.digest('base64');
 
-        const signature = await crypto.subtle.sign(
-            'HMAC',
-            hmac,
-            new TextEncoder().encode(String(groupId))
-        );
-
-        const roomSecret = btoa(String.fromCharCode(...new Uint8Array(signature)));
         res.json({ roomSecret });
     } catch (err) {
         console.error('Room secret generation failed:', err);
@@ -177,12 +192,12 @@ authRouter.post('/logout', async (req, res, next) => {
     const accessToken = req.user?.accessToken;
 
     // Revoke GitHub OAuth token before destroying session
-    if (accessToken) {
+    if (accessToken && githubClientId && githubClientSecret) {
         try {
-            await fetch(`https://api.github.com/applications/${process.env.GITHUB_CLIENT_ID}/token`, {
+            await fetch(`https://api.github.com/applications/${githubClientId}/token`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Basic ${Buffer.from(`${process.env.GITHUB_CLIENT_ID}:${process.env.GITHUB_CLIENT_SECRET}`).toString('base64')}`,
+                    'Authorization': `Basic ${Buffer.from(`${githubClientId}:${githubClientSecret}`).toString('base64')}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ access_token: accessToken })
@@ -205,6 +220,21 @@ authRouter.post('/logout', async (req, res, next) => {
             res.status(200).json({ message: "Logged out successfully" });
         });
     });
+});
+
+// Debug endpoint (authenticated) - returns presence of key env vars (no secrets)
+authRouter.get('/debug/status', isAuthenticated, async (req, res) => {
+    try {
+        return res.json({
+            NODE_ENV: process.env.NODE_ENV || 'development',
+            APP_BASE_URL: !!process.env.APP_BASE_URL,
+            GITHUB_WEBHOOK_SECRET: !!process.env.GITHUB_WEBHOOK_SECRET,
+            SESSION_SECRET: !!process.env.SESSION_SECRET,
+            ROOM_SECRET_KEY: !!process.env.ROOM_SECRET_KEY
+        });
+    } catch (err) {
+        return res.status(500).json({ error: 'Failed to read debug status' });
+    }
 });
 
 export default authRouter;
