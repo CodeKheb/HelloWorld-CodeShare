@@ -1,10 +1,39 @@
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, ".env") });
+
+// Try multiple paths for .env file to handle different deployment scenarios
+const envPaths = [
+    path.join(__dirname, ".env"),                    // Same directory as server.js
+    path.join(__dirname, "../.env"),                 // Parent directory (root)
+    path.join(process.cwd(), ".env"),               // Current working directory
+    path.join(process.cwd(), "backend/.env")        // CWD/backend/.env
+];
+
+let envLoaded = false;
+for (const envPath of envPaths) {
+    if (fs.existsSync(envPath)) {
+        console.log(`[DOTENV] Loading .env from: ${envPath}`);
+        const result = dotenv.config({ path: envPath });
+        if (result.error) {
+            console.warn(`[DOTENV] Warning loading ${envPath}:`, result.error.message);
+        } else {
+            console.log(`[DOTENV] Successfully loaded ${Object.keys(result.parsed || {}).length} variables`);
+            envLoaded = true;
+            break;
+        }
+    }
+}
+
+if (!envLoaded) {
+    console.warn(`[DOTENV] No .env file found in any of these locations:`, envPaths);
+    console.warn(`[DOTENV] Current working directory: ${process.cwd()}`);
+    console.warn(`[DOTENV] __dirname: ${__dirname}`);
+}
 
 import { Server } from "socket.io";
 import { createServer } from "http";

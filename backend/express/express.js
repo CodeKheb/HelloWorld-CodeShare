@@ -34,7 +34,11 @@ app.use(express.json({
         req.rawBody = buf;
     }
 }));
-app.use(express.static(path.join(__dirname, "../../frontend"), { index: false }));
+
+// Resolve frontend path robustly for both local and containerized environments
+const frontendPath = path.resolve(__dirname, "../../frontend");
+console.log(`[EXPRESS] Resolved frontend path: ${frontendPath}`);
+app.use(express.static(frontendPath, { index: false }));
 
 
 export const sessionMiddleware = session({
