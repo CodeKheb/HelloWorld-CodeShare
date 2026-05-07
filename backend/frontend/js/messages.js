@@ -754,6 +754,23 @@ function escapeAttr(s) {
     return String(s).replace(/"/g, '&quot;');
 }
 
+function formatTimeInPhilippines(date) {
+    try {
+        return date.toLocaleString('en-US', {
+            timeZone: 'Asia/Manila',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    } catch (e) {
+        return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    }
+}
+
 function initializeMessageComposer() {
     const sendButton = document.querySelector('.composer__send');
     const messageInput = document.querySelector('.composer__input');
@@ -845,11 +862,7 @@ function displayMessage(messageData) {
     const messageElement = document.createElement('article');
 
     const now = new Date(messageData.created_at || messageData.timestamp || Date.now());
-    const timeString = now.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    });
+    const timeString = formatTimeInPhilippines(now);
 
     if (messageData.type === 'system') {
         messageElement.className = 'message message--system';
