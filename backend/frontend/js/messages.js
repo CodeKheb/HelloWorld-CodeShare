@@ -144,11 +144,21 @@ window.requestedGroupName = _urlParams.get('groupName');
 // group messages 
 socket.on("server-group-text", async (message) => {
     console.log("Received group message:", message);
-    displayMessage(message);
-    if (shouldPlayMessageNotification(message)) {
-        playNotificationSound();
+    const messageGroupId = message?.groupId;
+    const isActiveGroup = String(messageGroupId) === String(window.currentGroupId) && !window.currentIsDm;
+
+    if (isActiveGroup) {
+        displayMessage(message);
+        clearUnreadForGroup(messageGroupId);
+        if (shouldPlayMessageNotification(message)) {
+            playNotificationSound();
+        }
+    } else {
+        markGroupUnread(messageGroupId);
+        if (shouldPlayMessageNotification(message)) {
+            playNotificationSound();
+        }
     }
-    markGroupUnread(message.groupId);
 });
 
 //Checks for members leaving
@@ -174,11 +184,21 @@ socket.on("member-joined", (data) => {
 // incoming messages
 socket.on("server-direct-text", async (message) => {
     console.log("Received direct message:", message);
-    displayMessage(message);
-    if (shouldPlayMessageNotification(message)) {
-        playNotificationSound();
+    const dmGroupId = message.DmId || message.dmGroupId || message.groupId;
+    const isActiveDm = window.currentIsDm && String(dmGroupId) === String(window.currentGroupId);
+
+    if (isActiveDm) {
+        displayMessage(message);
+        clearUnreadForDm(dmGroupId);
+        if (shouldPlayMessageNotification(message)) {
+            playNotificationSound();
+        }
+    } else {
+        markDmUnread(dmGroupId);
+        if (shouldPlayMessageNotification(message)) {
+            playNotificationSound();
+        }
     }
-    markDmUnread(message.DmId || message.dmGroupId || message.groupId);
 });
 
 // server errors
