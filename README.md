@@ -1,3 +1,4 @@
+# CodeShare
 <p align="center">
 	<img src="screenshots/Banner.png" alt="CodeShare Banner" />
 </p>
@@ -11,6 +12,7 @@ CodeShare is a real-time collaboration platform that brings GitHub directly into
 
 ### 🎬 Watch It in Action
 [![CodeShare Demo Video](https://img.youtube.com/vi/okiYoVzDuCU/0.jpg)](https://www.youtube.com/watch?v=okiYoVzDuCU)
+
 *2-minute walkthrough showing GitHub integration, real-time chat, Commit Comparisons*
 
 ---
@@ -66,7 +68,6 @@ Central overview of all your groups and cross-repo GitHub activity in one unifie
 | **Backend** | Node.js, Express.js, Socket.io |
 | **Database** | PostgreSQL (Render) |
 | **Authentication** | GitHub OAuth via Passport.js |
-| **AI** | Gemini Flash API |
 | **Deployment** | Render |
 | **Version Control** | GitHub |
 
