@@ -1,4 +1,6 @@
-# 💬CodeShare
+<p align="center">
+	<img src="screenshots/Banner.png" alt="CodeShare Banner" />
+</p>
 
 **Collaboration made easy.**
 
