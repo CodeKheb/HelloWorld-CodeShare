@@ -39,14 +39,14 @@ messagesRouter.get("/group/:groupId", async (req, res) => {
 			 FROM messages m
 			 LEFT JOIN users u ON u.id = m.sender_id
 			 WHERE m.group_id = $1
-			 ORDER BY m.created_at DESC
+			 ORDER BY m.created_at ASC
 			 LIMIT $2`,
 			[groupId, limit]
 		);
 
 		return res.json({
 			success: true,
-			messages: result.rows.reverse()
+			messages: result.rows
 		});
 	} catch (error) {
 		console.error("Error loading group messages:", error);
