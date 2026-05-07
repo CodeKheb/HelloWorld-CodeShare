@@ -910,9 +910,7 @@ a {
         gap: 8px;
     }
 
-    .secondary-button {
-        display: none;
-    }
+    /* Keep secondary buttons (like Create Group) visible on mobile; don't hide globally */
 
     .content {
         padding: 16px 12px;

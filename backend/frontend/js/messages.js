@@ -9,8 +9,6 @@ const roomSecrets = new Map();
 async function fetchRoomSecret(groupId) {
     if (roomSecrets.has(groupId)) return roomSecrets.get(groupId);
 
-    console.log(`Fetch groupId: ${groupId}`);
-
     const res = await fetch(`/api/auth/room-secret/${groupId}`, {
         credentials: 'include'
     });
@@ -21,8 +19,17 @@ async function fetchRoomSecret(groupId) {
     roomSecrets.set(groupId, roomSecret);
     return roomSecret;
 }
-// https://helloworld-codeshare.onrender.com
-// http://localhost:3000
+
+// Determine socket URL based on current environment
+const getSocketUrl = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        // Local development
+        return `http://${window.location.hostname}:${window.location.port || 3000}`;
+    }
+    // Production
+    return window.location.origin;
+};
+
 const socket = io("https://helloworld-codeshare.onrender.com", {
     withCredentials: true
 });
@@ -43,10 +50,28 @@ function emitPendingSubscriptions() {
 }
 
 socket.on("connect", () => {
-    console.log("Connected to server with ID:", socket.id);
     socket.emit("client_ID", socket.id);
     emitPendingSubscriptions();
 });
+
+// Connection errors (useful when testing locally)
+socket.on('connect_error', (err) => {
+    console.error('Socket connect_error:', err && err.message ? err.message : err);
+});
+socket.on('error', (err) => {
+    console.error('Socket error:', err && err.message ? err.message : err);
+});
+
+// Helper to wait for socket connection
+function waitForSocketConnection() {
+    return new Promise((resolve) => {
+        if (socket.connected) {
+            resolve();
+        } else {
+            socket.once('connect', resolve);
+        }
+    });
+}
 
 function isAppTabVisible() {
     return document.visibilityState === 'visible' && document.hasFocus();
@@ -141,16 +166,16 @@ function subscribeToAllDmRooms(dmGroups) {
     });
 }
 
-// Respect ?groupId=... in the URL so clicking a group card opens the correct conversation
+// Respect ?groupId=... and ?contactId=... in the URL
 const _urlParams = new URLSearchParams(window.location.search);
 window.requestedGroupId = _urlParams.get('groupId');
 window.requestedGroupName = _urlParams.get('groupName');
+window.requestedContactId = _urlParams.get('contactId');
 let allSidebarContacts = [];
 let showingAllSidebarContacts = false;
 
 // group messages 
 socket.on("server-group-text", async (message) => {
-    console.log("Received group message:", message);
     const messageGroupId = message?.groupId;
     const isActiveGroup = String(messageGroupId) === String(window.currentGroupId) && !window.currentIsDm;
 
@@ -181,8 +206,6 @@ socket.on("repo-attached", async ({ groupId, repo }) => {
 
 //Checks for members leaving
 socket.on("member-leave", (data) => {
-    console.log(`${data.username} left group ${data.groupId}`);
-
     // Only update UI if it's the currently viewed group
     if (String(data.groupId) === String(window.currentGroupId)) {
         loadGroupDetails(data.groupId);
@@ -191,8 +214,6 @@ socket.on("member-leave", (data) => {
 
 //Checks for new members
 socket.on("member-joined", (data) => {
-    console.log(`${data.username} joined group ${data.groupId}`);
-
     // Only update UI if it's the currently viewed group
     if (String(data.groupId) === String(window.currentGroupId)) {
         loadGroupDetails(data.groupId);
@@ -201,7 +222,6 @@ socket.on("member-joined", (data) => {
 
 // incoming messages
 socket.on("server-direct-text", async (message) => {
-    console.log("Received direct message:", message);
     const dmGroupId = message.DmId || message.dmGroupId || message.groupId;
     const isActiveDm = window.currentIsDm && String(dmGroupId) === String(window.currentGroupId);
 
@@ -221,7 +241,6 @@ socket.on("server-direct-text", async (message) => {
 
 // server errors
 socket.on("server-error", (error) => {
-    console.error("Server error:", error);
     alert(`Error: ${error.reason}`);
 });
 
@@ -229,6 +248,8 @@ socket.on("dm-ready", async ({ dmGroupId, receiverId }) => {
     window.currentGroupId = dmGroupId;
     window.currentIsDm = true;
     clearUnreadForDm(dmGroupId);
+    // Persist current conversation in URL so refresh keeps it
+    try { history.replaceState(null, '', `/messages?groupId=${encodeURIComponent(dmGroupId)}`); } catch (e) {}
     await Promise.all([
         loadDmMessages(dmGroupId),
         loadDmDetails(dmGroupId)
@@ -270,12 +291,11 @@ async function loadDmMessages(dmGroupId) {
         });
 
         if (!response.ok) {
-            console.error('Failed to load DM messages');
             return;
         }
 
         const payload = await response.json();
-        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+        const messages = Array.isArray(payload.messages) ? payload.messages.slice().reverse() : [];
           messages.forEach((m) => {
             displayMessage({
                 id: m.id,
@@ -289,7 +309,6 @@ async function loadDmMessages(dmGroupId) {
             });
         });
     } catch (error) {
-        console.error('Error loading DM messages:', error);
     }
 }
 
@@ -313,7 +332,6 @@ async function loadDmDetails(dmGroupId) {
         updateDmPanel(other, repos); 
 
     } catch (error) {
-        console.error('Error loading DM details:', error);
     }
 }
 
@@ -333,6 +351,14 @@ document.addEventListener('DOMContentLoaded', () => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const route = e.currentTarget.getAttribute('data-route');
+            // If user explicitly opened the Messages view from the sidebar nav,
+            // record that so the messages page can show an empty "no conversation"
+            // prompt instead of auto-selecting the first group.
+            try {
+                if (route === '/messages') sessionStorage.setItem('messages-opened-from-nav', '1');
+            } catch (ex) {
+                // sessionStorage may be unavailable in some contexts - ignore
+            }
             window.location.href = `${route}`;
         });
     });
@@ -372,11 +398,8 @@ async function initializeMessagesView() {
 
             // Load sidebar groups and contacts from the server
             await fetchAndRenderSidebar();
-
-            console.log('User initialized:', window.currentUser);
         }
     } catch (error) {
-        console.error("Messages view load failed:", error);
         window.location.href = '/login';
     }
 }
@@ -385,14 +408,13 @@ async function initializeMessagesView() {
 async function fetchAndRenderSidebar() {
     try {
         const res = await fetch('/api/groups', { credentials: 'include' });
-        if (!res.ok) return console.error('Failed to load groups for sidebar');
+        if (!res.ok) return;
         const payload = await res.json();
         const allGroups = (payload && payload.groups) || [];
 
         const groups = allGroups.filter(g => !g.is_direct);
         const dmGroups = allGroups.filter(g => g.is_direct);
 
-        // If user has no groups or DMs, show an informative empty state instead of leaving the feed blank
         const messageFeed = document.querySelector('.message-feed');
         const composerEl = document.querySelector('.composer');
         const titleEl = document.querySelector('.chat-channel');
@@ -411,7 +433,6 @@ async function fetchAndRenderSidebar() {
             if (composerEl) composerEl.style.display = '';
         }
 
-        // ── Render regular groups in sidebar ────────────────────────────
         const groupsList = document.getElementById('sidebar-groups');
         if (groupsList) {
             groupsList.innerHTML = '';
@@ -426,9 +447,11 @@ async function fetchAndRenderSidebar() {
                     <span>${escapeHtml(g.name)}</span>
                     <span class="unread-dot" aria-hidden="true"></span>
                 `;
+
                 if (window.unreadSidebarGroupIds.has(String(g.id))) {
                     a.classList.add('has-unread');
                 }
+
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
                     document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('sidebar-link--active'));
@@ -438,78 +461,37 @@ async function fetchAndRenderSidebar() {
                     clearUnreadForGroup(g.id);
                     collapseSidebarOnMobile();
                 });
+
                 li.appendChild(a);
                 groupsList.appendChild(li);
             });
+
             if (groups.length === 0) {
                 groupsList.innerHTML = '<li class="muted" style="padding:8px 12px;color:#8b949e">No groups yet</li>';
-                // Show a friendly empty state when there are no groups
                 showNoGroupsView();
             }
         }
 
-        // Subscribe to all known rooms so notifications arrive immediately
         subscribeToAllGroupRooms(groups);
         subscribeToAllDmRooms(dmGroups);
 
-        // ── Handle URL-requested group ───────────────────────────────────
-        if (window.requestedGroupId) {
-            const target = allGroups.find(g => String(g.id) === String(window.requestedGroupId));
-            if (target) {
-                updateGroupHeaderFromMembers(target);
-                selectGroup(target);
-                window.requestedGroupId = null;
-            } else {
-                try {
-                    const singleRes = await fetch(`/api/groups/${encodeURIComponent(window.requestedGroupId)}`, { credentials: 'include' });
-                    if (singleRes.ok) {
-                        const p = await singleRes.json();
-                        if (p && p.group) {
-                            updateGroupHeaderFromMembers(p.group);
-                            selectGroup(p.group);
-                            window.requestedGroupId = null;
-                        }
-                    }
-                } catch (err) {
-                    console.warn('Requested group not found:', err);
-                }
-            }
-        } else {
-            // Auto-select first regular group if none selected
-            if (!window.currentGroupId && groups.length > 0) {
-                const first = groups[0];
-                updateGroupHeaderFromMembers(first);
-                selectGroup(first);
-            }
-        }
-
-        // If there are no groups at all, ensure a clean empty UI is shown
-        if ((!groups || groups.length === 0) && (!dmGroups || dmGroups.length === 0)) {
-            showNoGroupsView();
-        }
-
-        // ── Build contacts list ──────────────────────────────────────────
         const contactsMap = new Map();
         groups.forEach(g => {
-            if (Array.isArray(g.members)) {
-                g.members.forEach(m => {
-                    if (!m || !m.id) return;
-                    if (m.id === window.currentUser.id) return;
-                    if (!contactsMap.has(m.id)) contactsMap.set(m.id, m);
-                });
-            }
+            if (!Array.isArray(g.members)) return;
+            g.members.forEach(m => {
+                if (!m || !m.id) return;
+                if (String(m.id) === String(window.currentUser.id)) return;
+                if (!contactsMap.has(m.id)) contactsMap.set(m.id, m);
+            });
         });
 
         dmGroups.forEach(g => {
-            if (Array.isArray(g.members)) {
-                g.members.forEach(m => {
-                    if (!m || !m.id) return;
-                    if (m.id === window.currentUser.id) return;
-                    if (!contactsMap.has(m.id)) {
-                        contactsMap.set(m.id, { ...m, existingDmGroupId: g.id });
-                    }
-                });
-            }
+            if (!Array.isArray(g.members)) return;
+            g.members.forEach(m => {
+                if (!m || !m.id) return;
+                if (String(m.id) === String(window.currentUser.id)) return;
+                contactsMap.set(m.id, { ...m, existingDmGroupId: g.id });
+            });
         });
 
         const contacts = Array.from(contactsMap.values())
@@ -519,6 +501,7 @@ async function fetchAndRenderSidebar() {
         const contactsList = document.getElementById('sidebar-contacts');
         if (contactsList) {
             contactsList.innerHTML = '';
+
             contacts.forEach(c => {
                 const li = document.createElement('li');
                 const a = document.createElement('a');
@@ -528,11 +511,12 @@ async function fetchAndRenderSidebar() {
                 a.innerHTML = `${avatar}<span>${escapeHtml(c.username)}</span><span class="unread-dot" aria-hidden="true"></span>`;
                 a.dataset.userId = c.id;
                 a.dataset.dmGroupId = c.existingDmGroupId || '';
+
                 if (c.existingDmGroupId && window.unreadSidebarDmGroupIds.has(String(c.existingDmGroupId))) {
                     a.classList.add('has-unread');
                 }
 
-                a.addEventListener('click', (e) => {
+                a.addEventListener('click', async (e) => {
                     e.preventDefault();
                     document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('sidebar-link--active'));
                     a.classList.add('sidebar-link--active');
@@ -540,16 +524,19 @@ async function fetchAndRenderSidebar() {
 
                     if (c.existingDmGroupId) {
                         window.currentGroupId = c.existingDmGroupId;
+                        try { history.replaceState(null, '', `/messages?groupId=${encodeURIComponent(c.existingDmGroupId)}`); } catch (e2) {}
                         clearUnreadForDm(c.existingDmGroupId);
-                        loadDmMessages(c.existingDmGroupId);
+                        await Promise.all([
+                            loadDmMessages(c.existingDmGroupId),
+                            loadDmDetails(c.existingDmGroupId)
+                        ]);
                         updateDmHeader(c);
-                        loadDmDetails(c.existingDmGroupId);  
+                        collapseSidebarOnMobile();
                     } else {
+                        await waitForSocketConnection();
                         socket.emit('direct-connect', c.id);
+                        collapseSidebarOnMobile();
                     }
-
-                    console.log('Opening DM with:', c.username, '| ID:', c.id);
-                    collapseSidebarOnMobile();
                 });
 
                 li.appendChild(a);
@@ -560,8 +547,71 @@ async function fetchAndRenderSidebar() {
                 contactsList.innerHTML = '<li class="muted" style="padding:8px 12px;color:#8b949e">No contacts yet</li>';
             }
         }
+
+        // Conversation selection precedence:
+        // 1) explicit group in URL
+        // 2) explicit contact in URL
+        // 3) opened from nav -> show empty prompt
+        // 4) default first group
+        let openedFromNav = false;
+        try {
+            openedFromNav = sessionStorage.getItem('messages-opened-from-nav') === '1';
+        } catch (e3) {
+            openedFromNav = false;
+        }
+
+        if (window.requestedGroupId) {
+            const target = allGroups.find(g => String(g.id) === String(window.requestedGroupId));
+            if (target) {
+                updateGroupHeaderFromMembers(target);
+                await selectGroup(target);
+            } else {
+                try {
+                    const singleRes = await fetch(`/api/groups/${encodeURIComponent(window.requestedGroupId)}`, { credentials: 'include' });
+                    if (singleRes.ok) {
+                        const p = await singleRes.json();
+                        if (p && p.group) {
+                            updateGroupHeaderFromMembers(p.group);
+                            await selectGroup(p.group);
+                        }
+                    }
+                } catch (ignoreErr) {
+                }
+            }
+            window.requestedGroupId = null;
+        } else if (window.requestedContactId) {
+            const contactToOpen = Array.from(contactsMap.values())
+                .find(c => String(c.id) === String(window.requestedContactId));
+
+            if (contactToOpen && contactToOpen.existingDmGroupId) {
+                window.currentGroupId = contactToOpen.existingDmGroupId;
+                window.currentIsDm = true;
+                try { history.replaceState(null, '', `/messages?groupId=${encodeURIComponent(contactToOpen.existingDmGroupId)}`); } catch (e4) {}
+                clearUnreadForDm(contactToOpen.existingDmGroupId);
+                await Promise.all([
+                    loadDmMessages(contactToOpen.existingDmGroupId),
+                    loadDmDetails(contactToOpen.existingDmGroupId)
+                ]);
+                updateDmHeader(contactToOpen);
+            } else {
+                await waitForSocketConnection();
+                socket.emit('direct-connect', window.requestedContactId);
+            }
+
+            window.requestedContactId = null;
+        } else if (openedFromNav) {
+            try { sessionStorage.removeItem('messages-opened-from-nav'); } catch (e5) {}
+            showNoConversationSelected();
+        } else if (!window.currentGroupId && groups.length > 0) {
+            const first = groups[0];
+            updateGroupHeaderFromMembers(first);
+            await selectGroup(first);
+        }
+
+        if ((!groups || groups.length === 0) && (!dmGroups || dmGroups.length === 0)) {
+            showNoGroupsView();
+        }
     } catch (err) {
-        console.error('Error populating sidebar:', err);
     }
 }
 
@@ -585,6 +635,22 @@ function showNoGroupsView() {
     // Repo list fallback
     const repoList = document.getElementById('group-repo-list') || document.querySelector('.repo-list');
     if (repoList) repoList.innerHTML = '<article class="repo-card"><div class="repo-card__title"><span class="material-symbols-outlined">folder_off</span><span>No attached repositories</span></div><div class="repo-card__meta">Attach one from the header button</div></article>';
+}
+
+function showNoConversationSelected() {
+    const messageFeed = document.querySelector('.message-feed');
+    const composerEl = document.querySelector('.composer');
+    const titleEl = document.querySelector('.chat-channel');
+
+    if (messageFeed) {
+        messageFeed.innerHTML = `
+            <div class="empty-feed-notice">
+                <span class="material-symbols-outlined">chat</span>
+                <p>No conversation selected — pick a person or group on the left to view messages.</p>
+            </div>`;
+    }
+    if (composerEl) composerEl.style.display = 'none';
+    if (titleEl) titleEl.innerText = 'No conversation selected';
 }
 
 function updateDmHeader(contact) {
@@ -680,6 +746,9 @@ async function selectGroup(group) {
 
     socket.emit('join-group', group.id);
 
+    // Persist current conversation in URL so a refresh preserves it
+    try { history.replaceState(null, '', `/messages?groupId=${encodeURIComponent(group.id)}`); } catch (e) {}
+
     await Promise.all([
         loadGroupMessages(group.id),
         loadGroupDetails(group.id)
@@ -693,7 +762,6 @@ async function loadGroupDetails(groupId) {
         });
 
         if (!response.ok) {
-            console.error('Failed to load group details');
             return;
         }
 
@@ -727,7 +795,6 @@ async function loadGroupDetails(groupId) {
         renderRepoList(repos);
         renderGroupActions(group);
     } catch (error) {
-        console.error('Error loading group details:', error);
     }
 }
 
@@ -932,7 +999,6 @@ async function handleLeaveGroup(group) {
         await fetchAndRenderSidebar();
 
     } catch (err) {
-        console.error('Error leaving group:', err);
         alert('Something went wrong. Please try again.');
     }
 }
@@ -973,7 +1039,6 @@ async function handleDeleteGroup(group) {
         await fetchAndRenderSidebar();
 
     } catch (err) {
-        console.error('Error deleting group:', err);
         alert('Something went wrong. Please try again.');
     }
 }
@@ -1039,7 +1104,6 @@ function initializeMessageComposer() {
     const messageInput = document.querySelector('.composer__input');
 
     if (!sendButton || !messageInput) {
-        console.error('Composer elements not found');
         return;
     }
 
@@ -1090,12 +1154,11 @@ async function loadGroupMessages(groupId) {
         });
 
         if (!response.ok) {
-            console.error('Failed to load group messages');
             return;
         }
 
         const payload = await response.json();
-        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+        const messages = Array.isArray(payload.messages) ? payload.messages.slice().reverse() : [];
         
         messages.forEach((m) => {
             displayMessage({
@@ -1110,7 +1173,6 @@ async function loadGroupMessages(groupId) {
             });
         });
     } catch (error) {
-        console.error('Error loading persisted messages:', error);
     }
 }
 
@@ -1118,7 +1180,6 @@ function displayMessage(messageData) {
     const messageFeed = document.querySelector('.message-feed');
 
     if (!messageFeed) {
-        console.error('Message feed not found');
         return;
     }
 
@@ -1313,7 +1374,6 @@ function initializeSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const toggleBtn = document.getElementById('sidebarToggle');
     if (!sidebar || !toggleBtn) {
-        console.warn('Sidebar or toggle button not found');
         return;
     }
 
@@ -1363,7 +1423,6 @@ function initializeCommitsModal() {
     const backBtn = document.getElementById('diffBackBtn');
 
     if (!summarizeBtn || !commitsOverlay) {
-        console.warn('Summarize button or commits overlay not found');
         return;
     }
 
@@ -1500,7 +1559,6 @@ async function loadGroupRepositories() {
             repoSelect.innerHTML = '<option value="">No repositories attached</option>';
         }
     } catch (error) {
-        console.error('Error loading repositories:', error);
         showCommitsError('Failed to load repositories');
     }
 }
@@ -1528,10 +1586,8 @@ async function loadCommits(repoFullName) {
 
         const data = await response.json();
         displayCommits(data.commits, repoFullName);
-    } catch (error) {
-        console.error('Error loading commits:', error);
-        showCommitsError(error.message);
-    } finally {
+    } 
+        finally {
         hideCommitsLoading();
     }
 }
@@ -1653,7 +1709,6 @@ async function compareCommits(sha1, sha2) {
 
         renderDiffInModal(commit1, commit2, repoFullName);
     } catch (error) {
-        console.error('Error comparing commits:', error);
         alert('Failed to compare commits: ' + error.message);
         updateCompareButton();
     }
