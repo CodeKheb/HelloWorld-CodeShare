@@ -9,6 +9,7 @@ CodeShare is a real-time collaboration platform that brings GitHub directly into
 
 ### 🎬 Watch It in Action
 [![CodeShare Demo Video](https://img.youtube.com/vi/okiYoVzDuCU/0.jpg)](https://www.youtube.com/watch?v=okiYoVzDuCU)
+
 *2-minute walkthrough showing GitHub integration, real-time chat, Commit Comparisons*
 
 ---
