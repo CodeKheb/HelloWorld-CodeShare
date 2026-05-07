@@ -1251,8 +1251,12 @@ a {
 		height: 2.25rem;
 	}
 
+	/* Keep secondary buttons visible on mobile (e.g., Create Group) */
 	.secondary-button {
-		display: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 6px 10px;
 	}
 
 	.content {

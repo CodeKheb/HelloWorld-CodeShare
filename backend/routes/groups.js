@@ -34,15 +34,21 @@ async function createGithubWebhook({ repoFullName, accessToken }) {
     }
 
     const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET || "test_secret";
-    
-    // Check if webhook already exists for this URL
-    const existingHooks = await getExistingWebhooks({ owner, repo, accessToken });
     const targetUrl = `${appBaseUrl.replace(/\/$/, "")}/api/webhooks/github`;
-    const existingHook = existingHooks.find(h => h.config?.url === targetUrl);
     
-    if (existingHook) {
-        console.log(`[WEBHOOK] Webhook already exists for ${owner}/${repo} with ID ${existingHook.id}`);
-        return existingHook.id;
+    // Check if webhook already exists for this URL using the current user's token
+    try {
+        const existingHooks = await getExistingWebhooks({ owner, repo, accessToken });
+        const existingHook = existingHooks.find(h => h.config?.url === targetUrl);
+        
+        if (existingHook) {
+            console.log(`[WEBHOOK] Webhook already exists for ${owner}/${repo} with ID ${existingHook.id}`);
+            return existingHook.id;
+        }
+    } catch (checkErr) {
+        // If checking for existing webhooks fails (permission issue), fall back to polling
+        console.log(`[WEBHOOK] Could not verify existing webhooks for ${owner}/${repo} with current token: ${checkErr.message}. Will use polling instead.`);
+        throw new Error("PERMISSION_ERROR_USE_POLLING");
     }
 
     const webhookUrl = `https://api.github.com/repos/${owner}/${repo}/hooks`;
@@ -150,9 +156,12 @@ groupsRouter.post("/create", async (req, res) => {
                         );
                         console.log(`[WEBHOOK] Successfully created webhook for ${repoRow.repo_full_name} (ID: ${webhookId})`);
                     } catch (webhookErr) {
-                        const isPermissionError = webhookErr.message.includes('403') || webhookErr.message.includes('404');
+                        const isPermissionError = 
+                            webhookErr.message.includes('403') || 
+                            webhookErr.message.includes('404') ||
+                            webhookErr.message.includes('PERMISSION_ERROR_USE_POLLING');
                         if (isPermissionError) {
-                            console.log(`[POLLING] Webhook creation failed due to permissions. Enabling polling for ${repoRow.repo_full_name}`);
+                            console.log(`[POLLING] Webhook creation/verification failed due to permissions. Enabling polling for ${repoRow.repo_full_name}`);
                             await client.query(
                                 `UPDATE group_repos SET use_polling = TRUE WHERE id = $1`,
                                 [repoRow.id]
@@ -378,11 +387,14 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
                     repoRow = updated.rows[0];
                     console.log(`[WEBHOOK] Successfully created webhook for ${repoRow.repo_full_name} (ID: ${webhookId})`);
                 } catch (webhookErr) {
-                    // Check if this is a permission error (403/404)
-                    const isPermissionError = webhookErr.message.includes('403') || webhookErr.message.includes('404');
+                    // Check for permission errors or webhook verification failures
+                    const isPermissionError = 
+                        webhookErr.message.includes('403') || 
+                        webhookErr.message.includes('404') ||
+                        webhookErr.message.includes('PERMISSION_ERROR_USE_POLLING');
                     
                     if (isPermissionError) {
-                        console.log(`[POLLING] Webhook creation failed due to permissions. Enabling polling for ${repoRow.repo_full_name}`);
+                        console.log(`[POLLING] Webhook creation/verification failed due to permissions. Enabling polling for ${repoRow.repo_full_name}`);
                         // Fall back to polling
                         const updated = await client.query(
                             `UPDATE group_repos

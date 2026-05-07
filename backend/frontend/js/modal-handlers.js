@@ -84,7 +84,6 @@ function initCreateGroupModal(onSuccess) {
                 alert('Error: ' + (data.error || 'Failed to create group'));
             }
         } catch (err) {
-            console.error('Error creating group:', err);
             alert('Error: ' + err.message);
         } finally {
             ModalManager.setButtonLoading(submitBtn, false);
@@ -169,7 +168,6 @@ function initCreateRepoModal(onSuccess) {
                 alert('Error: ' + (data.error || 'Failed to create repository'));
             }
         } catch (err) {
-            console.error('Error creating repository:', err);
             alert('Error: ' + err.message);
         } finally {
             ModalManager.setButtonLoading(submitBtn, false);
@@ -234,7 +232,6 @@ function initJoinGroupModal(onSuccess) {
                 alert('Error: ' + (data.error || 'Failed to join group'));
             }
         } catch (err) {
-            console.error('Error joining group:', err);
             alert('Error: ' + err.message);
         } finally {
             ModalManager.setButtonLoading(submitBtn, false);
@@ -307,7 +304,6 @@ document.getElementById('submitGroup')?.addEventListener('click', async () => {
             alert('Error: ' + (data.error || 'Failed'));
         }
     } catch (err) {
-        console.error(err);
         alert('Error: ' + err.message);
     } finally {
         btn.disabled = false;
@@ -415,7 +411,6 @@ function initAttachRepoModal(onSuccess) {
                 alert('Error: ' + (data.error || 'Failed to attach repository'));
             }
         } catch (err) {
-            console.error('Error attaching repository:', err);
             alert('Error: ' + err.message);
         } finally {
             ModalManager.setButtonLoading(submitBtn, false);
@@ -478,7 +473,6 @@ function initSettingsDropdown() {
                     alert(data.message || 'Logout failed. Please try again.');
                 }
             } catch (err) {
-                console.error('Logout error:', err);
                 alert('An error occurred during logout. Please try again.');
             }
         });

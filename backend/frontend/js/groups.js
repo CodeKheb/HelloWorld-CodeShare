@@ -15,7 +15,7 @@ async function initializeSidebar() {
       window.location.href = '/login';
     }
   } catch (error) {
-    console.error('Sidebar load failed:', error);
+
     window.location.href = '/login';
   }
 }
@@ -39,7 +39,6 @@ async function loadGroups() {
     });
 
     if (!response.ok) {
-      console.error('Failed to load groups');
       return;
     }
 
@@ -80,7 +79,6 @@ async function loadGroups() {
     }
 
   } catch (error) {
-    console.error('Error loading groups:', error);
   }
 }
 
@@ -162,7 +160,6 @@ function renderGroups(groupsGrid = document.getElementById('groups-grid')) {
       card.addEventListener('click', (e) => {
         const groupId = e.currentTarget.dataset.groupId;
         const groupName = e.currentTarget.dataset.groupName;
-        console.log('Clicked group:', groupId, groupName);
         navigateToGroupConversation(groupId, groupName);
       });
 
@@ -355,7 +352,6 @@ document.getElementById('submitGroup')
       const data = await response.json();
 
       if (response.ok) {
-        console.log('Group created:', data.group);
         alert('Group created successfully!');
         closeModal();
         loadGroups(); // refresh the groups list
@@ -363,7 +359,6 @@ document.getElementById('submitGroup')
         alert('Error: ' + (data.error || 'Failed to create group'));
       }
     } catch (error) {
-      console.error('Error creating group:', error);
       alert('Error: ' + error.message);
     } finally {
       // Re-enable button

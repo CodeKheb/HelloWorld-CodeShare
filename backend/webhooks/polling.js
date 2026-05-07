@@ -1,4 +1,19 @@
 import pool from "../db/pool.js";
+import { generatePollingEventId } from "./github.js";
+
+async function resolveUserTokenColumn() {
+        const result = await pool.query(
+                `SELECT column_name
+                 FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                     AND table_name = 'users'
+                     AND column_name IN ('access_token', 'accessToken')
+                 ORDER BY CASE column_name WHEN 'access_token' THEN 1 WHEN 'accessToken' THEN 2 ELSE 99 END
+                 LIMIT 1`
+        );
+
+        return result.rows[0]?.column_name || null;
+}
 
 /**
  * Fetch GitHub events API for a repo
@@ -219,8 +234,11 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
         const newMessages = [];
 
         for (const event of events.reverse()) {
-            const eventId = event.id?.toString();
-            if (!eventId) continue;
+            // Generate stable event ID that matches webhook format
+            const stableEventId = generatePollingEventId(event, repoFullName);
+            const legacyEventId = event.id?.toString(); // Keep for fallback compatibility
+            
+            if (!stableEventId && !legacyEventId) continue;
 
             const eventTimestamp = getEventTimestamp(event);
 
@@ -228,28 +246,17 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
             const eventMs = eventTimestamp ? new Date(eventTimestamp).getTime() : NaN;
             const eventLocal = eventTimestamp || 'unknown';
             const cmpResult = Number.isNaN(eventMs) || Number.isNaN(cutoffAtMs) ? 'invalid' : (eventMs > cutoffAtMs ? 'after' : 'before');
-            console.log(`[POLLING] Event ${eventId} timestamp=${eventLocal} (${eventMs}ms) cutoff=${cutoffAtRow} (${cutoffAtMs}ms) => ${cmpResult}`);
+            console.log(`[POLLING] Event ${stableEventId} timestamp=${eventLocal} (${eventMs}ms) cutoff=${cutoffAtRow} (${cutoffAtMs}ms) => ${cmpResult}`);
 
             if (!isAfterCutoff(eventTimestamp, cutoffAtMs)) {
-                console.log(`[POLLING] Skipping event ${eventId} for ${repoFullName} because ${eventTimestamp || 'unknown time'} is not after cutoff ${cutoffAtRow || 'none'}`);
-                // still mark processed to avoid re-processing across polls
-                try {
-                    await pool.query(
-                        `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
-                         VALUES ($1, $2, $3, $4)
-                         ON CONFLICT (github_event_id, group_id) DO NOTHING`,
-                        [eventId, event.type, groupId, repoFullName]
-                    );
-                } catch (e) {
-                    console.warn(`[POLLING] Failed to mark skipped event ${eventId} processed:`, e.message);
-                }
+                console.log(`[POLLING] Skipping event ${stableEventId} for ${repoFullName} because ${eventTimestamp || 'unknown time'} is not after cutoff ${cutoffAtRow || 'none'}`);
                 continue;
             }
 
-            // Check deduplication
-            const isNew = await isEventNew({ eventId, groupId, repoFullName });
+            // Check deduplication BEFORE doing any processing
+            const isNew = await isEventNew({ eventId: stableEventId, groupId, repoFullName });
             if (!isNew) {
-                console.log(`[POLLING] Event ${eventId} already processed, skipping...`);
+                console.log(`[POLLING] Event ${stableEventId} already processed, skipping...`);
                 continue;
             }
 
@@ -292,16 +299,16 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
                     `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
                      VALUES ($1, $2, $3, $4)
                      ON CONFLICT (github_event_id, group_id) DO NOTHING`,
-                    [eventId, event.type, groupId, repoFullName]
+                    [stableEventId, normalizeGithubEventType(event.type), groupId, repoFullName]
                 );
 
                 await client.query("COMMIT");
                 newMessages.push(messageRow);
-                console.log(`[POLLING] Inserted event ${eventId} as system message for ${repoFullName}`);
+                console.log(`[POLLING] Inserted event ${stableEventId} as system message for ${repoFullName}`);
 
             } catch (err) {
                 await client.query("ROLLBACK");
-                console.error(`[POLLING] Error inserting event ${eventId}:`, err.message);
+                console.error(`[POLLING] Error inserting event ${stableEventId}:`, err.message);
             } finally {
                 client.release();
             }
@@ -310,7 +317,7 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
         // Emit socket events for all new messages
         if (io && newMessages.length > 0) {
             newMessages.forEach(msg => {
-                io.to(`group-${groupId}`).emit("server-group-text", {
+                io.to(String(groupId)).emit("server-group-text", {
                     id: msg.id,
                     group_id: groupId,
                     sender_id: null,
@@ -320,7 +327,7 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
                     type: "system",
                     created_at: msg.created_at
                 });
-                console.log(`[POLLING] Emitted socket event for message ${msg.id}`);
+                console.log(`[POLLING] Emitted socket event for message ${msg.id} to group ${groupId}`);
             });
         }
 
@@ -342,46 +349,73 @@ async function pollAllReposWithPolling(io) {
     try {
         console.log(`[POLLING] Starting polling cycle at ${new Date().toISOString()}...`);
 
+        const tokenColumn = await resolveUserTokenColumn();
+        if (!tokenColumn) {
+            console.warn('[POLLING] No token column found on users table (expected access_token or accessToken); skipping polling cycle');
+            return;
+        }
+
+        const tokenExpr = `u.${tokenColumn}`;
+
         // Diagnostics: count repos flagged for polling vs repos with at least one member token
         try {
             const totalToPollRes = await pool.query(`SELECT COUNT(*) AS cnt FROM group_repos WHERE use_polling = TRUE`);
-            const reposWithTokenRes = await pool.query(`
-                SELECT COUNT(DISTINCT gr.repo_full_name) AS cnt
+            const pollableReposRes = await pool.query(`
+                SELECT COUNT(DISTINCT gr.group_id) AS cnt
                 FROM group_repos gr
                 WHERE gr.use_polling = TRUE
-                  AND EXISTS (
-                      SELECT 1 FROM group_members gm JOIN users u ON gm.user_id = u.id
-                      WHERE gm.group_id = gr.group_id AND u.access_token IS NOT NULL
+                  AND (
+                      -- Group has its own member with token
+                      EXISTS (
+                          SELECT 1 FROM group_members gm JOIN users u ON gm.user_id = u.id
+                          WHERE gm.group_id = gr.group_id AND ${tokenExpr} IS NOT NULL
+                      )
+                      OR
+                      -- OR another group sharing this repo has a member with token
+                      EXISTS (
+                          SELECT 1 FROM group_repos gr2
+                          JOIN group_members gm ON gm.group_id = gr2.group_id
+                          JOIN users u ON gm.user_id = u.id
+                          WHERE gr2.repo_full_name = gr.repo_full_name AND ${tokenExpr} IS NOT NULL
+                      )
                   )
             `);
-            console.log(`[POLLING] Repos flagged for polling=${totalToPollRes.rows[0].cnt}, repos with at least one member token=${reposWithTokenRes.rows[0].cnt}`);
+            console.log(`[POLLING] Repos flagged for polling=${totalToPollRes.rows[0].cnt}, repos with available tokens=${pollableReposRes.rows[0].cnt}`);
         } catch (diagErr) {
             console.warn('[POLLING] Diagnostics query failed:', diagErr.message);
         }
 
         // Get all repos that need polling.
-        // For each group, use one authenticated member's token.
+        // For each group, use one authenticated member's token from the same group if available,
+        // otherwise use a token from ANY OTHER group that has the same repo.
         const repos = await pool.query(
             `SELECT gr.group_id,
                     gr.repo_full_name,
-                    auth_user.access_token
-             FROM group_repos gr
-             JOIN group_chats gc ON gr.group_id = gc.id
-             JOIN LATERAL (
-                 SELECT u.access_token
-                 FROM group_members gm
-                 JOIN users u ON gm.user_id = u.id
-                 WHERE gm.group_id = gc.id
-                   AND u.access_token IS NOT NULL
-                 ORDER BY gm.joined_at ASC
-                 LIMIT 1
-             ) auth_user ON TRUE
-             WHERE gr.use_polling = TRUE
-             LIMIT 20
+                                        COALESCE(
+                                                (SELECT ${tokenExpr}
+                                                 FROM group_members gm
+                                                 JOIN users u ON gm.user_id = u.id
+                                                 WHERE gm.group_id = gr.group_id
+                                                     AND ${tokenExpr} IS NOT NULL
+                                                 ORDER BY gm.joined_at ASC
+                                                 LIMIT 1),
+                                                (SELECT ${tokenExpr}
+                                                 FROM group_repos gr2
+                                                 JOIN group_members gm ON gm.group_id = gr2.group_id
+                                                 JOIN users u ON gm.user_id = u.id
+                                                 WHERE gr2.repo_full_name = gr.repo_full_name
+                                                     AND ${tokenExpr} IS NOT NULL
+                                                 ORDER BY gm.joined_at ASC
+                                                 LIMIT 1)
+                                        ) AS access_token
+                         FROM group_repos gr
+                         WHERE gr.use_polling = TRUE
             `
         );
 
-        if (repos.rows.length === 0) {
+                const pollableRepos = repos.rows.filter((repo) => repo.access_token);
+
+                if (pollableRepos.length === 0) {
             console.log(`[POLLING] No repos to poll`);
             try {
                 const sampleNoTokenRes = await pool.query(`
@@ -390,14 +424,20 @@ async function pollAllReposWithPolling(io) {
                     WHERE gr.use_polling = TRUE
                       AND NOT EXISTS (
                         SELECT 1 FROM group_members gm JOIN users u ON gm.user_id = u.id
-                        WHERE gm.group_id = gr.group_id AND u.access_token IS NOT NULL
+                                                WHERE gm.group_id = gr.group_id AND ${tokenExpr} IS NOT NULL
+                      )
+                      AND NOT EXISTS (
+                        SELECT 1 FROM group_repos gr2
+                        JOIN group_members gm ON gm.group_id = gr2.group_id
+                        JOIN users u ON gm.user_id = u.id
+                                                WHERE gr2.repo_full_name = gr.repo_full_name AND ${tokenExpr} IS NOT NULL
                       )
                     LIMIT 10
                 `);
                 if (sampleNoTokenRes.rows.length > 0) {
-                    console.log('[POLLING] Sample repos with no member tokens:', sampleNoTokenRes.rows);
+                    console.log('[POLLING] Sample repos with no available tokens:', sampleNoTokenRes.rows);
                 } else {
-                    console.log('[POLLING] No sample repos without tokens found — verify `use_polling` flags and group_members entries.');
+                    console.log('[POLLING] All repos have available tokens but polling failed for other reasons');
                 }
             } catch (diagErr) {
                 console.warn('[POLLING] Diagnostics sample query failed:', diagErr.message);
@@ -406,10 +446,10 @@ async function pollAllReposWithPolling(io) {
             return;
         }
 
-        console.log(`[POLLING] Polling ${repos.rows.length} repo(s)...`);
+        console.log(`[POLLING] Polling ${pollableRepos.length} repo(s)...`);
 
         // Poll each repo
-        for (const repo of repos.rows) {
+        for (const repo of pollableRepos) {
             await pollRepoForEvents({
                 groupId: repo.group_id,
                 repoFullName: repo.repo_full_name,

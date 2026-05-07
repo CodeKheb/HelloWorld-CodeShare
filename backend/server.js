@@ -49,7 +49,9 @@ const httpServer = createServer(app);
 
 export const io = new Server(httpServer, {
     cors: {
-        origin: "*",
+        // When credentials are enabled, Access-Control-Allow-Origin cannot be "*".
+        // Use `origin: true` so Socket.IO echoes the request origin (works for dev and prod).
+        origin: true,
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -74,6 +76,7 @@ io.on("connection", (socket) => {
     if (user) {
         userInit(socket.id, {
             authenticated: true,
+            id: user.id,   
             github_id: user.github_id,
             username: user.username,
             avatar_url: user.avatar_url,
@@ -82,7 +85,7 @@ io.on("connection", (socket) => {
             active_group: null
         });
 
-        socket.userId = user.github_id;
+        socket.userId = user.id;
         socket.username = user.username;
 
         console.log(`User ${user.username} connected with socket ${socket.id}`);

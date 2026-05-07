@@ -22,7 +22,6 @@ const ModalManager = (() => {
     function open(modalId) {
         const overlay = document.getElementById(modalId);
         if (!overlay) {
-            console.warn(`Modal "${modalId}" not found in DOM`);
             return;
         }
 
@@ -43,7 +42,6 @@ const ModalManager = (() => {
     function close(modalId) {
         const overlay = document.getElementById(modalId);
         if (!overlay) {
-            console.warn(`Modal "${modalId}" not found in DOM`);
             return;
         }
 
@@ -117,7 +115,6 @@ const ModalManager = (() => {
     function registerOpenButton(buttonId, modalId) {
         const btn = document.getElementById(buttonId);
         if (!btn) {
-            console.warn(`Open button "${buttonId}" not found`);
             return;
         }
         
@@ -136,7 +133,6 @@ const ModalManager = (() => {
     function registerCloseButton(buttonId, modalId, fieldIds = []) {
         const btn = document.getElementById(buttonId);
         if (!btn) {
-            console.warn(`Close button "${buttonId}" not found`);
             return;
         }
         
@@ -154,7 +150,6 @@ const ModalManager = (() => {
     function registerOverlayClose(modalId, fieldIds = []) {
         const overlay = document.getElementById(modalId);
         if (!overlay) {
-            console.warn(`Modal "${modalId}" not found`);
             return;
         }
 

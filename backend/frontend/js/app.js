@@ -83,7 +83,6 @@
                     alert(data.message || 'Logout failed. Please try again.');
                 }
             } catch (err) {
-                console.error('Logout error:', err);
                 alert('An error occurred during logout. Please try again.');
             }
         });
@@ -106,7 +105,6 @@
         // Initialize all modal handlers after modals are loaded
         initializeAllModals();
     } catch (error) {
-        console.error('Failed to load modals:', error);
     }
 })();
 
@@ -154,7 +152,6 @@ async function initializeDashboard() {
         loadRecentActivity();
 
     } catch (err) {
-        console.error('Dashboard load failed:', err);
         document.getElementById('repo-grid').innerHTML = '<p style="color:var(--muted)">Error loading repositories.</p>';
     }
 }
@@ -245,7 +242,6 @@ async function loadRecentActivity() {
         renderRecentActivities();
 
     } catch (err) {
-        console.error('Failed to load recent activity:', err);
         activityList.innerHTML = '<p style="color:var(--muted);padding:16px;text-align:center;">Error loading activity.</p>';
     }
 }
@@ -271,7 +267,6 @@ function renderRecentActivities() {
                 if (!Number.isNaN(numeric)) {
                     timestamp = new Date(numeric);
                 } else {
-                    console.warn('Invalid timestamp for activity, using now:', activity.timestamp);
                     timestamp = new Date();
                 }
                 activity.timestamp = timestamp.toISOString();
