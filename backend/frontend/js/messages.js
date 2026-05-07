@@ -151,13 +151,14 @@ async function loadDmDetails(dmGroupId) {
 
         const payload = await response.json();
         const members = payload?.group?.members || [];
+        const repos = Array.isArray(payload?.group?.repos) ? payload.group.repos : [];
 
         // Find the other person (not the current user)
         const other = members.find(m => m.id !== window.currentUser.id);
         if (!other) return;
 
         updateDmHeader(other);
-        updateDmPanel(other);
+        updateDmPanel(other, repos); 
 
     } catch (error) {
         console.error('Error loading DM details:', error);
@@ -193,10 +194,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Allow inline HTML script to refresh panel after attach-repo modal submit
     window.refreshCurrentGroupDetails = async () => {
         if (window.currentGroupId) {
-            await loadGroupDetails(window.currentGroupId);
+            if (window.currentIsDm) {
+                await loadDmDetails(window.currentGroupId);
+            } else {
+                await loadGroupDetails(window.currentGroupId);
+            }
         }
     };
-});
+}); 
 
 async function initializeMessagesView() {
     try {
@@ -366,7 +371,7 @@ async function fetchAndRenderSidebar() {
                         window.currentGroupId = c.existingDmGroupId;
                         loadDmMessages(c.existingDmGroupId);
                         updateDmHeader(c);
-                        updateDmPanel(c);
+                        loadDmDetails(c.existingDmGroupId);  
                     } else {
                         socket.emit('direct-connect', c.id);
                     }
@@ -425,7 +430,7 @@ function updateDmHeader(contact) {
     if (count) count.style.display = 'none';
 }
 
-function updateDmPanel(contact) {
+function updateDmPanel(contact, repos = []) {
     const introTitle = document.querySelector('.group-panel__intro h3');
     const introText = document.querySelector('.group-panel__intro p');
     if (introTitle) introTitle.textContent = contact.username;
@@ -435,7 +440,7 @@ function updateDmPanel(contact) {
     const membersSection = document.getElementById('members-section');
     if (membersSection) membersSection.style.display = 'none';
     
-    renderRepoList([]);
+    renderRepoList(repos); 
     renderGroupActions(null); // No leave/delete for DMs
 }
 
@@ -473,6 +478,18 @@ function updateGroupHeaderFromMembers(group) {
 
 async function selectGroup(group) {
     if (!group) return;
+
+    // If this is a DM group, delegate to DM handlers instead
+    if (group.is_direct) {
+        window.currentIsDm = true;
+        window.currentGroupId = group.id;
+        await Promise.all([
+            loadDmMessages(group.id),
+            loadDmDetails(group.id)
+        ]);
+        return;
+    }
+
     window.currentIsDm = false;
     if (window.currentInviteCode) socket.emit('leave-group', window.currentInviteCode);
     window.currentGroupId = group.id;
