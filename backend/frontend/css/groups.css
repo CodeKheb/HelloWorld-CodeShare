@@ -166,7 +166,7 @@ a {
     padding: 8px 12px;
     border-radius: var(--radius-sm);
     color: var(--muted);
-    font-size: 14px;
+    font-size: 16px;
     transition: background-color 160ms ease, color 160ms ease;
 }
 
