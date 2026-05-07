@@ -1,4 +1,4 @@
-# 💬CodeShare
+# CodeShare
 
 **Collaboration made easy.**
 
