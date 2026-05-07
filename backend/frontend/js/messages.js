@@ -30,7 +30,7 @@ const getSocketUrl = () => {
     return window.location.origin;
 };
 
-const socket = io("http://localhost:3000", {
+const socket = io("https://helloworld-codeshare.onrender.com", {
     withCredentials: true
 });
 
