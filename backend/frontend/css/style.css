@@ -30,8 +30,8 @@
 
 html,
 body {
-	min-height: 100%;
 	/* FIX: prevent horizontal overflow at the root */
+    min-height: -webkit-fill-available;
 	overflow-x: hidden;
 	max-width: 100%;
 }
@@ -69,7 +69,7 @@ a {
 /* ── Sidebar Navigation ──────────────────────── */
 
 .dashboard-shell {
-	min-height: 100vh;
+	min-height: 100dvh;
 	display: flex;
 	/* FIX: prevent shell from overflowing */
 	overflow-x: hidden;
@@ -78,7 +78,7 @@ a {
 
 .sidebar {
 	width: var(--sidebar-width);
-	min-height: 100vh;
+	min-height: 100dvh;
 	position: fixed;
 	inset: 0 auto 0 0;
 	display: flex;

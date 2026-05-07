@@ -29,6 +29,7 @@
 html,
 body {
     min-height: 100%;
+    min-height: -webkit-fill-available;
 }
 
 body {
@@ -92,7 +93,7 @@ a {
 /* Sidebar Navigation */
 .sidebar {
     width: var(--sidebar-width);
-    min-height: 100vh;
+    min-height: 100dvh;
     position: fixed;
     inset: 0 auto 0 0;
     display: flex;
@@ -224,7 +225,7 @@ a {
 
 /* Dashboard Layout */
 .dashboard-shell {
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
 }
 

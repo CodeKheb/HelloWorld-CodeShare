@@ -18,7 +18,7 @@
 
     html,
     body {
-        min-height: 100vh;
+        min-height: 100dvh;
         min-height: -webkit-fill-available;
         margin: 0;
         padding: 0;
@@ -38,7 +38,7 @@
     }
 
     .page {
-        min-height: 100vh;
+        min-height: 100dvh;
         min-height: 100dvh;
         display: grid;
         place-items: center;
@@ -171,3 +171,4 @@
         height: 48px;
     object-fit: contain;
 }
+
