@@ -693,8 +693,8 @@ a {
 }
 
 .repo-input-wrapper:focus-within {
-    border-color: var(--brand-bright);
-    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.1);
 }
 
 .repo-icon {
@@ -716,6 +716,8 @@ a {
 
 .repo-input-wrapper input:focus {
     outline: none;
+    border-color: transparent !important;
+    box-shadow: none !important;
 }
 
 .required {

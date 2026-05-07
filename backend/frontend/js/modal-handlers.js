@@ -356,7 +356,7 @@ document.getElementById('submitGroup')?.addEventListener('click', async () => {
  */
 function initAttachRepoModal(onSuccess) {
     const modalId = 'attachRepoModal';
-    const fieldIds = ['attachRepoNameInput'];
+    const fieldIds = ['attachRepoOwnerInput', 'attachRepoNameInput'];
 
     // Register standard modal controls
     ModalManager.registerModal(
@@ -375,13 +375,15 @@ function initAttachRepoModal(onSuccess) {
     // Handle form submission
     document.getElementById('submitAttachRepoBtn')?.addEventListener('click', async () => {
         const submitBtn = document.getElementById('submitAttachRepoBtn');
-        const repoFullName = document.getElementById('attachRepoNameInput').value.trim();
+        const owner = document.getElementById('attachRepoOwnerInput').value.trim();
+        const repo = document.getElementById('attachRepoNameInput').value.trim();
+        const repoFullName = `${owner}/${repo}`;
 
         // Validation
-        if (!repoFullName) {
-            alert('Repository is required');
+        if (!owner || !repo) {
+            alert('Owner and repository name are both required');
             return;
-        }
+        }        
 
         // Get current group ID (should be set globally or passed via data attribute)
         const groupId = window.currentGroupId;
