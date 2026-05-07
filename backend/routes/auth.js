@@ -11,7 +11,6 @@ import { io } from "../server.js";
 import pool from "../db/pool.js";
 
 const authRouter = Router();
-
 authRouter.use(cookieParser());
 
 const githubClientId = process.env.GITHUB_CLIENT_ID?.trim();
@@ -19,6 +18,8 @@ const githubClientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
 const githubCallbackURL = process.env.GITHUB_CALLBACK?.trim()
     || (process.env.APP_BASE_URL ? `${process.env.APP_BASE_URL.replace(/\/$/, "")}/api/auth/github/callback` : "");
 const githubAuthEnabled = Boolean(githubClientId && githubClientSecret && githubCallbackURL);
+
+
 
 if (githubAuthEnabled) {
     passport.use(new GitHubStrategy(
