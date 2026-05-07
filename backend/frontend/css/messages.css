@@ -505,10 +505,11 @@ body.messages-page {
 .messages-page .member-list--expanded {
     display: flex;
     flex-direction: column;
-    max-height: 300px;
+    max-height: calc((32px * 5) + (8px * 4));
     overflow-y: auto;
     padding-right: 8px;
     gap: 8px;
+    scrollbar-gutter: stable;
 }
 
 .messages-page .member-item {

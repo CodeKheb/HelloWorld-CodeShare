@@ -776,12 +776,12 @@ function setupMemberToggle() {
     const toggle = document.getElementById('memberViewToggle');
     if (!toggle) return;
 
-    toggle.addEventListener('click', (e) => {
+    toggle.onclick = (e) => {
         e.preventDefault();
         if (allGroupMembers.length <= 5) return;
         showAllMembers = !showAllMembers;
         renderMemberList(allGroupMembers);
-    });
+    };
 
     updateMemberToggle();
 }
