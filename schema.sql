@@ -1,12 +1,12 @@
 -- Drop commands DO NOT use yet until we need a clean wipe
 
-DROP TABLE IF EXISTS processed_events;
-DROP TABLE IF EXISTS webhook_events;
-DROP TABLE IF EXISTS messages;
-DROP TABLE IF EXISTS group_repos;
-DROP TABLE IF EXISTS group_members;
-DROP TABLE IF EXISTS group_chats;
-DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS processed_events;
+-- DROP TABLE IF EXISTS webhook_events;
+-- DROP TABLE IF EXISTS messages;
+-- DROP TABLE IF EXISTS group_repos;
+-- DROP TABLE IF EXISTS group_members;
+-- DROP TABLE IF EXISTS group_chats;
+-- DROP TABLE IF EXISTS users;
 
 -- User table that stores user information as well as timestamp
 CREATE TABLE users (
