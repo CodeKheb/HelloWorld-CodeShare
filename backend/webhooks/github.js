@@ -20,88 +20,39 @@ function getEventTimestampFromPayload(event, payload) {
   }
 }
 
-/**
- * Generate a stable event ID that works consistently across webhook and polling sources
- * Uses repo + event type + unique identifier from payload
- */
-function generateStableEventId(event, repoFullName, payload) {
+export function generatePollingEventId(event, repoFullName) {
   try {
-    if (event === 'push') {
-      // Use the commit SHA as it's stable across sources
+    const eventType = event?.type;
+    const payload = event?.payload || {};
+
+    if (eventType === 'PushEvent') {
       const afterSha = payload?.after;
       if (afterSha) return `${repoFullName}:push:${afterSha}`;
     }
 
-    if (event === 'pull_request') {
+    if (eventType === 'PullRequestEvent') {
       const prNumber = payload?.number || payload?.pull_request?.number;
       if (prNumber) return `${repoFullName}:pr:${prNumber}`;
     }
 
-    if (event === 'issues') {
+    if (eventType === 'IssuesEvent') {
       const issueNumber = payload?.number || payload?.issue?.number;
       if (issueNumber) return `${repoFullName}:issue:${issueNumber}`;
     }
 
-    if (event === 'create' || event === 'delete') {
+    if (eventType === 'CreateEvent' || eventType === 'DeleteEvent') {
       const refType = payload?.ref_type || '';
       const ref = payload?.ref || '';
-      if (ref) return `${repoFullName}:${event}:${refType}:${ref}`;
-    }
-
-    // Fallback: use timestamp-based ID (less precise but better than nothing)
-    const timestamp = getEventTimestampFromPayload(event, payload) || new Date().toISOString();
-    const ts = new Date(timestamp).getTime();
-    return `${repoFullName}:${event}:${ts}`;
-  } catch (err) {
-    // Last resort: use timestamp
-    return `${repoFullName}:${event}:${Date.now()}`;
-  }
-}
-
-/**
- * Generate stable event ID for GitHub API events (used by polling)
- * Maps GitHub API event format to stable ID
- */
-export function generatePollingEventId(event, repoFullName) {
-  try {
-    // GitHub API events have: { id, type, payload, created_at, actor, repo }
-    const eventType = event.type;
-    const payload = event.payload || {};
-
-    if (eventType === 'PushEvent') {
-      const afterSha = payload.after;
-      if (afterSha) return `${repoFullName}:push:${afterSha}`;
-    }
-
-    if (eventType === 'PullRequestEvent') {
-      const prNumber = payload.number || payload.pull_request?.number;
-      if (prNumber) return `${repoFullName}:pr:${prNumber}`;
-    }
-
-    if (eventType === 'IssuesEvent') {
-      const issueNumber = payload.number || payload.issue?.number;
-      if (issueNumber) return `${repoFullName}:issue:${issueNumber}`;
-    }
-
-    if (eventType === 'CreateEvent' || eventType === 'DeleteEvent') {
-      const refType = payload.ref_type || '';
-      const ref = payload.ref || '';
       if (ref) return `${repoFullName}:${eventType === 'CreateEvent' ? 'create' : 'delete'}:${refType}:${ref}`;
     }
 
-    // Fallback: use event creation time
-    const timestamp = event.created_at || new Date().toISOString();
+    const timestamp = event?.created_at || new Date().toISOString();
     const ts = new Date(timestamp).getTime();
-    return `${repoFullName}:${eventType}:${ts}`;
+    return `${repoFullName}:${eventType || 'event'}:${ts}`;
   } catch (err) {
     return `${repoFullName}:event:${Date.now()}`;
   }
 }
-
-export function generateStableEventIdForWebhook(event, repoFullName, payload) {
-  return generateStableEventId(event, repoFullName, payload);
-}
-
 
 export function verifyWebhookSignature(req) {
   const skip = process.env.WEBHOOK_SKIP_SIGNATURE === "true";

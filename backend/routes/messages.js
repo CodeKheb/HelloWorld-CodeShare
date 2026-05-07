@@ -39,7 +39,7 @@ messagesRouter.get("/group/:groupId", async (req, res) => {
 			 FROM messages m
 			 LEFT JOIN users u ON u.id = m.sender_id
 			 WHERE m.group_id = $1
-			 ORDER BY m.created_at ASC
+			 ORDER BY m.created_at DESC, m.id DESC
 			 LIMIT $2`,
 			[groupId, limit]
 		);

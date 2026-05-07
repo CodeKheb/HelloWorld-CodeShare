@@ -21,18 +21,103 @@ export default function chatHandler(socket) {
             }
 
             const cleanText = String(message.text).trim();
-            const isDM = !!clientState?.active_directed_recieverId;
+            const requestedGroupId = message.groupId ? String(message.groupId) : null;
 
-            // --- BRANCH A: DIRECT MESSAGE LOGIC ---
+            // Resolve target chat from current socket state OR explicit groupId from client message.
+            // This prevents "No active group selected" when a DM is opened from sidebar/history
+            // without running direct-connect in the same socket session.
+            let activeGroupId = clientState?.active_group ? String(clientState.active_group) : null;
+            let dmGroupId = clientState?.active_dm_group_id ? String(clientState.active_dm_group_id) : null;
+            let receiverId = clientState?.active_directed_recieverId || null;
+            let isDM = !!receiverId;
+
+            if (requestedGroupId && requestedGroupId !== String(activeGroupId || dmGroupId || '')) {
+                const chatRes = await pool.query(
+                    `SELECT gc.id,
+                            gc.is_direct,
+                            (
+                              SELECT gm.user_id
+                              FROM group_members gm
+                              WHERE gm.group_id = gc.id AND gm.user_id != $2
+                              LIMIT 1
+                            ) AS receiver_id
+                     FROM group_chats gc
+                     JOIN group_members me ON me.group_id = gc.id AND me.user_id = $2
+                     WHERE gc.id = $1
+                     LIMIT 1`,
+                    [requestedGroupId, authUser.id]
+                );
+
+                if (chatRes.rows.length === 0) {
+                    return socket.emit("server-error", { err: "forbidden", reason: "You are not a member of this group" });
+                }
+
+                const chat = chatRes.rows[0];
+                if (chat.is_direct) {
+                    isDM = true;
+                    dmGroupId = String(chat.id);
+                    receiverId = chat.receiver_id;
+                    activeGroupId = null;
+
+                    clientState.active_group = null;
+                    clientState.active_dm_group_id = dmGroupId;
+                    clientState.active_directed_recieverId = receiverId;
+
+                    if (receiverId) {
+                        const dmRoom = `dm_${[authUser.id, receiverId].sort().join("_")}`;
+                        socket.join(dmRoom);
+                    }
+                } else {
+                    isDM = false;
+                    activeGroupId = String(chat.id);
+                    dmGroupId = null;
+                    receiverId = null;
+
+                    clientState.active_group = activeGroupId;
+                    clientState.active_dm_group_id = null;
+                    clientState.active_directed_recieverId = null;
+                    socket.join(activeGroupId);
+                }
+            }
+
             if (isDM) {
-                const receiverId = clientState.active_directed_recieverId;
-                const dmRoom = `dm_${[authUser.id, receiverId].sort().join("_")}`;
-
-                // Persist DM using the stored dm_group_id on clientState
-                const dmGroupId = clientState.active_dm_group_id;
                 if (!dmGroupId) {
                     return socket.emit("server-error", { err: "error", reason: "DM session not initialized" });
                 }
+
+                // Ensure this is still a valid DM group for the sender and resolve receiver.
+                const dmInfoRes = await pool.query(
+                    `SELECT gc.is_direct,
+                            (
+                              SELECT gm.user_id
+                              FROM group_members gm
+                              WHERE gm.group_id = gc.id AND gm.user_id != $2
+                              LIMIT 1
+                            ) AS receiver_id
+                     FROM group_chats gc
+                     JOIN group_members me ON me.group_id = gc.id AND me.user_id = $2
+                     WHERE gc.id = $1
+                     LIMIT 1`,
+                    [dmGroupId, authUser.id]
+                );
+
+                if (dmInfoRes.rows.length === 0 || !dmInfoRes.rows[0].is_direct) {
+                    return socket.emit("server-error", { err: "forbidden", reason: "Invalid DM target" });
+                }
+
+                if (!receiverId) {
+                    receiverId = dmInfoRes.rows[0].receiver_id;
+                }
+                if (!receiverId) {
+                    return socket.emit("server-error", { err: "error", reason: "DM receiver not found" });
+                }
+
+                clientState.active_group = null;
+                clientState.active_dm_group_id = dmGroupId;
+                clientState.active_directed_recieverId = receiverId;
+
+                const dmRoom = `dm_${[authUser.id, receiverId].sort().join("_")}`;
+                socket.join(dmRoom);
 
                 const insertResult = await pool.query(
                     `INSERT INTO messages (group_id, sender_id, content, type, created_at)
@@ -42,7 +127,7 @@ export default function chatHandler(socket) {
                 );
 
                 const saved = insertResult.rows[0];
-                const outbound = {
+                io.to(dmRoom).emit("server-direct-text", {
                     id: saved.id,
                     senderId: authUser.id,
                     receiverId,
@@ -53,14 +138,12 @@ export default function chatHandler(socket) {
                     authorName: authUser.username,
                     avatar: authUser.avatar_url,
                     DmId: dmGroupId
-                };
-
-                io.to(dmRoom).emit("server-direct-text", outbound);
+                });
                 return;
             }
 
-            // --- BRANCH B: GROUP MESSAGE LOGIC ---
-            const activeGroupId = clientState?.active_group;
+            // Group message path
+            activeGroupId = activeGroupId || requestedGroupId;
             if (!activeGroupId) {
                 return socket.emit("server-error", { err: "error", reason: "No active group selected" });
             }
@@ -73,6 +156,10 @@ export default function chatHandler(socket) {
                 return socket.emit("server-error", { err: "forbidden", reason: "You are not a member of this group" });
             }
 
+            clientState.active_group = activeGroupId;
+            clientState.active_dm_group_id = null;
+            clientState.active_directed_recieverId = null;
+
             const insertResult = await pool.query(
                 `INSERT INTO messages (group_id, sender_id, content, type, created_at)
                  VALUES ($1, $2, $3, 'text', $4)
@@ -81,7 +168,7 @@ export default function chatHandler(socket) {
             );
 
             const saved = insertResult.rows[0];
-            const groupOutbound = {
+            io.to(String(activeGroupId)).emit("server-group-text", {
                 id: saved.id,
                 groupId: saved.group_id,
                 senderId: saved.sender_id,
@@ -91,9 +178,7 @@ export default function chatHandler(socket) {
                 author: authUser.username,
                 authorName: authUser.username,
                 avatar: authUser.avatar_url
-            };
-
-            io.to(String(activeGroupId)).emit("server-group-text", groupOutbound);
+            });
         } catch (error) {
             console.error("Error handling client-message:", error);
             socket.emit("server-error", { err: "server", reason: "Failed to send message" });

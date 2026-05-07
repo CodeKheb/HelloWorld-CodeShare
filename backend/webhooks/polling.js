@@ -1,6 +1,20 @@
 import pool from "../db/pool.js";
 import { generatePollingEventId } from "./github.js";
 
+async function resolveUserTokenColumn() {
+        const result = await pool.query(
+                `SELECT column_name
+                 FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                     AND table_name = 'users'
+                     AND column_name IN ('access_token', 'accessToken')
+                 ORDER BY CASE column_name WHEN 'access_token' THEN 1 WHEN 'accessToken' THEN 2 ELSE 99 END
+                 LIMIT 1`
+        );
+
+        return result.rows[0]?.column_name || null;
+}
+
 /**
  * Fetch GitHub events API for a repo
  * Returns array of events from GitHub
@@ -335,7 +349,15 @@ async function pollAllReposWithPolling(io) {
     try {
         console.log(`[POLLING] Starting polling cycle at ${new Date().toISOString()}...`);
 
-        // Diagnostics: count repos flagged for polling vs repos that can actually be polled
+        const tokenColumn = await resolveUserTokenColumn();
+        if (!tokenColumn) {
+            console.warn('[POLLING] No token column found on users table (expected access_token or accessToken); skipping polling cycle');
+            return;
+        }
+
+        const tokenExpr = `u.${tokenColumn}`;
+
+        // Diagnostics: count repos flagged for polling vs repos with at least one member token
         try {
             const totalToPollRes = await pool.query(`SELECT COUNT(*) AS cnt FROM group_repos WHERE use_polling = TRUE`);
             const pollableReposRes = await pool.query(`
@@ -346,7 +368,7 @@ async function pollAllReposWithPolling(io) {
                       -- Group has its own member with token
                       EXISTS (
                           SELECT 1 FROM group_members gm JOIN users u ON gm.user_id = u.id
-                          WHERE gm.group_id = gr.group_id AND u.access_token IS NOT NULL
+                          WHERE gm.group_id = gr.group_id AND ${tokenExpr} IS NOT NULL
                       )
                       OR
                       -- OR another group sharing this repo has a member with token
@@ -354,11 +376,11 @@ async function pollAllReposWithPolling(io) {
                           SELECT 1 FROM group_repos gr2
                           JOIN group_members gm ON gm.group_id = gr2.group_id
                           JOIN users u ON gm.user_id = u.id
-                          WHERE gr2.repo_full_name = gr.repo_full_name AND u.access_token IS NOT NULL
+                          WHERE gr2.repo_full_name = gr.repo_full_name AND ${tokenExpr} IS NOT NULL
                       )
                   )
             `);
-            console.log(`[POLLING] Repos flagged for polling=${totalToPollRes.rows[0].cnt}, groups that can be polled=${pollableReposRes.rows[0].cnt}`);
+            console.log(`[POLLING] Repos flagged for polling=${totalToPollRes.rows[0].cnt}, repos with available tokens=${pollableReposRes.rows[0].cnt}`);
         } catch (diagErr) {
             console.warn('[POLLING] Diagnostics query failed:', diagErr.message);
         }
@@ -369,33 +391,31 @@ async function pollAllReposWithPolling(io) {
         const repos = await pool.query(
             `SELECT gr.group_id,
                     gr.repo_full_name,
-                    COALESCE(
-                        -- First, try to get a token from the same group
-                        (SELECT u.access_token
-                         FROM group_members gm
-                         JOIN users u ON gm.user_id = u.id
-                         WHERE gm.group_id = gr.group_id
-                           AND u.access_token IS NOT NULL
-                         ORDER BY gm.joined_at ASC
-                         LIMIT 1),
-                        -- If no token in same group, use a token from ANY group that has this repo
-                        (SELECT u.access_token
-                         FROM group_repos gr2
-                         JOIN group_members gm ON gm.group_id = gr2.group_id
-                         JOIN users u ON gm.user_id = u.id
-                         WHERE gr2.repo_full_name = gr.repo_full_name
-                           AND u.access_token IS NOT NULL
-                         ORDER BY gm.joined_at ASC
-                         LIMIT 1)
-                    ) AS access_token
-             FROM group_repos gr
-             WHERE gr.use_polling = TRUE
-               AND access_token IS NOT NULL
-             LIMIT 20
+                                        COALESCE(
+                                                (SELECT ${tokenExpr}
+                                                 FROM group_members gm
+                                                 JOIN users u ON gm.user_id = u.id
+                                                 WHERE gm.group_id = gr.group_id
+                                                     AND ${tokenExpr} IS NOT NULL
+                                                 ORDER BY gm.joined_at ASC
+                                                 LIMIT 1),
+                                                (SELECT ${tokenExpr}
+                                                 FROM group_repos gr2
+                                                 JOIN group_members gm ON gm.group_id = gr2.group_id
+                                                 JOIN users u ON gm.user_id = u.id
+                                                 WHERE gr2.repo_full_name = gr.repo_full_name
+                                                     AND ${tokenExpr} IS NOT NULL
+                                                 ORDER BY gm.joined_at ASC
+                                                 LIMIT 1)
+                                        ) AS access_token
+                         FROM group_repos gr
+                         WHERE gr.use_polling = TRUE
             `
         );
 
-        if (repos.rows.length === 0) {
+                const pollableRepos = repos.rows.filter((repo) => repo.access_token);
+
+                if (pollableRepos.length === 0) {
             console.log(`[POLLING] No repos to poll`);
             try {
                 const sampleNoTokenRes = await pool.query(`
@@ -404,13 +424,13 @@ async function pollAllReposWithPolling(io) {
                     WHERE gr.use_polling = TRUE
                       AND NOT EXISTS (
                         SELECT 1 FROM group_members gm JOIN users u ON gm.user_id = u.id
-                        WHERE gm.group_id = gr.group_id AND u.access_token IS NOT NULL
+                                                WHERE gm.group_id = gr.group_id AND ${tokenExpr} IS NOT NULL
                       )
                       AND NOT EXISTS (
                         SELECT 1 FROM group_repos gr2
                         JOIN group_members gm ON gm.group_id = gr2.group_id
                         JOIN users u ON gm.user_id = u.id
-                        WHERE gr2.repo_full_name = gr.repo_full_name AND u.access_token IS NOT NULL
+                                                WHERE gr2.repo_full_name = gr.repo_full_name AND ${tokenExpr} IS NOT NULL
                       )
                     LIMIT 10
                 `);
@@ -426,10 +446,10 @@ async function pollAllReposWithPolling(io) {
             return;
         }
 
-        console.log(`[POLLING] Polling ${repos.rows.length} repo(s)...`);
+        console.log(`[POLLING] Polling ${pollableRepos.length} repo(s)...`);
 
         // Poll each repo
-        for (const repo of repos.rows) {
+        for (const repo of pollableRepos) {
             await pollRepoForEvents({
                 groupId: repo.group_id,
                 repoFullName: repo.repo_full_name,

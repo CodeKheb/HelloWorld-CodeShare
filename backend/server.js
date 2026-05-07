@@ -49,7 +49,9 @@ const httpServer = createServer(app);
 
 export const io = new Server(httpServer, {
     cors: {
-        origin: "*",
+        // When credentials are enabled, Access-Control-Allow-Origin cannot be "*".
+        // Use `origin: true` so Socket.IO echoes the request origin (works for dev and prod).
+        origin: true,
         methods: ["GET", "POST"],
         credentials: true
     }
