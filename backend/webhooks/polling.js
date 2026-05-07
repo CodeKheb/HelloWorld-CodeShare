@@ -1,4 +1,5 @@
 import pool from "../db/pool.js";
+import { generatePollingEventId } from "./github.js";
 
 /**
  * Fetch GitHub events API for a repo
@@ -219,8 +220,11 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
         const newMessages = [];
 
         for (const event of events.reverse()) {
-            const eventId = event.id?.toString();
-            if (!eventId) continue;
+            // Generate stable event ID that matches webhook format
+            const stableEventId = generatePollingEventId(event, repoFullName);
+            const legacyEventId = event.id?.toString(); // Keep for fallback compatibility
+            
+            if (!stableEventId && !legacyEventId) continue;
 
             const eventTimestamp = getEventTimestamp(event);
 
@@ -228,28 +232,17 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
             const eventMs = eventTimestamp ? new Date(eventTimestamp).getTime() : NaN;
             const eventLocal = eventTimestamp || 'unknown';
             const cmpResult = Number.isNaN(eventMs) || Number.isNaN(cutoffAtMs) ? 'invalid' : (eventMs > cutoffAtMs ? 'after' : 'before');
-            console.log(`[POLLING] Event ${eventId} timestamp=${eventLocal} (${eventMs}ms) cutoff=${cutoffAtRow} (${cutoffAtMs}ms) => ${cmpResult}`);
+            console.log(`[POLLING] Event ${stableEventId} timestamp=${eventLocal} (${eventMs}ms) cutoff=${cutoffAtRow} (${cutoffAtMs}ms) => ${cmpResult}`);
 
             if (!isAfterCutoff(eventTimestamp, cutoffAtMs)) {
-                console.log(`[POLLING] Skipping event ${eventId} for ${repoFullName} because ${eventTimestamp || 'unknown time'} is not after cutoff ${cutoffAtRow || 'none'}`);
-                // still mark processed to avoid re-processing across polls
-                try {
-                    await pool.query(
-                        `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
-                         VALUES ($1, $2, $3, $4)
-                         ON CONFLICT (github_event_id, group_id) DO NOTHING`,
-                        [eventId, event.type, groupId, repoFullName]
-                    );
-                } catch (e) {
-                    console.warn(`[POLLING] Failed to mark skipped event ${eventId} processed:`, e.message);
-                }
+                console.log(`[POLLING] Skipping event ${stableEventId} for ${repoFullName} because ${eventTimestamp || 'unknown time'} is not after cutoff ${cutoffAtRow || 'none'}`);
                 continue;
             }
 
-            // Check deduplication
-            const isNew = await isEventNew({ eventId, groupId, repoFullName });
+            // Check deduplication BEFORE doing any processing
+            const isNew = await isEventNew({ eventId: stableEventId, groupId, repoFullName });
             if (!isNew) {
-                console.log(`[POLLING] Event ${eventId} already processed, skipping...`);
+                console.log(`[POLLING] Event ${stableEventId} already processed, skipping...`);
                 continue;
             }
 
@@ -292,16 +285,16 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
                     `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
                      VALUES ($1, $2, $3, $4)
                      ON CONFLICT (github_event_id, group_id) DO NOTHING`,
-                    [eventId, event.type, groupId, repoFullName]
+                    [stableEventId, normalizeGithubEventType(event.type), groupId, repoFullName]
                 );
 
                 await client.query("COMMIT");
                 newMessages.push(messageRow);
-                console.log(`[POLLING] Inserted event ${eventId} as system message for ${repoFullName}`);
+                console.log(`[POLLING] Inserted event ${stableEventId} as system message for ${repoFullName}`);
 
             } catch (err) {
                 await client.query("ROLLBACK");
-                console.error(`[POLLING] Error inserting event ${eventId}:`, err.message);
+                console.error(`[POLLING] Error inserting event ${stableEventId}:`, err.message);
             } finally {
                 client.release();
             }
