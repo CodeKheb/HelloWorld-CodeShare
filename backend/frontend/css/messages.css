@@ -69,6 +69,28 @@ body.messages-page {
     color: var(--text);
 }
 
+.messages-page .sidebar-link {
+    position: relative;
+}
+
+.messages-page .sidebar-link .unread-dot {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #3ac63a;
+    box-shadow: 0 0 0 4px rgba(58, 198, 58, 0.16);
+    opacity: 0;
+    transition: opacity 160ms ease-in-out;
+}
+
+.messages-page .sidebar-link.has-unread .unread-dot {
+    opacity: 1;
+}
+
 .messages-page .avatar-stack {
     display: flex;
     align-items: center;
