@@ -39,10 +39,6 @@ window.requestedGroupName = _urlParams.get('groupName');
 // group messages 
 socket.on("server-group-text", async (message) => {
     console.log("Received group message:", message);
-    if (message.type !== 'system' && message.text) {
-        const roomSecret = await fetchRoomSecret(message.groupId);
-        message.text = await decryptMessage(message.text, roomSecret);
-    }
     displayMessage(message);
 });
 
@@ -69,10 +65,6 @@ socket.on("member-joined", (data) => {
 // incoming messages
 socket.on("server-direct-text", async (message) => {
     console.log("Received direct message:", message);
-    if (message.type !== 'system' && message.text) {
-        const roomSecret = await fetchRoomSecret(message.DmId);
-        message.text = await decryptMessage(message.text, roomSecret);
-    }
     displayMessage(message);
 });
 
@@ -132,16 +124,10 @@ async function loadDmMessages(dmGroupId) {
 
         const payload = await response.json();
         const messages = Array.isArray(payload.messages) ? payload.messages : [];
-        const roomSecret = await fetchRoomSecret(dmGroupId);
-
-        for (const m of messages) {
-            const decryptedText = m.type !== 'system'
-                ? await decryptMessage(m.content, roomSecret)
-                : m.content;
-
+          messages.forEach((m) => {
             displayMessage({
                 id: m.id,
-                text: decryptedText,
+                text: m.content,
                 type: m.type,
                 timestamp: m.created_at,
                 author: m.sender_username || 'Unknown',
@@ -149,7 +135,7 @@ async function loadDmMessages(dmGroupId) {
                 avatar: m.sender_avatar_url || '/default-avatar.png',
                 senderId: m.sender_id
             });
-        }
+        });
     } catch (error) {
         console.error('Error loading DM messages:', error);
     }
@@ -761,13 +747,13 @@ function initializeMessageComposer() {
     }
 
     sendButton.addEventListener('click', async () => {
-        await sendMessage(messageInput.value);
+        sendMessage(messageInput.value);
     });
 
     messageInput.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            await sendMessage(messageInput.value);
+            sendMessage(messageInput.value);
         }
     });
 
@@ -784,11 +770,9 @@ function initializeMessageComposer() {
             return;
         }
 
-        const roomSecret = await fetchRoomSecret(window.currentGroupId);
-        const encryptedText = await encryptMessage(text.trim(), roomSecret);
-        console.log(`Current GroupID: ${window.currentGroupId}`);
+        
         socket.emit("client-message", {
-            text: encryptedText,
+            text: text.trim(),
             groupId: window.currentGroupId
         });
 
@@ -815,16 +799,11 @@ async function loadGroupMessages(groupId) {
 
         const payload = await response.json();
         const messages = Array.isArray(payload.messages) ? payload.messages : [];
-        const roomSecret = await fetchRoomSecret(groupId);
-
-        for (const m of messages) {
-            const decryptedText = m.type !== 'system'
-                ? await decryptMessage(m.content, roomSecret)
-                : m.content;
-
+        
+        messages.forEach((m) => {
             displayMessage({
                 id: m.id,
-                text: decryptedText,
+                text: m.content,
                 type: m.type,
                 timestamp: m.created_at,
                 author: m.sender_username || 'Unknown',
@@ -832,7 +811,7 @@ async function loadGroupMessages(groupId) {
                 avatar: m.sender_avatar_url || '/default-avatar.png',
                 senderId: m.sender_id
             });
-        }
+        });
     } catch (error) {
         console.error('Error loading persisted messages:', error);
     }
