@@ -234,14 +234,20 @@ async function loadRecentActivity() {
         }
 
         activityList.innerHTML = data.activities.map(activity => {
-            const timestamp = new Date(activity.timestamp);
-            
-            // Fallback if timestamp is invalid
+            let timestamp = new Date(activity.timestamp);
+
+            // Fallback: try numeric epoch, then default to now
             if (Number.isNaN(timestamp.getTime())) {
-                console.warn('Invalid timestamp for activity:', activity.timestamp);
-                activity.timestamp = new Date().toISOString();
+                const numeric = Number(activity.timestamp);
+                if (!Number.isNaN(numeric)) {
+                    timestamp = new Date(numeric);
+                } else {
+                    console.warn('Invalid timestamp for activity, using now:', activity.timestamp);
+                    timestamp = new Date();
+                }
+                activity.timestamp = timestamp.toISOString();
             }
-            
+
             const relativeTime = getRelativeTime(timestamp);
             const safedMessage = escapeHtml(activity.message);
             const commitLink = activity.commitUrl || '';
