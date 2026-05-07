@@ -82,9 +82,12 @@ export async function saveSystemMessages(repoFullName, content, metadata = {}) {
     );
 
     if (repoRows.rows.length === 0) {
+      console.log(`[WEBHOOK] No groups found for repo ${repoFullName}`);
       await client.query("COMMIT");
       return [];
     }
+
+    console.log(`[WEBHOOK] Found ${repoRows.rows.length} group(s) with repo ${repoFullName}`);
 
     // Determine event timestamp from payload (commit time for push events).
     // Normalize to UTC string because messages.created_at is timestamp without time zone
@@ -234,6 +237,7 @@ export const handleGithubWebhook = async (req, res) => {
 
     const io = req.app.get("io");
     if (io) {
+      console.log(`[WEBHOOK] Broadcasting ${savedMessages.length} message(s) to groups...`);
       savedMessages.forEach((saved) => {
         io.to(String(saved.group_id)).emit("server-group-text", {
           id: saved.id,
@@ -246,12 +250,17 @@ export const handleGithubWebhook = async (req, res) => {
           authorName: "System",
           avatar: "/default-avatar.png"
         });
+        console.log(`[WEBHOOK] Emitted message to group ${saved.group_id}`);
       });
     }
 
-    return res.status(200).send("OK");
+    return res.status(200).json({
+      status: "OK",
+      savedMessages: savedMessages.length,
+      groups: savedMessages.map(m => m.group_id)
+    });
   } catch (error) {
     console.error("Error processing webhook delivery:", error);
-    return res.status(500).send("Failed to process webhook");
+    return res.status(500).json({ error: "Failed to process webhook" });
   }
 };
