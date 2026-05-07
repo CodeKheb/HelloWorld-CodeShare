@@ -333,6 +333,23 @@ async function pollAllReposWithPolling(io) {
     try {
         console.log(`[POLLING] Starting polling cycle at ${new Date().toISOString()}...`);
 
+        // Diagnostics: count repos flagged for polling vs repos with at least one member token
+        try {
+            const totalToPollRes = await pool.query(`SELECT COUNT(*) AS cnt FROM group_repos WHERE use_polling = TRUE`);
+            const reposWithTokenRes = await pool.query(`
+                SELECT COUNT(DISTINCT gr.repo_full_name) AS cnt
+                FROM group_repos gr
+                WHERE gr.use_polling = TRUE
+                  AND EXISTS (
+                      SELECT 1 FROM group_members gm JOIN users u ON gm.user_id = u.id
+                      WHERE gm.group_id = gr.group_id AND u.access_token IS NOT NULL
+                  )
+            `);
+            console.log(`[POLLING] Repos flagged for polling=${totalToPollRes.rows[0].cnt}, repos with at least one member token=${reposWithTokenRes.rows[0].cnt}`);
+        } catch (diagErr) {
+            console.warn('[POLLING] Diagnostics query failed:', diagErr.message);
+        }
+
         // Get all repos that need polling.
         // For each group, use one authenticated member's token.
         const repos = await pool.query(
@@ -357,6 +374,26 @@ async function pollAllReposWithPolling(io) {
 
         if (repos.rows.length === 0) {
             console.log(`[POLLING] No repos to poll`);
+            try {
+                const sampleNoTokenRes = await pool.query(`
+                    SELECT gr.group_id, gr.repo_full_name
+                    FROM group_repos gr
+                    WHERE gr.use_polling = TRUE
+                      AND NOT EXISTS (
+                        SELECT 1 FROM group_members gm JOIN users u ON gm.user_id = u.id
+                        WHERE gm.group_id = gr.group_id AND u.access_token IS NOT NULL
+                      )
+                    LIMIT 10
+                `);
+                if (sampleNoTokenRes.rows.length > 0) {
+                    console.log('[POLLING] Sample repos with no member tokens:', sampleNoTokenRes.rows);
+                } else {
+                    console.log('[POLLING] No sample repos without tokens found — verify `use_polling` flags and group_members entries.');
+                }
+            } catch (diagErr) {
+                console.warn('[POLLING] Diagnostics sample query failed:', diagErr.message);
+            }
+
             return;
         }
 
