@@ -86,8 +86,14 @@ export async function saveSystemMessages(repoFullName, content, metadata = {}) {
       return [];
     }
 
-    // Determine event timestamp from payload (commit time for push events)
-    const eventTimestamp = getEventTimestampFromPayload(metadata.event, metadata.payload) || new Date().toISOString();
+    // Determine event timestamp from payload (commit time for push events).
+    // Normalize to UTC string because messages.created_at is timestamp without time zone
+    // and the frontend treats stored values as UTC.
+    const eventTimestampRaw = getEventTimestampFromPayload(metadata.event, metadata.payload) || new Date().toISOString();
+    const parsedEventDate = new Date(eventTimestampRaw);
+    const eventTimestamp = Number.isNaN(parsedEventDate.getTime())
+      ? new Date().toISOString()
+      : parsedEventDate.toISOString();
     const eventMs = new Date(eventTimestamp).getTime();
 
     const savedMessages = [];
@@ -102,35 +108,12 @@ export async function saveSystemMessages(repoFullName, content, metadata = {}) {
       );
 
       const latestUserMessage = userMessageCheck.rows[0]?.latest_message;
-      if (!latestUserMessage) {
-        // No user messages yet, don't insert system message. Still mark as processed and
-        // store webhook payload so dashboards and other tooling can read raw event data.
-        console.log(`[WEBHOOK] Group ${repo.group_id} has no user messages yet, skipping system message but recording payload and marking processed`);
+      const cutoffAt = latestUserMessage || null;
+      const cutoffMs = cutoffAt ? new Date(cutoffAt).getTime() : null;
 
-        // Insert webhook_events record (message_id NULL) so raw payload is preserved
-        await client.query(
-          `INSERT INTO webhook_events (message_id, group_id, repo_full_name, webhook_id, github_event, delivery_id, payload)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [null, repo.group_id, repoFullName, repo.webhook_id, metadata.event || null, metadata.deliveryId || null, metadata.payload || null]
-        );
-
-        // Record processed_events so polling won't re-insert later
-        await client.query(
-          `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT (github_event_id, group_id) DO NOTHING`,
-          [metadata.deliveryId ? `webhook_${metadata.deliveryId}` : `webhook_${Date.now()}`, metadata.event || null, repo.group_id, repoFullName]
-        );
-
-        continue;
-      }
-
-      const cutoffAt = latestUserMessage;
-      const cutoffMs = new Date(cutoffAt).getTime();
-
-      // If event is older or equal to cutoff, skip inserting but still mark processed to avoid future duplicates
-      if (Number.isFinite(eventMs) && eventMs <= cutoffMs) {
-        // Record processed_events so polling won't re-insert later
+      // If we have a cutoff (there are prior user messages) and the event is older or equal to cutoff,
+      // skip inserting the system message but still mark processed to avoid future duplicates.
+      if (cutoffMs !== null && Number.isFinite(eventMs) && eventMs <= cutoffMs) {
         await client.query(
           `INSERT INTO processed_events (github_event_id, event_type, group_id, repo_full_name)
            VALUES ($1, $2, $3, $4)

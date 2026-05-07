@@ -6,11 +6,12 @@ const router = express.Router();
 function getActivityTimestamp(row) {
     const envelope = row.payload || {};
     const payload = envelope && envelope.type && envelope.payload ? envelope.payload : envelope;
-    const eventType = row.github_event || envelope.type || payload.type || "";
+    const rawEventType = row.github_event || envelope.type || payload.type || "";
+    const eventType = String(rawEventType).toLowerCase();
 
     const candidates = [];
 
-    if (eventType === "push") {
+    if (eventType === "push" || eventType === "pushevent") {
         if (Array.isArray(payload.commits)) {
             for (const commit of payload.commits) {
                 if (commit?.timestamp) candidates.push(commit.timestamp);
@@ -19,12 +20,12 @@ function getActivityTimestamp(row) {
         if (payload.head_commit?.timestamp) candidates.push(payload.head_commit.timestamp);
         if (payload.created_at) candidates.push(payload.created_at);
         if (payload.updated_at) candidates.push(payload.updated_at);
-    } else if (eventType === "pull_request") {
+    } else if (eventType === "pull_request" || eventType === "pullrequestevent") {
         if (payload.pull_request?.updated_at) candidates.push(payload.pull_request.updated_at);
         if (payload.pull_request?.created_at) candidates.push(payload.pull_request.created_at);
         if (payload.created_at) candidates.push(payload.created_at);
         if (payload.updated_at) candidates.push(payload.updated_at);
-    } else if (eventType === "issues") {
+    } else if (eventType === "issues" || eventType === "issuesevent") {
         if (payload.issue?.updated_at) candidates.push(payload.issue.updated_at);
         if (payload.issue?.created_at) candidates.push(payload.issue.created_at);
         if (payload.created_at) candidates.push(payload.created_at);

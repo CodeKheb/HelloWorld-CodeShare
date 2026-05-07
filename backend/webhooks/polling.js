@@ -85,6 +85,15 @@ function getEventTimestamp(event) {
     return event?.created_at || event?.updated_at || null;
 }
 
+function normalizeGithubEventType(eventType) {
+    if (eventType === "PushEvent") return "push";
+    if (eventType === "PullRequestEvent") return "pull_request";
+    if (eventType === "IssuesEvent") return "issues";
+    if (eventType === "CreateEvent") return "create";
+    if (eventType === "DeleteEvent") return "delete";
+    return eventType;
+}
+
 function isAfterCutoff(eventTimestamp, cutoffTimestamp) {
     if (!cutoffTimestamp) return false;
     if (!eventTimestamp) return false;
@@ -272,7 +281,7 @@ async function pollRepoForEvents({ groupId, repoFullName, accessToken, io }) {
                         groupId,
                         repoFullName,
                         null,
-                        event.type,
+                        normalizeGithubEventType(event.type),
                         null,
                         event
                     ]
