@@ -21,8 +21,9 @@ async function fetchRoomSecret(groupId) {
     roomSecrets.set(groupId, roomSecret);
     return roomSecret;
 }
-//https://helloworld-codeshare.onrender.com
-const socket = io("http://localhost:3000", {
+// https://helloworld-codeshare.onrender.com
+// http://localhost:3000
+const socket = io("https://helloworld-codeshare.onrender.com", {
     withCredentials: true
 });
 
