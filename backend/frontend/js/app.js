@@ -77,8 +77,6 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (res.ok) {
-                    if (typeof clearKeyCache === 'function') clearKeyCache();
-                    if (typeof roomSecrets !== 'undefined' && roomSecrets instanceof Map) roomSecrets.clear();
                     window.location.href = '/login';
                 } else {
                     const data = await res.json();
