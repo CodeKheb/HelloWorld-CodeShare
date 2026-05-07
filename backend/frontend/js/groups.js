@@ -176,7 +176,7 @@ function renderGroups(groupsGrid = document.getElementById('groups-grid')) {
     const contactsGrid = document.getElementById('contacts-grid');
     if (!contactsGrid) return;
 
-    const contactsToShow = showAllContacts ? allContacts : allContacts.slice(0, 4);
+    const contactsToShow = showAllContacts ? allContacts : allContacts.slice(0, 5);
 
     if (contactsToShow.length === 0) {
       contactsGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#8b949e">No contacts yet</p>';

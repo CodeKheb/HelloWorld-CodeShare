@@ -32,6 +32,10 @@ window.pendingSubscribeDmIds = new Set();
 window.unreadSidebarGroupIds = new Set();
 window.unreadSidebarDmGroupIds = new Set();
 
+// Member list toggle state
+let allGroupMembers = [];
+let showAllMembers = false;
+
 function emitPendingSubscriptions() {
     if (!socket || !socket.connected) return;
     window.pendingSubscribeGroupIds.forEach((groupId) => socket.emit('subscribe-group', groupId));
@@ -716,7 +720,10 @@ async function loadGroupDetails(groupId) {
         const membersSection = document.getElementById('members-section');
         if (membersSection) membersSection.style.display = '';
 
+        // Reset member toggle state for new group
+        showAllMembers = false;
         renderMemberList(members);
+        setupMemberToggle();
         renderRepoList(repos);
         renderGroupActions(group);
     } catch (error) {
@@ -728,14 +735,28 @@ function renderMemberList(members) {
     const list = document.getElementById('group-member-list') || document.querySelector('.member-list');
     if (!list) return;
 
+    // Store all members for toggle functionality
+    allGroupMembers = members || [];
+    
+    // Determine how many members to show (5 default, all if expanded)
+    const membersToShow = showAllMembers ? allGroupMembers : allGroupMembers.slice(0, 5);
+    
     list.innerHTML = '';
+    
+    // Apply scrollable class when expanded
+    if (showAllMembers && allGroupMembers.length > 5) {
+        list.classList.add('member-list--expanded');
+    } else {
+        list.classList.remove('member-list--expanded');
+    }
 
-    if (!members || members.length === 0) {
+    if (!membersToShow || membersToShow.length === 0) {
         list.innerHTML = '<li class="member-item"><span class="member-muted">No members found.</span></li>';
+        updateMemberToggle();
         return;
     }
 
-    members.forEach((m) => {
+    membersToShow.forEach((m) => {
         const li = document.createElement('li');
         li.className = 'member-item';
         li.innerHTML = `
@@ -747,6 +768,35 @@ function renderMemberList(members) {
         `;
         list.appendChild(li);
     });
+    
+    updateMemberToggle();
+}
+
+function setupMemberToggle() {
+    const toggle = document.getElementById('memberViewToggle');
+    if (!toggle) return;
+
+    toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (allGroupMembers.length <= 5) return;
+        showAllMembers = !showAllMembers;
+        renderMemberList(allGroupMembers);
+    });
+
+    updateMemberToggle();
+}
+
+function updateMemberToggle() {
+    const toggle = document.getElementById('memberViewToggle');
+    if (!toggle) return;
+
+    if (allGroupMembers.length <= 5) {
+        toggle.style.display = 'none';
+        return;
+    }
+
+    toggle.style.display = '';
+    toggle.textContent = showAllMembers ? 'Show less' : 'View all';
 }
 
 function renderRepoList(repos) {

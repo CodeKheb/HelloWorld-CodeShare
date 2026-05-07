@@ -502,6 +502,15 @@ body.messages-page {
     gap: 12px;
 }
 
+.messages-page .member-list--expanded {
+    display: flex;
+    flex-direction: column;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 8px;
+    gap: 8px;
+}
+
 .messages-page .member-item {
     display: flex;
     align-items: center;
