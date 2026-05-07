@@ -3,8 +3,6 @@
 	<img src="screenshots/Banner.png" alt="CodeShare Banner" />
 </p>
 
-**Collaboration made easy.**
-
 CodeShare is a real-time collaboration platform that brings GitHub directly into your team chat. Stop bouncing between Discord, Slack, and GitHub. Stop losing context. Developer teams working remotely deserve tools built for distributed work—and CodeShare is that tool.
 
 ## 🎯 Try It Now
