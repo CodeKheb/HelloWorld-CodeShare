@@ -65,7 +65,6 @@ Central overview of all your groups and cross-repo GitHub activity in one unifie
 | **Backend** | Node.js, Express.js, Socket.io |
 | **Database** | PostgreSQL (Render) |
 | **Authentication** | GitHub OAuth via Passport.js |
-| **AI** | Gemini Flash API |
 | **Deployment** | Render |
 | **Version Control** | GitHub |
 
