@@ -3,971 +3,981 @@
    ============================================= */
 
 :root {
-	--panel-width: 20rem;
-	--messages-bg-soft: #1c2128;
-	--messages-bg-low: #181c22;
-	--messages-accent: #d29922;
+    --panel-width: 20rem;
+    --messages-bg-soft: #1c2128;
+    --messages-bg-low: #181c22;
+    --messages-accent: #d29922;
 }
 
 /* ── Base (all screen sizes) ───────────────── */
 
 body.messages-page {
-	overflow: hidden;
+    overflow: hidden;
 }
 
 .messages-page .chat-layout {
-	min-height: 100vh;
-	display: flex;
+    min-height: 100vh;
+    display: flex;
 }
 
 .messages-page .chat-main-shell {
-	flex: 1;
-	margin-left: var(--sidebar-width);
-	min-width: 0;
-	display: flex;
-	height: 100vh;
-	position: relative;
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    min-width: 0;
+    display: flex;
+    height: 100vh;
+    position: relative;
 }
 
 .messages-page .chat-main {
-	flex: 1;
-	min-width: 0;
-	display: flex;
-	flex-direction: column;
-	border-right: 1px solid var(--border);
-	background: var(--bg);
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
 }
 
 .messages-page .chat-header {
-	min-height: 4rem;
-	padding: 0 24px;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 16px;
-	border-bottom: 1px solid var(--border);
-	background: rgba(13, 17, 23, 0.95);
-	backdrop-filter: blur(12px);
+    min-height: 4rem;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(13, 17, 23, 0.95);
+    backdrop-filter: blur(12px);
 }
 
 .messages-page .chat-header__group {
-	display: flex;
-	align-items: center;
-	gap: 16px;
-	min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
 }
 
 .messages-page .chat-channel {
-	margin: 0;
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 20px;
-	line-height: 1.4;
-	font-weight: 600;
-	letter-spacing: -0.01em;
-	color: var(--text);
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 20px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
 }
 
 .messages-page .avatar-stack {
-	display: flex;
-	align-items: center;
-	margin-left: 4px;
+    display: flex;
+    align-items: center;
+    margin-left: 4px;
 }
 
 .messages-page .avatar--stacked {
-	width: 24px;
-	height: 24px;
-	border-radius: 999px;
-	border: 2px solid var(--bg);
-	margin-left: -8px;
-	object-fit: cover;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 2px solid var(--bg);
+    margin-left: -8px;
+    object-fit: cover;
 }
 
 .messages-page .member-count {
-	font-size: 12px;
-	line-height: 1.3;
-	color: var(--muted);
-	white-space: nowrap;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--muted);
+    white-space: nowrap;
 }
 
 .messages-page .chat-header__actions {
-	display: flex;
-	align-items: center;
-	gap: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .messages-page .action-button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	padding: 10px 14px;
-	border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
 }
 
 .messages-page .message-feed {
-	flex: 1;
-	overflow-y: auto;
+    flex: 1;
+    overflow-y: auto;
     overflow-x: hidden;
-	padding: 24px;
-	display: flex;
-	flex-direction: column;
-	gap: 0;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
 .messages-page .system-message {
-	margin-bottom: 24px;
-	display: flex;
-	align-items: flex-start;
-	gap: 12px;
-	padding: 12px 16px;
-	border-left: 3px solid var(--brand);
-	background: rgba(63, 185, 80, 0.06);
-	border-radius: var(--radius-md);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--brand);
+    background: rgba(63, 185, 80, 0.06);
+    border-radius: var(--radius-md);
 }
 
 .messages-page .system-message__content {
-	display: flex;
-	align-items: flex-start;
-	gap: 12px;
-	width: 100%;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
 }
 
 .messages-page .system-message__icon {
-	color: var(--brand);
-	font-size: 20px;
-	flex-shrink: 0;
-	margin-top: 2px;
+    color: var(--brand);
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
 }
 
 .messages-page .system-message__body {
-	flex: 1;
-	min-width: 0;
+    flex: 1;
+    min-width: 0;
 }
 
 .messages-page .system-message__text {
-	margin: 0;
-	font-size: 14px;
-	line-height: 1.5;
-	color: var(--text);
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
 }
 
 .messages-page .system-message__time {
-	font-size: 12px;
-	line-height: 1.3;
-	color: var(--muted);
-	margin-top: 4px;
-	display: inline-block;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--muted);
+    margin-top: 4px;
+    display: inline-block;
 }
 
 .messages-page .message {
-	display: flex;
-	gap: 16px;
-	margin-bottom: 24px;
-	flex-shrink: 0;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-shrink: 0;
 }
 
 .messages-page .message--system {
-	justify-content: center;
-	gap: 0;
+    justify-content: center;
+    gap: 0;
 }
 
 .messages-page .message__system-pill {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	max-width: min(90%, 680px);
-	padding: 8px 14px;
-	border-radius: 999px;
-	border: 1px solid var(--border);
-	background: rgba(139, 148, 158, 0.14);
-	color: var(--muted);
-	font-size: 12px;
-	line-height: 1.4;
-	text-align: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: min(90%, 680px);
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(139, 148, 158, 0.14);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
 }
 
 .messages-page .message__system-text {
-	overflow-wrap: anywhere;
+    overflow-wrap: anywhere;
 }
 
 .messages-page .message__system-time {
-	opacity: 0.85;
-	white-space: nowrap;
+    opacity: 0.85;
+    white-space: nowrap;
 }
 
 .messages-page .message:last-child {
-	margin-bottom: 0;
+    margin-bottom: 0;
 }
 
 .messages-page .avatar--message {
-	width: 40px;
-	height: 40px;
-	border-radius: 999px;
-	object-fit: cover;
-	flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 
 .messages-page .message__body {
-	flex: 1;
-	min-width: 0;
+    flex: 1;
+    min-width: 0;
 }
 
 .messages-page .message__meta {
-	display: flex;
-	align-items: baseline;
-	gap: 8px;
-	margin-bottom: 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
 }
 
 .messages-page .message__author {
-	font-weight: 700;
-	color: var(--text);
+    font-weight: 700;
+    color: var(--text);
 }
 
 .messages-page .message__time {
-	font-size: 12px;
-	line-height: 1.33;
-	color: var(--muted);
+    font-size: 12px;
+    line-height: 1.33;
+    color: var(--muted);
 }
 
 .messages-page .message__text {
-	margin: 0;
-	line-height: 1.65;
-	color: var(--text);
+    margin: 0;
+    line-height: 1.65;
+    color: var(--text);
 }
 
 .messages-page .summary-card {
-	position: relative;
-	overflow: hidden;
-	padding: 20px;
-	border-radius: var(--radius-lg);
-	border: 1px solid var(--border);
-	border-left: 2px solid var(--messages-accent);
-	background: var(--messages-bg-soft);
+    position: relative;
+    overflow: hidden;
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--messages-accent);
+    background: var(--messages-bg-soft);
 }
 
 .messages-page .summary-card__badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 12px;
-	font-size: 12px;
-	line-height: 1.3;
-	text-transform: uppercase;
-	letter-spacing: 0.12em;
-	color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text);
 }
 
 .messages-page .summary-card__badge .material-symbols-outlined {
-	color: var(--messages-accent);
+    color: var(--messages-accent);
 }
 
 .messages-page .summary-card__text {
-	margin: 0 0 16px;
-	max-width: 60rem;
-	line-height: 1.65;
-	color: var(--muted);
+    margin: 0 0 16px;
+    max-width: 60rem;
+    line-height: 1.65;
+    color: var(--muted);
 }
 
 .messages-page .summary-card__tags {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .messages-page .chip {
-	display: inline-flex;
-	align-items: center;
-	padding: 4px 10px;
-	border-radius: 999px;
-	border: 1px solid var(--border);
-	background: rgba(255, 255, 255, 0.02);
-	font-size: 12px;
-	line-height: 1.33;
-	color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 12px;
+    line-height: 1.33;
+    color: var(--text);
 }
 
 .messages-page .composer {
-	padding: 16px 24px 24px;
-	border-top: 1px solid var(--border);
-	background: var(--bg);
-	display: flex;
-	align-items: flex-end;
-	gap: 8px;
+    padding: 16px 24px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
 }
 
 .messages-page .icon-button {
-	width: 2.5rem;
-	height: 2.5rem;
-	display: inline-grid;
-	place-items: center;
-	border-radius: var(--radius-md);
-	color: var(--muted);
-	transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-grid;
+    place-items: center;
+    border-radius: var(--radius-md);
+    color: var(--muted);
+    transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
 .messages-page .icon-button:hover,
 .messages-page .icon-button:focus-visible {
-	background: var(--messages-bg-low);
-	color: var(--text);
-	transform: translateY(-1px);
+    background: var(--messages-bg-low);
+    color: var(--text);
+    transform: translateY(-1px);
 }
 
 .messages-page .composer__input {
-	flex: 1;
-	min-height: 40px;
-	max-height: 8rem;
-	padding: 12px 14px;
-	border: 0;
-	border-radius: var(--radius-md);
-	background: transparent;
-	resize: none;
-	color: var(--text);
-	outline: none;
+    flex: 1;
+    min-height: 40px;
+    max-height: 8rem;
+    padding: 12px 14px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    resize: none;
+    color: var(--text);
+    outline: none;
 }
 
 .messages-page .composer__input::placeholder {
-	color: var(--muted);
+    color: var(--muted);
 }
 
 .messages-page .composer__actions {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px;
 }
 
 .messages-page .composer__send {
-	width: 2.5rem;
-	height: 2.5rem;
-	padding: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
 }
 
 /* ── Group Panel (desktop) ─────────────────── */
 
 .messages-page .group-panel {
-	width: var(--panel-width, 320px);
-	min-width: 250px;
-	max-width: 600px;
-	flex-shrink: 0;
-	display: flex;
-	flex-direction: column;
-	background: var(--bg-panel);
-	position: relative;
+    width: var(--panel-width, 320px);
+    min-width: 250px;
+    max-width: 600px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-panel);
+    position: relative;
 }
 
 .messages-page .group-panel-drag-handle {
-	display: none;
-	border: 0;
-	padding: 0;
-	margin: 0;
-	background: transparent;
+    display: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: transparent;
 }
 
 .messages-page .group-panel.dragging {
-	transition: none !important;
-	will-change: transform;
+    transition: none !important;
+    will-change: transform;
 }
 
 .messages-page .resize-handle {
-	position: absolute;
-	left: 0;
-	top: 0;
-	bottom: 0;
-	width: 4px;
-	cursor: col-resize;
-	background: transparent;
-	transition: background 0.2s;
-	z-index: 10;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.2s;
+    z-index: 10;
 }
 
 .messages-page .resize-handle:hover,
 .messages-page .resize-handle.dragging {
-	background: rgba(99, 102, 241, 0.5);
+    background: rgba(99, 102, 241, 0.5);
 }
 
 .messages-page .resize-handle::before {
-	content: '';
-	position: absolute;
-	left: -4px;
-	right: -4px;
-	top: 0;
-	bottom: 0;
+    content: '';
+    position: absolute;
+    left: -4px;
+    right: -4px;
+    top: 0;
+    bottom: 0;
 }
 
 .messages-page .group-panel__intro {
-	padding: 24px;
-	border-bottom: 1px solid var(--border);
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
 }
 
 .messages-page .section-label {
-	font-size: 12px;
-	line-height: 1.3;
-	text-transform: uppercase;
-	letter-spacing: 0.14em;
-	color: var(--muted);
-	margin-bottom: 16px;
+    font-size: 12px;
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 16px;
 }
 
 .messages-page .group-panel__intro h3 {
-	margin: 0 0 12px;
-	font-size: 20px;
-	line-height: 1.4;
-	font-weight: 700;
-	letter-spacing: -0.01em;
-	color: var(--text);
+    margin: 0 0 12px;
+    font-size: 20px;
+    line-height: 1.4;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
 }
 
 .messages-page .group-panel__intro p {
-	margin: 0;
-	color: var(--muted);
-	line-height: 1.65;
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.65;
 }
 
 .messages-page .group-panel__body {
-	flex: 1;
-	overflow-y: auto;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .messages-page .panel-section {
-	padding: 24px;
-	border-bottom: 1px solid var(--border);
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
 }
 
 .messages-page .panel-section__header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 16px;
-	margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
 .messages-page .panel-section h4 {
-	margin: 0;
-	font-size: 16px;
-	line-height: 1.4;
-	font-weight: 600;
-	color: var(--text);
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: var(--text);
 }
 
 .messages-page .text-button {
-	padding: 0;
-	border: 0;
-	background: transparent;
-	color: var(--brand);
-	font-size: 12px;
-	line-height: 1.33;
-	cursor: pointer;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--brand);
+    font-size: 12px;
+    line-height: 1.33;
+    cursor: pointer;
 }
 
 .messages-page #openAttachRepoModal {
-	min-width: 160px;
-	padding: 10px 20px;
-	justify-content: center;
+    min-width: 160px;
+    padding: 10px 20px;
+    justify-content: center;
 }
 
 .messages-page .member-list {
-	list-style: none;
-	padding: 0;
-	margin: 0 0 16px;
-	display: grid;
-	gap: 12px;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: grid;
+    gap: 12px;
 }
 
 .messages-page .member-item {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text);
 }
 
 .messages-page .status-avatar {
-	position: relative;
-	width: 32px;
-	height: 32px;
-	flex-shrink: 0;
+    position: relative;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
 }
 
 .messages-page .avatar--small {
-	width: 32px;
-	height: 32px;
-	border-radius: 999px;
-	object-fit: cover;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    object-fit: cover;
 }
 
 .messages-page .avatar--dimmed {
-	opacity: 0.6;
+    opacity: 0.6;
 }
 
 .messages-page .presence-dot {
-	position: absolute;
-	right: -1px;
-	bottom: -1px;
-	width: 10px;
-	height: 10px;
-	border: 2px solid var(--bg-panel);
-	border-radius: 999px;
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--bg-panel);
+    border-radius: 999px;
 }
 
-.messages-page .presence-dot--online { background: var(--brand); }
-.messages-page .presence-dot--away   { background: var(--muted); }
+.messages-page .presence-dot--online {
+    background: var(--brand);
+}
+
+.messages-page .presence-dot--away {
+    background: var(--muted);
+}
 
 .messages-page .member-muted {
-	color: var(--muted);
+    color: var(--muted);
 }
 
 .messages-page .panel-action {
-	width: 100%;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	padding: 10px 16px;
-	border-radius: var(--radius-md);
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
 }
 
 .messages-page .repo-list {
-	display: grid;
-	gap: 12px;
+    display: grid;
+    gap: 12px;
 }
 
 .messages-page .repo-card {
-	padding: 12px 16px;
-	border: 1px solid var(--border);
-	border-radius: var(--radius-md);
-	background: var(--messages-bg-low);
-	transition: border-color 160ms ease, transform 160ms ease;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	min-height: 60px;
-	cursor: pointer;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--messages-bg-low);
+    transition: border-color 160ms ease, transform 160ms ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 60px;
+    cursor: pointer;
 }
 
 .messages-page .repo-card:hover {
-	border-color: var(--brand);
-	transform: translateY(-1px);
+    border-color: var(--brand);
+    transform: translateY(-1px);
 }
 
 .messages-page .repo-card__content {
-	flex: 1;
-	min-width: 0;
+    flex: 1;
+    min-width: 0;
 }
 
 .messages-page .repo-card__title {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	margin-bottom: 8px;
-	font-size: 14px;
-	font-weight: 600;
-	color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
 }
 
 .messages-page .repo-card__title .material-symbols-outlined {
-	color: var(--muted);
+    color: var(--muted);
 }
 
 .messages-page .repo-card__meta {
-	font-size: 11px;
-	line-height: 1.33;
-	color: var(--muted);
+    font-size: 11px;
+    line-height: 1.33;
+    color: var(--muted);
 }
 
 .messages-page .repo-card__actions {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .messages-page .repo-card__download {
-	width: 40px;
-	height: 40px;
-	display: inline-grid;
-	place-items: center;
-	border-radius: var(--radius-md);
-	background: rgba(82, 82, 82, 0.1);
-	color: white;
-	cursor: pointer;
-	transition: background-color 160ms ease, transform 160ms ease;
+    width: 40px;
+    height: 40px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: var(--radius-md);
+    background: rgba(82, 82, 82, 0.1);
+    color: white;
+    cursor: pointer;
+    transition: background-color 160ms ease, transform 160ms ease;
 }
 
 .messages-page .repo-card__download:hover {
-	background: rgba(126, 126, 126, 0.2);
-	transform: translateY(-1px);
+    background: rgba(126, 126, 126, 0.2);
+    transform: translateY(-1px);
 }
 
 /* ── Hamburger: hidden on desktop ──────────── */
 
 .sidebar-toggle {
-	display: none;
+    display: none;
 }
 
 /* Overlay: hidden until active */
 .sidebar-overlay {
-	display: none;
-	position: fixed;
-	inset: 0;
-	background: rgba(0, 0, 0, 0.55);
-	z-index: 999;
-	backdrop-filter: blur(2px);
-	-webkit-backdrop-filter: blur(2px);
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 999;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
 }
 
 .sidebar-overlay.active {
-	display: block;
-	animation: overlayFadeIn 0.2s ease;
+    display: block;
+    animation: overlayFadeIn 0.2s ease;
 }
 
 @keyframes overlayFadeIn {
-	from { opacity: 0; }
-	to   { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 /* ── Mobile Group Info Drawer ───────────────── */
 
 /* The floating info button — hidden on desktop */
 .mobile-group-info-toggle {
-	display: none;
+    display: none;
 }
 
 /* ── Mobile (≤ 768px) — single clean block ─── */
 
 @media (max-width: 768px) {
-	.mobile-hide {
-		display: none;
-	}
+    .mobile-hide {
+        display: none;
+    }
 
-	/* Lock the whole page to viewport, no scroll bounce */
-	body.messages-page {
-		overflow: hidden;
-	}
+    /* Lock the whole page to viewport, no scroll bounce */
+    body.messages-page {
+        overflow: hidden;
+    }
 
-	.messages-page .chat-layout {
-		height: 100dvh;
-		min-height: unset;
-		overflow: hidden;
-		flex-direction: row;
-	}
+    .messages-page .chat-layout {
+        height: 100dvh;
+        min-height: unset;
+        overflow: hidden;
+        flex-direction: row;
+    }
 
-	/* Shell fills width, stacks chat + panel vertically */
-	.messages-page .chat-main-shell {
-		margin-left: 0 !important;
-		flex-direction: column;
-		flex: 1;
-		width: 100%;
-		height: 100dvh;
-		overflow: hidden;
-	}
+    /* Shell fills width, stacks chat + panel vertically */
+    .messages-page .chat-main-shell {
+        margin-left: 0 !important;
+        flex-direction: column;
+        flex: 1;
+        width: 100%;
+        height: 100dvh;
+        overflow: hidden;
+    }
 
-	/* Chat takes all remaining vertical space */
-	.messages-page .chat-main {
-		flex: 1;
-		min-height: 0;
-		overflow: hidden;
-		border-right: none;
-		display: flex;
-		flex-direction: column;
-	}
+    /* Chat takes all remaining vertical space */
+    .messages-page .chat-main {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        border-right: none;
+        display: flex;
+        flex-direction: column;
+    }
 
-	/* ── Header: single compact row ── */
-	.messages-page .chat-header {
-		min-height: 3.25rem;
-		padding: 0 10px;
-		gap: 6px;
-		flex-wrap: nowrap;
-		flex-shrink: 0;
-	}
+    /* ── Header: single compact row ── */
+    .messages-page .chat-header {
+        min-height: 3.25rem;
+        padding: 0 10px;
+        gap: 6px;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+    }
 
-	.messages-page .chat-header__group {
-		flex: 1;
-		gap: 8px;
-		min-width: 0;
-		overflow: hidden;
-	}
+    .messages-page .chat-header__group {
+        flex: 1;
+        gap: 8px;
+        min-width: 0;
+        overflow: hidden;
+    }
 
-	.messages-page .chat-channel {
-		font-size: 15px;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		gap: 5px;
-	}
+    .messages-page .chat-channel {
+        font-size: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        gap: 5px;
+    }
 
-	.messages-page .chat-channel .material-symbols-outlined {
-		font-size: 18px;
-		flex-shrink: 0;
-	}
+    .messages-page .chat-channel .material-symbols-outlined {
+        font-size: 18px;
+        flex-shrink: 0;
+    }
 
-	/* Hide noisy elements */
-	.messages-page .avatar-stack,
-	.messages-page .member-count {
-		display: none;
-	}
+    /* Hide noisy elements */
+    .messages-page .avatar-stack,
+    .messages-page .member-count {
+        display: none;
+    }
 
-	/* Action buttons → icon-only squares */
-	.messages-page .chat-header__actions .action-button {
-		width: 2.25rem !important;
-		height: 2.25rem !important;
-		min-width: 2.25rem !important;
-		max-width: 2.25rem !important;
-		padding: 0 !important;
-		overflow: hidden;
-	}
+    /* Action buttons → icon-only squares */
+    .messages-page .chat-header__actions .action-button {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+        min-width: 2.25rem !important;
+        max-width: 2.25rem !important;
+        padding: 0 !important;
+        overflow: hidden;
+    }
 
-	.messages-page .chat-header__actions .action-button span:not(.material-symbols-outlined) {
-		display: none !important;
-	}
+    .messages-page .chat-header__actions .action-button span:not(.material-symbols-outlined) {
+        display: none !important;
+    }
 
-	.messages-page #openAttachRepoModal {
-		width: 2.25rem !important;
-		min-width: 2.25rem !important;
-		padding: 0 !important;
-	}
+    .messages-page #openAttachRepoModal {
+        width: 2.25rem !important;
+        min-width: 2.25rem !important;
+        padding: 0 !important;
+    }
 
-	/* Info toggle button — shown on mobile in header */
-	.mobile-group-info-toggle {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-		width: 2.25rem;
-		height: 2.25rem;
-		background: none;
-		border: none;
-		border-radius: 50%;
-		color: var(--muted);
-		cursor: pointer;
-		font-size: 22px;
-		transition: color 160ms ease, background 160ms ease;
-		line-height: 1;
-		padding: 0;
-	}
+    /* Info toggle button — shown on mobile in header */
+    .mobile-group-info-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 2.25rem;
+        height: 2.25rem;
+        background: none;
+        border: none;
+        border-radius: 50%;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 22px;
+        transition: color 160ms ease, background 160ms ease;
+        line-height: 1;
+        padding: 0;
+    }
 
-	.mobile-group-info-toggle:hover,
-	.mobile-group-info-toggle:focus-visible {
-		background: rgba(255, 255, 255, 0.06);
-		color: var(--text);
-	}
+    .mobile-group-info-toggle:hover,
+    .mobile-group-info-toggle:focus-visible {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+    }
 
-	/* ── Message feed scrolls freely ── */
-	.messages-page .message-feed {
-		flex: 1;
-		min-height: 0;
-		overflow-y: auto;
-		overflow-x: hidden;
-		padding: 14px 12px;
-		-webkit-overflow-scrolling: touch;
-		overscroll-behavior: contain;
-	}
+    /* ── Message feed scrolls freely ── */
+    .messages-page .message-feed {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 14px 12px;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
 
-	.messages-page .message {
-		gap: 10px;
-		margin-bottom: 14px;
-	}
+    .messages-page .message {
+        gap: 10px;
+        margin-bottom: 14px;
+    }
 
-	.messages-page .avatar--message {
-		width: 34px;
-		height: 34px;
-	}
+    .messages-page .avatar--message {
+        width: 34px;
+        height: 34px;
+    }
 
-	.messages-page .message__author {
-		font-size: 14px;
-	}
+    .messages-page .message__author {
+        font-size: 14px;
+    }
 
-	.messages-page .message__text {
-		font-size: 14px;
-		line-height: 1.55;
-	}
+    .messages-page .message__text {
+        font-size: 14px;
+        line-height: 1.55;
+    }
 
-	/* ── Composer pinned at bottom ── */
-	.messages-page .composer {
-		flex-shrink: 0;
-		padding: 8px 10px 12px;
-		gap: 6px;
-		border-top: 1px solid var(--border);
-		background: var(--bg);
-	}
+    /* ── Composer pinned at bottom ── */
+    .messages-page .composer {
+        flex-shrink: 0;
+        padding: 8px 10px 12px;
+        gap: 6px;
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+    }
 
-	.messages-page .composer__input {
-		font-size: 16px;
-		padding: 9px 12px;
-		background: var(--messages-bg-soft);
-		border-radius: 20px;
-		border: 1px solid var(--border);
-		min-height: 38px;
-	}
+    .messages-page .composer__input {
+        font-size: 16px;
+        padding: 9px 12px;
+        background: var(--messages-bg-soft);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        min-height: 38px;
+    }
 
-	.messages-page .icon-button {
-		width: 2.25rem;
-		height: 2.25rem;
-	}
+    .messages-page .icon-button {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
 
-	/* Sidebar: slide-in drawer on mobile */
-	.messages-page .sidebar {
-		position: fixed !important;
-		top: 0;
-		left: 0;
-		bottom: 0;
-		z-index: 1000;
-		width: min(280px, 85vw);
-		transform: translateX(-100%);
-		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-		background: #0d1117 !important;
-		box-shadow: 4px 0 24px rgba(0, 0, 0, 0.7);
-		overflow-y: auto;
-		-webkit-overflow-scrolling: touch;
-	}
+    /* Sidebar: slide-in drawer on mobile */
+    .messages-page .sidebar {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 1000;
+        width: min(280px, 85vw);
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #0d1117 !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.7);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 
-	.messages-page .sidebar.active {
-		transform: translateX(0);
-	}
+    .messages-page .sidebar.active {
+        transform: translateX(0);
+    }
 
-	/* Fix resize handle still showing */
-	.messages-page .resize-handle {
-		display: none !important;
-	}
+    /* Fix resize handle still showing */
+    .messages-page .resize-handle {
+        display: none !important;
+    }
 
-	/* ── Hamburger: visible on mobile ── */
-	.sidebar-toggle {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-		width: 2.25rem;
-		height: 2.25rem;
-		padding: 0;
-		background: none;
-		border: none;
-		border-radius: var(--radius-md, 6px);
-		color: var(--text);
-		cursor: pointer;
-		transition: background 160ms ease;
-	}
+    /* ── Hamburger: visible on mobile ── */
+    .sidebar-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 2.25rem;
+        height: 2.25rem;
+        padding: 0;
+        background: none;
+        border: none;
+        border-radius: var(--radius-md, 6px);
+        color: var(--text);
+        cursor: pointer;
+        transition: background 160ms ease;
+    }
 
-	.sidebar-toggle:hover,
-	.sidebar-toggle:focus-visible {
-		background: rgba(255, 255, 255, 0.06);
-	}
+    .sidebar-toggle:hover,
+    .sidebar-toggle:focus-visible {
+        background: rgba(255, 255, 255, 0.06);
+    }
 
-	/* ── Group Panel: slide-up drawer on mobile ── */
-	.messages-page .group-panel {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		width: 100%;
-		min-width: 0;
-		max-width: none;
-		max-height: 70dvh;
-		height: auto;
-		overflow-y: auto;
-		flex-shrink: 0;
-		border-top: 1px solid var(--border);
-		border-radius: 16px 16px 0 0;
-		background: #0d1117;
-		box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
-		z-index: 900;
+    /* ── Group Panel: slide-up drawer on mobile ── */
+    .messages-page .group-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        max-height: 70dvh;
+        height: auto;
+        overflow-y: auto;
+        flex-shrink: 0;
+        border-top: 1px solid var(--border);
+        border-radius: 16px 16px 0 0;
+        background: #0d1117;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+        z-index: 900;
 
-		/* Hidden by default — slides up when .active */
-		transform: translateY(100%);
-		transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
-	}
+        /* Hidden by default — slides up when .active */
+        transform: translateY(100%);
+        transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-	.messages-page .group-panel-drag-handle {
-		display: block;
-		width: 100%;
-		height: 28px;
-		padding: 10px 0 0;
-		border: 0;
-		background: transparent;
-		cursor: grab;
-		touch-action: none;
-		flex-shrink: 0;
-		position: relative;
-	}
+    .messages-page .group-panel-drag-handle {
+        display: block;
+        width: 100%;
+        height: 28px;
+        padding: 10px 0 0;
+        border: 0;
+        background: transparent;
+        cursor: grab;
+        touch-action: none;
+        flex-shrink: 0;
+        position: relative;
+    }
 
-	.messages-page .group-panel-drag-handle::before {
-		content: '';
-		display: block;
-		width: 36px;
-		height: 4px;
-		margin: 0 auto;
-		background: rgba(139, 148, 158, 0.3);
-		border-radius: 999px;
-	}
+    .messages-page .group-panel-drag-handle::before {
+        content: '';
+        display: block;
+        width: 36px;
+        height: 4px;
+        margin: 0 auto;
+        background: rgba(139, 148, 158, 0.3);
+        border-radius: 999px;
+    }
 
-	.messages-page .group-panel-drag-handle:active {
-		cursor: grabbing;
-	}
+    .messages-page .group-panel-drag-handle:active {
+        cursor: grabbing;
+    }
 
-	.messages-page .group-panel.active {
-		transform: translateY(0);
-	}
+    .messages-page .group-panel.active {
+        transform: translateY(0);
+    }
 
-	/* Overlay behind group panel drawer */
-	.group-panel-overlay {
-		display: none;
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.45);
-		z-index: 899;
-		backdrop-filter: blur(2px);
-		-webkit-backdrop-filter: blur(2px);
-		animation: overlayFadeIn 0.2s ease;
-	}
+    /* Overlay behind group panel drawer */
+    .group-panel-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 899;
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+        animation: overlayFadeIn 0.2s ease;
+    }
 
-	.group-panel-overlay.active {
-		display: block;
-	}
+    .group-panel-overlay.active {
+        display: block;
+    }
 
-	.messages-page .panel-section,
-	.messages-page .group-panel__intro {
-		padding: 14px 16px;
-	}
+    .messages-page .panel-section,
+    .messages-page .group-panel__intro {
+        padding: 14px 16px;
+    }
 
-	.messages-page .group-panel__intro h3 {
-		font-size: 17px;
-		margin-bottom: 6px;
-	}
+    .messages-page .group-panel__intro h3 {
+        font-size: 17px;
+        margin-bottom: 6px;
+    }
 
-	.messages-page .group-panel__intro p {
-		font-size: 13px;
-	}
+    .messages-page .group-panel__intro p {
+        font-size: 13px;
+    }
 
-	/* Sidebar section collapsibles — desktop sections still visible inside the drawer */
-	.messages-page .sidebar .sidebar-section {
-		border-bottom: 1px solid rgba(255,255,255,0.05);
-	}
+    /* Sidebar section collapsibles — desktop sections still visible inside the drawer */
+    .messages-page .sidebar .sidebar-section {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
 
-	/* Sidebar section header collapse toggle */
-	.messages-page .sidebar .section-header {
-		cursor: pointer;
-		user-select: none;
-	}
+    /* Sidebar section header collapse toggle */
+    .messages-page .sidebar .section-header {
+        cursor: pointer;
+        user-select: none;
+    }
 
-	/* Collapsed state: hide the ul */
-	.messages-page .sidebar .sidebar-section.collapsed > ul {
-		display: none;
-	}
+    /* Collapsed state: hide the ul */
+    .messages-page .sidebar .sidebar-section.collapsed>ul {
+        display: none;
+    }
 
-	/* Collapse arrow indicator */
-	.messages-page .sidebar .section-header::after {
-		content: 'expand_less';
-		font-family: 'Material Symbols Outlined';
-		font-size: 18px;
-		color: var(--muted);
-		margin-left: auto;
-		transition: transform 0.2s ease;
-	}
+    /* Collapse arrow indicator */
+    .messages-page .sidebar .section-header::after {
+        content: 'expand_less';
+        font-family: 'Material Symbols Outlined';
+        font-size: 18px;
+        color: var(--muted);
+        margin-left: auto;
+        transition: transform 0.2s ease;
+    }
 
-	.messages-page .sidebar .sidebar-section.collapsed .section-header::after {
-		transform: rotate(180deg);
-	}
+    .messages-page .sidebar .sidebar-section.collapsed .section-header::after {
+        transform: rotate(180deg);
+    }
 }
 
 /* Commits Modal Styles - UPDATED */
@@ -977,6 +987,7 @@ body.messages-page {
     max-height: 90vh;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
 }
 
 .modal--large .modal-header {
@@ -986,10 +997,11 @@ body.messages-page {
 }
 
 .modal--large .modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1.5rem;
-    max-height: calc(90vh - 120px);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    max-height: calc(90vh - 60px);
 }
 
 /* Repository Selector - UPDATED */
@@ -1047,9 +1059,7 @@ body.messages-page {
     padding: 0.5rem;
 }
 
-.commits-container {
-    margin-top: 1rem;
-}
+
 
 .commits-header {
     display: flex;
@@ -1143,6 +1153,10 @@ body.messages-page {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    flex-shrink: 1;
+    overflow-y: auto;
+    max-height: calc(90vh - 280px);
+    padding-right: 8px;
 }
 
 .commit-item {
@@ -1266,8 +1280,13 @@ body.messages-page {
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .error-state {
@@ -1302,7 +1321,7 @@ body.messages-page {
     border-bottom: 1px solid #21262d;
     gap: 1rem;
     flex-wrap: wrap;
-    width: 100%;  
+    width: 100%;
 }
 
 .diff-title {
@@ -1346,7 +1365,7 @@ body.messages-page {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    width: 100%; 
+    width: 100%;
 }
 
 .diff-file {
@@ -1354,7 +1373,7 @@ body.messages-page {
     border-radius: 4px;
     overflow: hidden;
     border: 1px solid #30363d;
-    width: 100%; 
+    width: 100%;
 }
 
 .diff-file-header {
@@ -1369,12 +1388,12 @@ body.messages-page {
 }
 
 .diff-file-content {
-    padding: 0.5rem;
-    font-size: 0.75rem;
+    padding: 4px 0;
+    font-size: 12px;
     font-family: 'Courier New', monospace;
-    overflow-x: hidden;
-    max-height: 400px;
+    overflow-x: auto;
     overflow-y: auto;
+    max-height: 400px;
 }
 
 .diff-line {
@@ -1529,6 +1548,7 @@ body.messages-page {
     text-align: center;
     letter-spacing: 0.02em;
 }
+
 .group-id-display span {
     color: #58a6ff;
     font-weight: 600;
@@ -1547,8 +1567,13 @@ body.messages-page {
 }
 
 @keyframes shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .messages-page .sidebar .section-header {
@@ -1573,14 +1598,14 @@ body.messages-page {
     flex-shrink: 0;
     transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
 }
- 
+
 .diff-back-btn:hover,
 .diff-back-btn:focus-visible {
     background: #21262d;
     border-color: #8b949e;
     color: #e6edf3;
 }
- 
+
 /* ── Diff meta bar (repo name + commit pills) ─────── */
 .diff-meta-bar {
     flex-shrink: 0;
@@ -1591,7 +1616,7 @@ body.messages-page {
     flex-direction: column;
     gap: 8px;
 }
- 
+
 .diff-meta-bar__title {
     font-size: 13px;
     font-weight: 600;
@@ -1600,7 +1625,7 @@ body.messages-page {
     align-items: center;
     gap: 6px;
 }
- 
+
 .diff-meta-bar__subtitle {
     display: flex;
     align-items: center;
@@ -1610,7 +1635,7 @@ body.messages-page {
     color: #8b949e;
     line-height: 1.5;
 }
- 
+
 .diff-sha-pill {
     display: inline-flex;
     align-items: center;
@@ -1623,7 +1648,7 @@ body.messages-page {
     color: #58a6ff;
     white-space: nowrap;
 }
- 
+
 .diff-sha-label {
     color: #8b949e;
     font-size: 12px;
@@ -1632,7 +1657,7 @@ body.messages-page {
     white-space: nowrap;
     max-width: 200px;
 }
- 
+
 .diff-meta-bar__stats {
     display: flex;
     align-items: center;
@@ -1640,7 +1665,7 @@ body.messages-page {
     font-size: 12px;
     flex-wrap: wrap;
 }
- 
+
 /* ── Scrollable diff area ─────────────────────────── */
 .diff-scroll-area {
     flex: 1;
@@ -1651,16 +1676,18 @@ body.messages-page {
     gap: 12px;
     background: #0d1117;
     min-height: 0;
+    max-height: calc(90vh - 200px);
 }
- 
+
 /* ── Individual diff file card ────────────────────── */
 .diff-file {
     background: #161b22;
     border: 1px solid #30363d;
     border-radius: 6px;
     overflow: hidden;
+    flex-shrink: 0;
 }
- 
+
 .diff-file-header {
     display: flex;
     align-items: center;
@@ -1675,7 +1702,7 @@ body.messages-page {
     border-bottom: 1px solid #30363d;
     flex-wrap: wrap;
 }
- 
+
 /* Status badge on file header */
 .diff-file-badge {
     display: inline-flex;
@@ -1689,21 +1716,40 @@ body.messages-page {
     font-family: inherit;
     flex-shrink: 0;
 }
- 
-.diff-file-badge--modified  { background: rgba(210,153,34,0.15);  color: #d29922; border: 1px solid rgba(210,153,34,0.3); }
-.diff-file-badge--added     { background: rgba(63,185,80,0.12);   color: #3fb950; border: 1px solid rgba(63,185,80,0.3); }
-.diff-file-badge--removed   { background: rgba(248,81,73,0.12);   color: #f85149; border: 1px solid rgba(248,81,73,0.3); }
-.diff-file-badge--renamed   { background: rgba(88,166,255,0.12);  color: #58a6ff; border: 1px solid rgba(88,166,255,0.3); }
- 
+
+.diff-file-badge--modified {
+    background: rgba(210, 153, 34, 0.15);
+    color: #d29922;
+    border: 1px solid rgba(210, 153, 34, 0.3);
+}
+
+.diff-file-badge--added {
+    background: rgba(63, 185, 80, 0.12);
+    color: #3fb950;
+    border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.diff-file-badge--removed {
+    background: rgba(248, 81, 73, 0.12);
+    color: #f85149;
+    border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+.diff-file-badge--renamed {
+    background: rgba(88, 166, 255, 0.12);
+    color: #58a6ff;
+    border: 1px solid rgba(88, 166, 255, 0.3);
+}
+
 .diff-file-content {
     padding: 4px 0;
     font-size: 12px;
     font-family: 'Courier New', monospace;
     overflow-x: auto;
-    max-height: 360px;
+    max-height: none;  /* Change from: 360px */
     overflow-y: auto;
 }
- 
+
 .diff-line {
     padding: 1px 12px;
     white-space: pre-wrap;
@@ -1713,21 +1759,21 @@ body.messages-page {
     line-height: 1.55;
     font-size: 12px;
 }
- 
+
 .diff-line--addition {
     background: rgba(63, 185, 80, 0.1);
     color: #3fb950;
 }
- 
+
 .diff-line--deletion {
     background: rgba(248, 81, 73, 0.1);
     color: #f85149;
 }
- 
+
 .diff-line--context {
     color: #8b949e;
 }
- 
+
 /* ── Stat chips reused in diff meta bar ───────────── */
 .diff-stat {
     display: inline-flex;
@@ -1735,10 +1781,15 @@ body.messages-page {
     gap: 4px;
     white-space: nowrap;
 }
- 
-.diff-stat--additions { color: #3fb950; }
-.diff-stat--deletions { color: #f85149; }
- 
+
+.diff-stat--additions {
+    color: #3fb950;
+}
+
+.diff-stat--deletions {
+    color: #f85149;
+}
+
 /* ── Make the diff view fill the modal body ─────────
    The modal--large body needs to flex-column so the
    diff scroll area can grow/shrink properly.          */
@@ -1746,66 +1797,161 @@ body.messages-page {
     display: flex;
     flex-direction: column;
     padding: 0;
-    overflow: hidden; /* children handle their own scroll */
+    overflow: hidden;
+    /* children handle their own scroll */
 }
- 
+
 #commitsListView {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
 }
- 
+
 #commitsDiffView {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
+    overflow: hidden;
 }
- 
+
 /* ── Mobile tweaks ────────────────────────────────── */
 @media (max-width: 768px) {
     .diff-meta-bar {
         padding: 10px 14px;
         gap: 6px;
     }
- 
+
     .diff-sha-label {
         max-width: 120px;
     }
- 
+
     .diff-meta-bar__stats {
         gap: 10px;
     }
- 
+
     .diff-scroll-area {
         padding: 10px 12px;
         gap: 8px;
     }
- 
+
     .diff-file-content {
         font-size: 11px;
         max-height: 240px;
     }
- 
+
     .diff-line {
         font-size: 11px;
         padding: 1px 8px;
     }
 }
 
-.panel-section--actions { border-top: 1px solid #30363d; padding-top: 1rem; }
-.group-actions { display: flex; flex-direction: column; gap: 8px; }
+.panel-section--actions {
+    border-top: 1px solid #30363d;
+    padding-top: 1rem;
+}
+
+.group-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .danger-button {
-    display: flex; align-items: center; gap: 6px;
-    padding: 8px 14px; border-radius: 6px; font-size: 13px;
-    font-weight: 500; cursor: pointer; border: none;
-    background: #da3633; color: #fff; width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    background: #da3633;
+    color: #fff;
+    width: 100%;
 }
+
 .danger-button--outline {
-    background: transparent; border: 1px solid #da3633; color: #da3633;
+    background: transparent;
+    border: 1px solid #da3633;
+    color: #da3633;
 }
-.danger-button:hover { opacity: 0.85; }
+
+.danger-button:hover {
+    opacity: 0.85;
+}
+
 .empty-feed-notice {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; height: 100%; gap: 12px;
-    color: #8b949e; text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: #8b949e;
+    text-align: center;
+}
+
+/* Mobile diff view adjustments */
+@media (max-width: 768px) {
+    .modal--large {
+        width: 100%;
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .modal--large .modal-header {
+        padding: 1rem;
+    }
+
+    .modal--large .modal-body {
+        max-height: calc(100vh - 60px);
+    }
+
+    #commitsListView {
+        padding: 1rem;
+    }
+
+    .repo-selector {
+        margin-bottom: 1rem;
+    }
+
+    .repo-selector select {
+        font-size: 0.8125rem;
+        padding: 0.75rem;
+    }
+
+    .commits-header {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0.875rem;
+        top: 60px;
+    }
+
+    .commits-list {
+        max-height: calc(100vh - 280px);
+    }
+
+    .diff-meta-bar {
+        padding: 1rem;
+    }
+
+    .diff-scroll-area {
+        max-height: calc(100vh - 200px);
+        padding: 1rem;
+    }
+
+    .diff-file-content {
+        max-height: 300px;
+        font-size: 11px;
+    }
+
+    .diff-line {
+        font-size: 11px;
+        padding: 1px 8px;
+    }
 }
