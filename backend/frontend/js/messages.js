@@ -936,6 +936,40 @@ function formatTimeInPhilippines(date) {
     }
 }
 
+function parseServerTimestamp(value) {
+    if (!value) return new Date();
+    if (value instanceof Date) return value;
+    if (typeof value === 'number') return new Date(value);
+
+    const raw = String(value).trim();
+
+    // ISO with explicit zone (Z or +/-hh:mm)
+    if (/Z$|[+-]\d{2}:\d{2}$/.test(raw)) {
+        const zoned = new Date(raw);
+        if (!Number.isNaN(zoned.getTime())) return zoned;
+    }
+
+    // PostgreSQL "timestamp without time zone" values are treated as UTC in this app.
+    // Support both "YYYY-MM-DD HH:mm:ss" and "YYYY-MM-DDTHH:mm:ss" with optional milliseconds.
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?$/);
+    if (match) {
+        const [, y, mo, d, h, mi, s, ms = '0'] = match;
+        const utcDate = new Date(Date.UTC(
+            Number(y),
+            Number(mo) - 1,
+            Number(d),
+            Number(h),
+            Number(mi),
+            Number(s),
+            Number(ms.padEnd(3, '0'))
+        ));
+        if (!Number.isNaN(utcDate.getTime())) return utcDate;
+    }
+
+    const fallback = new Date(raw);
+    return Number.isNaN(fallback.getTime()) ? new Date() : fallback;
+}
+
 function initializeMessageComposer() {
     const sendButton = document.querySelector('.composer__send');
     const messageInput = document.querySelector('.composer__input');
@@ -1026,8 +1060,8 @@ function displayMessage(messageData) {
 
     const messageElement = document.createElement('article');
 
-    const now = new Date(messageData.created_at || messageData.timestamp || Date.now());
-    const timeString = formatTimeInPhilippines(now);
+    const timestamp = parseServerTimestamp(messageData.created_at || messageData.timestamp || Date.now());
+    const timeString = formatTimeInPhilippines(timestamp);
 
     if (messageData.type === 'system') {
         messageElement.className = 'message message--system';
