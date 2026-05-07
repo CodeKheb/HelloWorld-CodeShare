@@ -3,6 +3,49 @@ import pool from "../db/pool.js";
 
 const router = express.Router();
 
+function getActivityTimestamp(row) {
+    const envelope = row.payload || {};
+    const payload = envelope && envelope.type && envelope.payload ? envelope.payload : envelope;
+    const eventType = row.github_event || envelope.type || payload.type || "";
+
+    const candidates = [];
+
+    if (eventType === "push") {
+        if (Array.isArray(payload.commits)) {
+            for (const commit of payload.commits) {
+                if (commit?.timestamp) candidates.push(commit.timestamp);
+            }
+        }
+        if (payload.head_commit?.timestamp) candidates.push(payload.head_commit.timestamp);
+        if (payload.created_at) candidates.push(payload.created_at);
+        if (payload.updated_at) candidates.push(payload.updated_at);
+    } else if (eventType === "pull_request") {
+        if (payload.pull_request?.updated_at) candidates.push(payload.pull_request.updated_at);
+        if (payload.pull_request?.created_at) candidates.push(payload.pull_request.created_at);
+        if (payload.created_at) candidates.push(payload.created_at);
+        if (payload.updated_at) candidates.push(payload.updated_at);
+    } else if (eventType === "issues") {
+        if (payload.issue?.updated_at) candidates.push(payload.issue.updated_at);
+        if (payload.issue?.created_at) candidates.push(payload.issue.created_at);
+        if (payload.created_at) candidates.push(payload.created_at);
+        if (payload.updated_at) candidates.push(payload.updated_at);
+    } else {
+        if (payload.created_at) candidates.push(payload.created_at);
+        if (payload.updated_at) candidates.push(payload.updated_at);
+    }
+
+    candidates.push(row.created_at);
+
+    for (const candidate of candidates) {
+        const timestamp = new Date(candidate);
+        if (!Number.isNaN(timestamp.getTime())) {
+            return timestamp;
+        }
+    }
+
+    return new Date();
+}
+
 /**
  * GET /api/dashboard/recent-activity
  * Returns deduplicated recent GitHub events (from both webhooks and polling)
@@ -77,6 +120,7 @@ router.get("/recent-activity", async (req, res) => {
             const envelope = row.payload || {};
             const payload = envelope && envelope.type && envelope.payload ? envelope.payload : envelope;
             const eventType = row.github_event || envelope.type || payload.type || "";
+            const timestamp = getActivityTimestamp(row);
             const messageContent = row.message_content || "";
 
             const commitData = {
@@ -150,7 +194,7 @@ router.get("/recent-activity", async (req, res) => {
                 message: commitData.message || messageContent || "No commit message",
                 additions: commitData.additions,
                 deletions: commitData.deletions,
-                timestamp: new Date(row.created_at).toISOString(),
+                timestamp: timestamp.toISOString(),
                 repo: row.repo_full_name,
                 repoShort: repo,
                 branch: commitData.branch,
@@ -161,6 +205,8 @@ router.get("/recent-activity", async (req, res) => {
                 eventType
             };
         });
+
+        activities.sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
 
         res.json({
             success: true,
