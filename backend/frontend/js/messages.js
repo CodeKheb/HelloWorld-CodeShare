@@ -817,10 +817,11 @@ function renderGroupActions(group) {
     const isOwner = window.currentUser && String(group.created_by) === String(window.currentUser.id);
 
     actionsSection.innerHTML = `
-        <div class="panel-section__header">
-            <h4>Danger Zone</h4>
-        </div>
-        <div class="group-actions">
+    <div class="panel-section__header" id="dangerZoneToggle" style="cursor:pointer;">
+        <h4>Danger Zone</h4>
+        <span class="material-symbols-outlined" id="dangerZoneChevron" style="color:var(--muted);font-size:18px;transition:transform 0.2s;">expand_more</span>
+    </div>
+    <div class="group-actions" id="dangerZoneBody" style="display:none;">
             ${!isOwner ? `
                 <button id="leaveGroupBtn" class="danger-button danger-button--outline" type="button">
                     <span class="material-symbols-outlined" aria-hidden="true">logout</span>
@@ -836,6 +837,13 @@ function renderGroupActions(group) {
 
     document.getElementById('leaveGroupBtn')?.addEventListener('click', () => handleLeaveGroup(group));
     document.getElementById('deleteGroupBtn')?.addEventListener('click', () => handleDeleteGroup(group));
+    document.getElementById('dangerZoneToggle')?.addEventListener('click', () => {
+        const body = document.getElementById('dangerZoneBody');
+        const chevron = document.getElementById('dangerZoneChevron');
+        const isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : '';
+        chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    });
 }
 
 async function handleLeaveGroup(group) {

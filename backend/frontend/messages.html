@@ -138,6 +138,9 @@
                             </button>
                             <div id="groupIdDisplay" class="group-id-display hidden">
                                 Invite Code: <span id="inviteCodeValue">—</span>
+                                <button id="copyInviteBtn" class="icon-button" aria-label="Copy invite code" style="width:24px;height:24px;margin-left:6px;vertical-align:middle;">
+                                    <span style="font-family:'Material Symbols Outlined';font-size:16px;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;line-height:1;">content_copy</span>
+                                </button>
                             </div>                        
 
                         </section>
@@ -247,6 +250,16 @@
                 const val = document.getElementById('inviteCodeValue');
                 if (val) val.textContent = window.currentInviteCode || 'Code cannot be fetched';
                 display.classList.toggle('hidden');
+            });
+
+            document.getElementById('copyInviteBtn')?.addEventListener('click', () => {
+                const code = document.getElementById('inviteCodeValue')?.textContent;
+                if (!code || code === '—') return;
+                navigator.clipboard.writeText(code).then(() => {
+                    const btn = document.getElementById('copyInviteBtn');
+                    btn.querySelector('.material-symbols-outlined').textContent = 'check';
+                    setTimeout(() => btn.querySelector('.material-symbols-outlined').textContent = 'content_copy', 1500);
+                });
             });
 
             // ── "Attach Repo" header button ──────────────────────────────
