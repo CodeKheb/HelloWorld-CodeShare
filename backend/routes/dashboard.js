@@ -56,15 +56,18 @@ router.get("/recent-activity", async (req, res) => {
                 )
                 AND COALESCE(m.created_at, we.created_at) >= (timezone('UTC', NOW()) - INTERVAL '24 hours')
             )
-            SELECT DISTINCT ON (activity_key)
-                activity_key AS github_event_id,
-                created_at,
-                repo_full_name,
-                payload,
-                github_event,
-                message_content
-            FROM activity_rows
-            ORDER BY activity_key, created_at DESC, message_id DESC NULLS LAST
+            SELECT * FROM (
+              SELECT DISTINCT ON (activity_key)
+                  activity_key AS github_event_id,
+                  created_at,
+                  repo_full_name,
+                  payload,
+                  github_event,
+                  message_content
+              FROM activity_rows
+              ORDER BY activity_key, created_at DESC, message_id DESC NULLS LAST
+            ) AS deduped
+            ORDER BY created_at DESC
             LIMIT 20
         `;
 
