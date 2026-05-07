@@ -31,6 +31,84 @@ socket.on("connect", () => {
     socket.emit("client_ID", socket.id);
 });
 
+window.unreadSidebarGroupIds = new Set();
+window.unreadSidebarDmGroupIds = new Set();
+
+function isAppTabVisible() {
+    return document.visibilityState === 'visible' && document.hasFocus();
+}
+
+function playNotificationSound() {
+    if (isAppTabVisible()) return;
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+
+    const audioCtx = new AudioContext();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(650, audioCtx.currentTime);
+    gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.12);
+
+    oscillator.onended = () => {
+        audioCtx.close().catch(() => {});
+    };
+}
+
+function shouldPlayMessageNotification(message) {
+    if (!message || !window.currentUser) return false;
+    if (String(message.senderId) === String(window.currentUser.id)) return false;
+    return !isAppTabVisible();
+}
+
+function showUnreadIndicator(anchor) {
+    if (!anchor) return;
+    anchor.classList.add('has-unread');
+}
+
+function clearUnreadIndicator(anchor) {
+    if (!anchor) return;
+    anchor.classList.remove('has-unread');
+}
+
+function markGroupUnread(groupId) {
+    if (!groupId || String(groupId) === String(window.currentGroupId)) return;
+    window.unreadSidebarGroupIds.add(String(groupId));
+    showUnreadIndicator(document.querySelector(`[data-group-id="${groupId}"]`));
+}
+
+function markDmUnread(dmGroupId) {
+    if (!dmGroupId || String(dmGroupId) === String(window.currentGroupId)) return;
+    window.unreadSidebarDmGroupIds.add(String(dmGroupId));
+    showUnreadIndicator(document.querySelector(`[data-dm-group-id="${dmGroupId}"]`));
+}
+
+function clearUnreadForGroup(groupId) {
+    if (!groupId) return;
+    window.unreadSidebarGroupIds.delete(String(groupId));
+    clearUnreadIndicator(document.querySelector(`[data-group-id="${groupId}"]`));
+}
+
+function clearUnreadForDm(dmGroupId) {
+    if (!dmGroupId) return;
+    window.unreadSidebarDmGroupIds.delete(String(dmGroupId));
+    clearUnreadIndicator(document.querySelector(`[data-dm-group-id="${dmGroupId}"]`));
+}
+
+function clearUnreadForCurrentChat() {
+    if (!window.currentGroupId) return;
+    clearUnreadForGroup(window.currentGroupId);
+    clearUnreadForDm(window.currentGroupId);
+}
+
 // Respect ?groupId=... in the URL so clicking a group card opens the correct conversation
 const _urlParams = new URLSearchParams(window.location.search);
 window.requestedGroupId = _urlParams.get('groupId');
@@ -40,6 +118,10 @@ window.requestedGroupName = _urlParams.get('groupName');
 socket.on("server-group-text", async (message) => {
     console.log("Received group message:", message);
     displayMessage(message);
+    if (shouldPlayMessageNotification(message)) {
+        playNotificationSound();
+    }
+    markGroupUnread(message.groupId);
 });
 
 //Checks for members leaving
@@ -66,6 +148,10 @@ socket.on("member-joined", (data) => {
 socket.on("server-direct-text", async (message) => {
     console.log("Received direct message:", message);
     displayMessage(message);
+    if (shouldPlayMessageNotification(message)) {
+        playNotificationSound();
+    }
+    markDmUnread(message.DmId || message.dmGroupId || message.groupId);
 });
 
 // server errors
@@ -77,6 +163,7 @@ socket.on("server-error", (error) => {
 socket.on("dm-ready", async ({ dmGroupId, receiverId }) => {
     window.currentGroupId = dmGroupId;
     window.currentIsDm = true;
+    clearUnreadForDm(dmGroupId);
     await Promise.all([
         loadDmMessages(dmGroupId),
         loadDmDetails(dmGroupId)
@@ -269,13 +356,21 @@ async function fetchAndRenderSidebar() {
                 a.className = 'sidebar-link';
                 a.href = '#';
                 a.dataset.groupId = g.id;
-                a.innerHTML = `<span class="material-symbols-outlined">tag</span><span>${escapeHtml(g.name)}</span>`;
+                a.innerHTML = `
+                    <span class="material-symbols-outlined">tag</span>
+                    <span>${escapeHtml(g.name)}</span>
+                    <span class="unread-dot" aria-hidden="true"></span>
+                `;
+                if (window.unreadSidebarGroupIds.has(String(g.id))) {
+                    a.classList.add('has-unread');
+                }
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
                     document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('sidebar-link--active'));
                     a.classList.add('sidebar-link--active');
                     updateGroupHeaderFromMembers(g);
                     selectGroup(g);
+                    clearUnreadForGroup(g.id);
                     collapseSidebarOnMobile();
                 });
                 li.appendChild(a);
@@ -358,8 +453,12 @@ async function fetchAndRenderSidebar() {
                 a.className = 'sidebar-link';
                 a.href = '#';
                 const avatar = `<div class="avatar avatar--small"><img src="${escapeAttr(c.avatar_url || '/default-avatar.png')}" alt="${escapeAttr(c.username)}"/></div>`;
-                a.innerHTML = `${avatar}<span>${escapeHtml(c.username)}</span>`;
+                a.innerHTML = `${avatar}<span>${escapeHtml(c.username)}</span><span class="unread-dot" aria-hidden="true"></span>`;
                 a.dataset.userId = c.id;
+                a.dataset.dmGroupId = c.existingDmGroupId || '';
+                if (c.existingDmGroupId && window.unreadSidebarDmGroupIds.has(String(c.existingDmGroupId))) {
+                    a.classList.add('has-unread');
+                }
 
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -369,6 +468,7 @@ async function fetchAndRenderSidebar() {
 
                     if (c.existingDmGroupId) {
                         window.currentGroupId = c.existingDmGroupId;
+                        clearUnreadForDm(c.existingDmGroupId);
                         loadDmMessages(c.existingDmGroupId);
                         updateDmHeader(c);
                         loadDmDetails(c.existingDmGroupId);  
