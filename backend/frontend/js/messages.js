@@ -21,18 +21,27 @@ async function fetchRoomSecret(groupId) {
     roomSecrets.set(groupId, roomSecret);
     return roomSecret;
 }
-
-const socket = io("https://helloworld-codeshare.onrender.com", {
+//https://helloworld-codeshare.onrender.com
+const socket = io("http://localhost:3000", {
     withCredentials: true
 });
+
+window.pendingSubscribeGroupIds = new Set();
+window.pendingSubscribeDmIds = new Set();
+window.unreadSidebarGroupIds = new Set();
+window.unreadSidebarDmGroupIds = new Set();
+
+function emitPendingSubscriptions() {
+    if (!socket || !socket.connected) return;
+    window.pendingSubscribeGroupIds.forEach((groupId) => socket.emit('subscribe-group', groupId));
+    window.pendingSubscribeDmIds.forEach((dmGroupId) => socket.emit('subscribe-dm', dmGroupId));
+}
 
 socket.on("connect", () => {
     console.log("Connected to server with ID:", socket.id);
     socket.emit("client_ID", socket.id);
+    emitPendingSubscriptions();
 });
-
-window.unreadSidebarGroupIds = new Set();
-window.unreadSidebarDmGroupIds = new Set();
 
 function isAppTabVisible() {
     return document.visibilityState === 'visible' && document.hasFocus();
@@ -107,6 +116,24 @@ function clearUnreadForCurrentChat() {
     if (!window.currentGroupId) return;
     clearUnreadForGroup(window.currentGroupId);
     clearUnreadForDm(window.currentGroupId);
+}
+
+function subscribeToAllGroupRooms(groups) {
+    if (!Array.isArray(groups) || groups.length === 0) return;
+    groups.forEach((group) => {
+        if (!group || !group.id) return;
+        window.pendingSubscribeGroupIds.add(String(group.id));
+        if (socket.connected) socket.emit('subscribe-group', group.id);
+    });
+}
+
+function subscribeToAllDmRooms(dmGroups) {
+    if (!Array.isArray(dmGroups) || dmGroups.length === 0) return;
+    dmGroups.forEach((group) => {
+        if (!group || !group.id) return;
+        window.pendingSubscribeDmIds.add(String(group.id));
+        if (socket.connected) socket.emit('subscribe-dm', group.id);
+    });
 }
 
 // Respect ?groupId=... in the URL so clicking a group card opens the correct conversation
@@ -383,6 +410,10 @@ async function fetchAndRenderSidebar() {
             }
         }
 
+        // Subscribe to all known rooms so notifications arrive immediately
+        subscribeToAllGroupRooms(groups);
+        subscribeToAllDmRooms(dmGroups);
+
         // ── Handle URL-requested group ───────────────────────────────────
         if (window.requestedGroupId) {
             const target = allGroups.find(g => String(g.id) === String(window.requestedGroupId));
@@ -583,6 +614,7 @@ async function selectGroup(group) {
     if (group.is_direct) {
         window.currentIsDm = true;
         window.currentGroupId = group.id;
+        clearUnreadForDm(group.id);
         await Promise.all([
             loadDmMessages(group.id),
             loadDmDetails(group.id)
@@ -594,6 +626,7 @@ async function selectGroup(group) {
     if (window.currentInviteCode) socket.emit('leave-group', window.currentInviteCode);
     window.currentGroupId = group.id;
     window.currentInviteCode = group.invite_code;
+    clearUnreadForGroup(group.id);
 
     const titleEl = document.querySelector('.chat-channel');
     if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> ${escapeHtml(group.name)}`;
