@@ -1138,6 +1138,7 @@ function initializeMessageComposer() {
         });
 
         messageInput.value = '';
+        if (pickerEl) pickerEl.classList.add('hidden');
         messageInput.style.height = 'auto';
     }
 }

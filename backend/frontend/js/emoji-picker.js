@@ -37,7 +37,6 @@ function initEmojiPicker() {
             input.value = text.slice(0, start) + emoji + text.slice(end);
             input.selectionStart = input.selectionEnd = start + emoji.length;
             input.focus();
-            pickerEl.classList.add('hidden');
         }
     });
 
