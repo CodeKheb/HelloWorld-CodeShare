@@ -125,6 +125,8 @@ document.querySelectorAll('[data-route]').forEach(link => {
 
 let allRepos   = [];
 let showingAll = false;
+let allActivities = [];
+let showingAllActivities = false;
 
 async function initializeDashboard() {
     try {
@@ -148,6 +150,7 @@ async function initializeDashboard() {
         setupViewAllHandler();
 
         // 5. Recent Activity
+        setupRecentActivityToggle();
         loadRecentActivity();
 
     } catch (err) {
@@ -229,11 +232,37 @@ async function loadRecentActivity() {
         const data = await res.json();
 
         if (!data.success || !data.activities || data.activities.length === 0) {
+            allActivities = [];
             activityList.innerHTML = '<p style="color:var(--muted);padding:16px;text-align:center;">No recent activity yet.</p>';
+            updateRecentActivityToggle();
             return;
         }
 
-        activityList.innerHTML = data.activities.map(activity => {
+        allActivities = [...data.activities].sort((left, right) => {
+            return new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime();
+        });
+
+        renderRecentActivities();
+
+    } catch (err) {
+        console.error('Failed to load recent activity:', err);
+        activityList.innerHTML = '<p style="color:var(--muted);padding:16px;text-align:center;">Error loading activity.</p>';
+    }
+}
+
+function renderRecentActivities() {
+    const activityList = document.getElementById('activity-list');
+    if (!activityList) return;
+
+    const activitiesToShow = showingAllActivities ? allActivities : allActivities.slice(0, 4);
+    updateRecentActivityToggle();
+
+    if (activitiesToShow.length === 0) {
+        activityList.innerHTML = '<p style="color:var(--muted);padding:16px;text-align:center;">No recent activity yet.</p>';
+        return;
+    }
+
+    activityList.innerHTML = activitiesToShow.map(activity => {
             let timestamp = new Date(activity.timestamp);
 
             // Fallback: try numeric epoch, then default to now
@@ -286,11 +315,33 @@ async function loadRecentActivity() {
                 ${cardTagEnd}
             `;
         }).join('');
+}
 
-    } catch (err) {
-        console.error('Failed to load recent activity:', err);
-        activityList.innerHTML = '<p style="color:var(--muted);padding:16px;text-align:center;">Error loading activity.</p>';
+function setupRecentActivityToggle() {
+    const toggle = document.getElementById('activityViewToggle');
+    if (!toggle) return;
+
+    toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (allActivities.length <= 4) return;
+        showingAllActivities = !showingAllActivities;
+        renderRecentActivities();
+    });
+
+    updateRecentActivityToggle();
+}
+
+function updateRecentActivityToggle() {
+    const toggle = document.getElementById('activityViewToggle');
+    if (!toggle) return;
+
+    if (allActivities.length <= 4) {
+        toggle.style.display = 'none';
+        return;
     }
+
+    toggle.style.display = '';
+    toggle.textContent = showingAllActivities ? 'Show less' : 'View all';
 }
 
 /**

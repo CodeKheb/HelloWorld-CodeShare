@@ -141,6 +141,8 @@ function subscribeToAllDmRooms(dmGroups) {
 const _urlParams = new URLSearchParams(window.location.search);
 window.requestedGroupId = _urlParams.get('groupId');
 window.requestedGroupName = _urlParams.get('groupName');
+let allSidebarContacts = [];
+let showingAllSidebarContacts = false;
 
 // group messages 
 socket.on("server-group-text", async (message) => {
@@ -506,7 +508,10 @@ async function fetchAndRenderSidebar() {
             }
         });
 
-        const contacts = Array.from(contactsMap.values()).slice(0, 4);
+        const contacts = Array.from(contactsMap.values())
+            .sort((left, right) => (left.username || '').localeCompare(right.username || ''))
+            .slice(0, 4);
+
         const contactsList = document.getElementById('sidebar-contacts');
         if (contactsList) {
             contactsList.innerHTML = '';
@@ -546,6 +551,7 @@ async function fetchAndRenderSidebar() {
                 li.appendChild(a);
                 contactsList.appendChild(li);
             });
+
             if (contacts.length === 0) {
                 contactsList.innerHTML = '<li class="muted" style="padding:8px 12px;color:#8b949e">No contacts yet</li>';
             }

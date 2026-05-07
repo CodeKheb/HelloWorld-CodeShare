@@ -30,7 +30,7 @@
             <ul class="sidebar-nav">
                 <li><a class="sidebar-link sidebar-link--active" href="#"><span class="material-symbols-outlined icon-filled">home</span><span>Home</span></a></li>
                 <li><a class="sidebar-link" href="/messages" data-route="messages"><span class="material-symbols-outlined">chat_bubble</span><span>Direct Messages</span></a></li>
-                <li><a class="sidebar-link" href="/groups" data-route="groups"><span class="material-symbols-outlined">groups</span><span>People and Groups</span></a></li>
+                <li><a class="sidebar-link" href="/groups" data-route="groups"><span class="material-symbols-outlined">groups</span><span>People & Groups</span></a></li>
             </ul>
             <div class="sidebar-footer">
                 <button class="primary-button" type="button" id="newRepoSidebarBtn">New Repository</button>
@@ -51,10 +51,6 @@
                 </nav>
 
                 <div class="topbar-actions">
-                    <button class="icon-button" type="button" aria-label="Notifications">
-                        <span class="material-symbols-outlined">notifications</span>
-                    </button>
-
                     <!-- Settings Dropdown -->
                     <div class="dropdown">
                         <button class="icon-button" type="button" aria-label="Settings" id="settingsButton">
@@ -86,7 +82,10 @@
                 </section>
 
                 <section class="section-block">
-                    <h2 class="section-title">Recent Activity</h2>
+                    <div class="section-heading">
+                        <h2>Recent Activity</h2>
+                        <a href="#" id="activityViewToggle">View all</a>
+                    </div>
                     <div class="activity-list" id="activity-list">
                         <!-- Activity will be populated here -->
                     </div>

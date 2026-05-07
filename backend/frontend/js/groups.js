@@ -26,6 +26,11 @@ if (typeof initSettingsDropdown === 'function') {
   initSettingsDropdown();
 }
 
+let allGroupCards = [];
+let allContacts = [];
+let showAllGroups = false;
+let showAllContacts = false;
+
 // Load groups from backend
 async function loadGroups() {
   try {
@@ -40,11 +45,12 @@ async function loadGroups() {
 
     const data = await response.json();
     const groupsGrid = document.getElementById('groups-grid');
-    const groups = (data.groups || []).filter(g => !g.is_direct);
+    allGroupCards = (data.groups || []).filter(g => !g.is_direct)
+      .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
 
     // Build contacts list from group members (exclude current user)
     const contactsMap = new Map();
-    groups.forEach(g => {
+    allGroupCards.forEach(g => {
       if (!Array.isArray(g.members)) return;
       g.members.forEach(m => {
         if (!m || !m.id) return;
@@ -55,46 +61,45 @@ async function loadGroups() {
       });
     });
 
-    const contacts = Array.from(contactsMap.values()).sort((a,b) => (a.username||'').localeCompare(b.username||''));
+    allContacts = Array.from(contactsMap.values()).sort((left, right) => (left.username || '').localeCompare(right.username || ''));
 
-    // Render contacts section
-    const contactsGrid = document.getElementById('contacts-grid');
-    if (contactsGrid) {
-      if (contacts.length === 0) {
+    renderGroups(groupsGrid);
+    renderContacts();
+    setupGroupToggle();
+    setupContactsToggle();
+
+    if (allGroupCards.length === 0 && groupsGrid) {
+      groupsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8b949e;">No groups yet. Create one to get started!</p>';
+    }
+
+    if (allContacts.length === 0) {
+      const contactsGrid = document.getElementById('contacts-grid');
+      if (contactsGrid) {
         contactsGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#8b949e">No contacts yet</p>';
-      } else {
-        contactsGrid.innerHTML = '';
-        contacts.forEach(c => {
-          const card = document.createElement('article');
-          card.className = 'contact-card';
-          card.innerHTML = `
-            <div class="contact-avatar"><img src="${c.avatar_url||'/default-avatar.png'}" alt="${c.username||'User'}"/></div>
-            <div class="contact-body">
-              <strong>${c.username || 'Unknown'}</strong>
-              <div class="contact-meta">${c.username ? `@${c.username}` : ''}</div>
-            </div>
-          `;
-          card.addEventListener('click', () => {
-            // Navigate to messages page; include user id for convenience
-            window.location.href = `/messages?contactId=${encodeURIComponent(c.id)}`;
-          });
-          contactsGrid.appendChild(card);
-        });
       }
     }
 
-    if (groups.length === 0) {
-      groupsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8b949e;">No groups yet. Create one to get started!</p>';
-      return;
-    }
+  } catch (error) {
+    console.error('Error loading groups:', error);
+  }
+}
 
-    // Clear existing groups
-    groupsGrid.innerHTML = '';
+function renderGroups(groupsGrid = document.getElementById('groups-grid')) {
+  if (!groupsGrid) return;
 
-    // Render each group as a card
-    groups.forEach(group => {
-      const card = document.createElement('article');
-      card.className = 'group-card';
+  const groupsToShow = showAllGroups ? allGroupCards : allGroupCards.slice(0, 4);
+
+  if (groupsToShow.length === 0) {
+    groupsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8b949e;">No groups yet. Create one to get started!</p>';
+    updateGroupToggle();
+    return;
+  }
+
+  groupsGrid.innerHTML = '';
+
+  groupsToShow.forEach(group => {
+    const card = document.createElement('article');
+    card.className = 'group-card';
 
       // Build member avatars markup (show up to 3 avatars, plus a +N if more)
       let membersHtml = '';
@@ -154,18 +159,103 @@ async function loadGroups() {
         card.dataset.groupName = group.name;
         card.style.cursor = 'pointer';
       
-        card.addEventListener('click', (e) => {
-          const groupId = e.currentTarget.dataset.groupId;
-          const groupName = e.currentTarget.dataset.groupName;
-          console.log('Clicked group:', groupId, groupName);
-          navigateToGroupConversation(groupId, groupName);
-        });
-      
+      card.addEventListener('click', (e) => {
+        const groupId = e.currentTarget.dataset.groupId;
+        const groupName = e.currentTarget.dataset.groupName;
+        console.log('Clicked group:', groupId, groupName);
+        navigateToGroupConversation(groupId, groupName);
+      });
+
       groupsGrid.appendChild(card);
     });
-  } catch (error) {
-    console.error('Error loading groups:', error);
+
+    updateGroupToggle();
   }
+
+  function renderContacts() {
+    const contactsGrid = document.getElementById('contacts-grid');
+    if (!contactsGrid) return;
+
+    const contactsToShow = showAllContacts ? allContacts : allContacts.slice(0, 4);
+
+    if (contactsToShow.length === 0) {
+      contactsGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#8b949e">No contacts yet</p>';
+      updateContactsToggle();
+      return;
+    }
+
+    contactsGrid.innerHTML = '';
+    contactsToShow.forEach(c => {
+      const card = document.createElement('article');
+      card.className = 'contact-card';
+      card.innerHTML = `
+        <div class="contact-avatar"><img src="${c.avatar_url||'/default-avatar.png'}" alt="${c.username||'User'}"/></div>
+        <div class="contact-body">
+          <strong>${c.username || 'Unknown'}</strong>
+          <div class="contact-meta">${c.username ? `@${c.username}` : ''}</div>
+        </div>
+      `;
+      card.addEventListener('click', () => {
+        window.location.href = `/messages?contactId=${encodeURIComponent(c.id)}`;
+      });
+      contactsGrid.appendChild(card);
+    });
+
+    updateContactsToggle();
+  }
+
+  function setupGroupToggle() {
+    const toggle = document.getElementById('groupsViewToggle');
+    if (!toggle) return;
+
+    toggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (allGroupCards.length <= 4) return;
+      showAllGroups = !showAllGroups;
+      renderGroups();
+    });
+
+    updateGroupToggle();
+  }
+
+  function updateGroupToggle() {
+    const toggle = document.getElementById('groupsViewToggle');
+    if (!toggle) return;
+
+    if (allGroupCards.length <= 4) {
+      toggle.style.display = 'none';
+      return;
+    }
+
+    toggle.style.display = '';
+    toggle.textContent = showAllGroups ? 'Show less' : 'View all';
+  }
+
+  function setupContactsToggle() {
+    const toggle = document.getElementById('contactsViewToggle');
+    if (!toggle) return;
+
+    toggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (allContacts.length <= 4) return;
+      showAllContacts = !showAllContacts;
+      renderContacts();
+    });
+
+    updateContactsToggle();
+  }
+
+  function updateContactsToggle() {
+    const toggle = document.getElementById('contactsViewToggle');
+    if (!toggle) return;
+
+    if (allContacts.length <= 4) {
+      toggle.style.display = 'none';
+      return;
+    }
+
+    toggle.style.display = '';
+    toggle.textContent = showAllContacts ? 'Show less' : 'View all';
 }
 
 // Load groups on page load
