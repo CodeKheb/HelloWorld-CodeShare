@@ -21,15 +21,121 @@ async function fetchRoomSecret(groupId) {
     roomSecrets.set(groupId, roomSecret);
     return roomSecret;
 }
-
+// https://helloworld-codeshare.onrender.com
+// http://localhost:3000
 const socket = io("https://helloworld-codeshare.onrender.com", {
     withCredentials: true
 });
 
+window.pendingSubscribeGroupIds = new Set();
+window.pendingSubscribeDmIds = new Set();
+window.unreadSidebarGroupIds = new Set();
+window.unreadSidebarDmGroupIds = new Set();
+
+function emitPendingSubscriptions() {
+    if (!socket || !socket.connected) return;
+    window.pendingSubscribeGroupIds.forEach((groupId) => socket.emit('subscribe-group', groupId));
+    window.pendingSubscribeDmIds.forEach((dmGroupId) => socket.emit('subscribe-dm', dmGroupId));
+}
+
 socket.on("connect", () => {
     console.log("Connected to server with ID:", socket.id);
     socket.emit("client_ID", socket.id);
+    emitPendingSubscriptions();
 });
+
+function isAppTabVisible() {
+    return document.visibilityState === 'visible' && document.hasFocus();
+}
+
+function playNotificationSound() {
+    if (isAppTabVisible()) return;
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+
+    const audioCtx = new AudioContext();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(650, audioCtx.currentTime);
+    gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.12);
+
+    oscillator.onended = () => {
+        audioCtx.close().catch(() => {});
+    };
+}
+
+function shouldPlayMessageNotification(message) {
+    if (!message || !window.currentUser) return false;
+    if (String(message.senderId) === String(window.currentUser.id)) return false;
+    return !isAppTabVisible();
+}
+
+function showUnreadIndicator(anchor) {
+    if (!anchor) return;
+    anchor.classList.add('has-unread');
+}
+
+function clearUnreadIndicator(anchor) {
+    if (!anchor) return;
+    anchor.classList.remove('has-unread');
+}
+
+function markGroupUnread(groupId) {
+    if (!groupId || String(groupId) === String(window.currentGroupId)) return;
+    window.unreadSidebarGroupIds.add(String(groupId));
+    showUnreadIndicator(document.querySelector(`[data-group-id="${groupId}"]`));
+}
+
+function markDmUnread(dmGroupId) {
+    if (!dmGroupId || String(dmGroupId) === String(window.currentGroupId)) return;
+    window.unreadSidebarDmGroupIds.add(String(dmGroupId));
+    showUnreadIndicator(document.querySelector(`[data-dm-group-id="${dmGroupId}"]`));
+}
+
+function clearUnreadForGroup(groupId) {
+    if (!groupId) return;
+    window.unreadSidebarGroupIds.delete(String(groupId));
+    clearUnreadIndicator(document.querySelector(`[data-group-id="${groupId}"]`));
+}
+
+function clearUnreadForDm(dmGroupId) {
+    if (!dmGroupId) return;
+    window.unreadSidebarDmGroupIds.delete(String(dmGroupId));
+    clearUnreadIndicator(document.querySelector(`[data-dm-group-id="${dmGroupId}"]`));
+}
+
+function clearUnreadForCurrentChat() {
+    if (!window.currentGroupId) return;
+    clearUnreadForGroup(window.currentGroupId);
+    clearUnreadForDm(window.currentGroupId);
+}
+
+function subscribeToAllGroupRooms(groups) {
+    if (!Array.isArray(groups) || groups.length === 0) return;
+    groups.forEach((group) => {
+        if (!group || !group.id) return;
+        window.pendingSubscribeGroupIds.add(String(group.id));
+        if (socket.connected) socket.emit('subscribe-group', group.id);
+    });
+}
+
+function subscribeToAllDmRooms(dmGroups) {
+    if (!Array.isArray(dmGroups) || dmGroups.length === 0) return;
+    dmGroups.forEach((group) => {
+        if (!group || !group.id) return;
+        window.pendingSubscribeDmIds.add(String(group.id));
+        if (socket.connected) socket.emit('subscribe-dm', group.id);
+    });
+}
 
 // Respect ?groupId=... in the URL so clicking a group card opens the correct conversation
 const _urlParams = new URLSearchParams(window.location.search);
@@ -39,7 +145,32 @@ window.requestedGroupName = _urlParams.get('groupName');
 // group messages 
 socket.on("server-group-text", async (message) => {
     console.log("Received group message:", message);
-    displayMessage(message);
+    const messageGroupId = message?.groupId;
+    const isActiveGroup = String(messageGroupId) === String(window.currentGroupId) && !window.currentIsDm;
+
+    if (isActiveGroup) {
+        displayMessage(message);
+        clearUnreadForGroup(messageGroupId);
+        if (shouldPlayMessageNotification(message)) {
+            playNotificationSound();
+        }
+    } else {
+        markGroupUnread(messageGroupId);
+        if (shouldPlayMessageNotification(message)) {
+            playNotificationSound();
+        }
+    }
+});
+
+socket.on("repo-attached", async ({ groupId, repo }) => {
+    if (!groupId) return;
+    if (String(groupId) !== String(window.currentGroupId)) return;
+
+    if (window.currentIsDm) {
+        await loadDmDetails(groupId);
+    } else {
+        await loadGroupDetails(groupId);
+    }
 });
 
 //Checks for members leaving
@@ -65,7 +196,21 @@ socket.on("member-joined", (data) => {
 // incoming messages
 socket.on("server-direct-text", async (message) => {
     console.log("Received direct message:", message);
-    displayMessage(message);
+    const dmGroupId = message.DmId || message.dmGroupId || message.groupId;
+    const isActiveDm = window.currentIsDm && String(dmGroupId) === String(window.currentGroupId);
+
+    if (isActiveDm) {
+        displayMessage(message);
+        clearUnreadForDm(dmGroupId);
+        if (shouldPlayMessageNotification(message)) {
+            playNotificationSound();
+        }
+    } else {
+        markDmUnread(dmGroupId);
+        if (shouldPlayMessageNotification(message)) {
+            playNotificationSound();
+        }
+    }
 });
 
 // server errors
@@ -77,6 +222,7 @@ socket.on("server-error", (error) => {
 socket.on("dm-ready", async ({ dmGroupId, receiverId }) => {
     window.currentGroupId = dmGroupId;
     window.currentIsDm = true;
+    clearUnreadForDm(dmGroupId);
     await Promise.all([
         loadDmMessages(dmGroupId),
         loadDmDetails(dmGroupId)
@@ -269,13 +415,21 @@ async function fetchAndRenderSidebar() {
                 a.className = 'sidebar-link';
                 a.href = '#';
                 a.dataset.groupId = g.id;
-                a.innerHTML = `<span class="material-symbols-outlined">tag</span><span>${escapeHtml(g.name)}</span>`;
+                a.innerHTML = `
+                    <span class="material-symbols-outlined">tag</span>
+                    <span>${escapeHtml(g.name)}</span>
+                    <span class="unread-dot" aria-hidden="true"></span>
+                `;
+                if (window.unreadSidebarGroupIds.has(String(g.id))) {
+                    a.classList.add('has-unread');
+                }
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
                     document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('sidebar-link--active'));
                     a.classList.add('sidebar-link--active');
                     updateGroupHeaderFromMembers(g);
                     selectGroup(g);
+                    clearUnreadForGroup(g.id);
                     collapseSidebarOnMobile();
                 });
                 li.appendChild(a);
@@ -287,6 +441,10 @@ async function fetchAndRenderSidebar() {
                 showNoGroupsView();
             }
         }
+
+        // Subscribe to all known rooms so notifications arrive immediately
+        subscribeToAllGroupRooms(groups);
+        subscribeToAllDmRooms(dmGroups);
 
         // ── Handle URL-requested group ───────────────────────────────────
         if (window.requestedGroupId) {
@@ -358,8 +516,12 @@ async function fetchAndRenderSidebar() {
                 a.className = 'sidebar-link';
                 a.href = '#';
                 const avatar = `<div class="avatar avatar--small"><img src="${escapeAttr(c.avatar_url || '/default-avatar.png')}" alt="${escapeAttr(c.username)}"/></div>`;
-                a.innerHTML = `${avatar}<span>${escapeHtml(c.username)}</span>`;
+                a.innerHTML = `${avatar}<span>${escapeHtml(c.username)}</span><span class="unread-dot" aria-hidden="true"></span>`;
                 a.dataset.userId = c.id;
+                a.dataset.dmGroupId = c.existingDmGroupId || '';
+                if (c.existingDmGroupId && window.unreadSidebarDmGroupIds.has(String(c.existingDmGroupId))) {
+                    a.classList.add('has-unread');
+                }
 
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -369,6 +531,7 @@ async function fetchAndRenderSidebar() {
 
                     if (c.existingDmGroupId) {
                         window.currentGroupId = c.existingDmGroupId;
+                        clearUnreadForDm(c.existingDmGroupId);
                         loadDmMessages(c.existingDmGroupId);
                         updateDmHeader(c);
                         loadDmDetails(c.existingDmGroupId);  
@@ -483,6 +646,7 @@ async function selectGroup(group) {
     if (group.is_direct) {
         window.currentIsDm = true;
         window.currentGroupId = group.id;
+        clearUnreadForDm(group.id);
         await Promise.all([
             loadDmMessages(group.id),
             loadDmDetails(group.id)
@@ -494,6 +658,7 @@ async function selectGroup(group) {
     if (window.currentInviteCode) socket.emit('leave-group', window.currentInviteCode);
     window.currentGroupId = group.id;
     window.currentInviteCode = group.invite_code;
+    clearUnreadForGroup(group.id);
 
     const titleEl = document.querySelector('.chat-channel');
     if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">tag</span> ${escapeHtml(group.name)}`;

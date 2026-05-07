@@ -120,20 +120,7 @@ export default function chatHandler(socket) {
             clientState.active_group = groupId;
             socket.join(String(groupId));
 
-        //     const joinNotification = {
-        //         id: null, // Temporary unique ID for frontend keys
-        //         groupId: groupId,
-        //         senderId: null,          // Null indicates it's a system message
-        //         text: `--- ${authUser.username} joined this group ---`,
-        //         type: 'system',          // Changed type to distinguish from user 'text'
-        //         timestamp: new Date(),
-        //         author: "System",
-        //         authorName: "System",
-        //         avatar: null
-        //     };
-
-        // // 2. Emit the structured object instead of a raw string
-        //     io.to(String(groupId)).emit("server-group-text", joinNotification);
+       
             io.to(String(groupId)).emit("member-joined", {
                 userId: authUser.id,
                 username: authUser.username,
@@ -146,6 +133,50 @@ export default function chatHandler(socket) {
         } catch (error) {
             console.error("Error joining group:", error);
             socket.emit("server-error", { err: "server", reason: "Failed to join group" });
+        }
+    });
+
+    socket.on("subscribe-group", async (groupId) => {
+        try {
+            const authUser = socket.request.user;
+            if (!authUser || !authUser.id) return;
+
+            const membership = await pool.query(
+                `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 LIMIT 1`,
+                [groupId, authUser.id]
+            );
+            if (membership.rows.length === 0) return;
+
+            socket.join(String(groupId));
+            console.log(`Subscribed socket ${socket.id} to group room ${groupId}`);
+        } catch (error) {
+            console.error("Error subscribing to group room:", error);
+        }
+    });
+
+    socket.on("subscribe-dm", async (dmGroupId) => {
+        try {
+            const authUser = socket.request.user;
+            if (!authUser || !authUser.id) return;
+
+            const membership = await pool.query(
+                `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 LIMIT 1`,
+                [dmGroupId, authUser.id]
+            );
+            if (membership.rows.length === 0) return;
+
+            const receiverRes = await pool.query(
+                `SELECT user_id FROM group_members WHERE group_id = $1 AND user_id != $2 LIMIT 1`,
+                [dmGroupId, authUser.id]
+            );
+            if (receiverRes.rows.length === 0) return;
+
+            const receiverId = receiverRes.rows[0].user_id;
+            const dmRoom = `dm_${[authUser.id, receiverId].sort().join("_")}`;
+            socket.join(dmRoom);
+            console.log(`Subscribed socket ${socket.id} to DM room ${dmRoom}`);
+        } catch (error) {
+            console.error("Error subscribing to DM room:", error);
         }
     });
 

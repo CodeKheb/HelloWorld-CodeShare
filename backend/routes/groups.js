@@ -409,6 +409,10 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
                           authorName: "System",
                           avatar: "/default-avatar.png"
                         });
+            io.to(String(groupId)).emit("repo-attached", {
+                          groupId: groupId,
+                          repo: repoRow
+                        });
             await client.query("COMMIT");
         } catch (err) {
             await client.query("ROLLBACK");
@@ -452,13 +456,28 @@ groupsRouter.post("/join/:inviteCode", async (req, res) => {
             return res.status(403).json({ error: "Cannot join a direct message via invite code" });
         }
 
-        // Insert member (idempotent)
-        await pool.query(
+        // Insert member (idempotent) and notify the group only when the user is newly added
+        const joinResult = await pool.query(
             `INSERT INTO group_members (group_id, user_id)
              VALUES ($1, $2)
-             ON CONFLICT (group_id, user_id) DO NOTHING`,
+             ON CONFLICT (group_id, user_id) DO NOTHING
+             RETURNING user_id`,
             [group.id, userId]
         );
+
+        if (joinResult.rows.length > 0) {
+            io.to(String(group.id)).emit("server-group-text", {
+                id: null,
+                groupId: group.id,
+                senderId: userId,
+                text: `${req.user.username} joined the group.`,
+                type: "system",
+                timestamp: new Date(),
+                author: "System",
+                authorName: "System",
+                avatar: "/default-avatar.png"
+            });
+        }
 
         return res.status(200).json({ 
             success: true, 
@@ -491,13 +510,28 @@ groupsRouter.post("/:groupId/join", async (req, res) => {
             return res.status(404).json({ error: "Group not found" });
         }
 
-        // Insert member (idempotent)
-        await pool.query(
+        // Insert member (idempotent) and notify the group only when the user is newly added
+        const joinResult = await pool.query(
             `INSERT INTO group_members (group_id, user_id)
              VALUES ($1, $2)
-             ON CONFLICT (group_id, user_id) DO NOTHING`,
+             ON CONFLICT (group_id, user_id) DO NOTHING
+             RETURNING user_id`,
             [groupId, userId]
         );
+
+        if (joinResult.rows.length > 0) {
+            io.to(String(groupId)).emit("server-group-text", {
+                id: null,
+                groupId,
+                senderId: userId,
+                text: `${req.user.username} joined the group.`,
+                type: "system",
+                timestamp: new Date(),
+                author: "System",
+                authorName: "System",
+                avatar: "/default-avatar.png"
+            });
+        }
 
         return res.status(200).json({ success: true, groupId });
     } catch (error) {
