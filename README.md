@@ -78,7 +78,7 @@ Central overview of all your groups and cross-repo GitHub activity in one unifie
 ![Dashboard Overview](screenshots/Dashboard.png)
 *Your repositories and GitHub activity across all connected repos in one unified feed*
 
-![Group Chat with GitHub Integration](screenshots/GroupMesages.png)
+![Group Chat with GitHub Integration](screenshots/GroupMessages.png)
 *Real-time team messages with GitHub push and commit events appearing as system messages—no context switching*
 
 ![Attach Repository to Group](screenshots/AttachRepo.png)
