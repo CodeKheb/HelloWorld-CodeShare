@@ -491,6 +491,9 @@ function initSettingsDropdown() {
  * Call this function after loading modals.html
  */
 function initializeAllModals() {
+    if (window._modalHandlersInitialized) return;
+    window._modalHandlersInitialized = true;
+
     // Initialize each modal with optional success callbacks
     initCreateGroupModal(() => {
         // Refresh group list if function is available

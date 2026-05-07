@@ -162,6 +162,17 @@ socket.on("server-group-text", async (message) => {
     }
 });
 
+socket.on("repo-attached", async ({ groupId, repo }) => {
+    if (!groupId) return;
+    if (String(groupId) !== String(window.currentGroupId)) return;
+
+    if (window.currentIsDm) {
+        await loadDmDetails(groupId);
+    } else {
+        await loadGroupDetails(groupId);
+    }
+});
+
 //Checks for members leaving
 socket.on("member-leave", (data) => {
     console.log(`${data.username} left group ${data.groupId}`);

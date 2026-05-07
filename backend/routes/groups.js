@@ -409,6 +409,10 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
                           authorName: "System",
                           avatar: "/default-avatar.png"
                         });
+            io.to(String(groupId)).emit("repo-attached", {
+                          groupId: groupId,
+                          repo: repoRow
+                        });
             await client.query("COMMIT");
         } catch (err) {
             await client.query("ROLLBACK");
