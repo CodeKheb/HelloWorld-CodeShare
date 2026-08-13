@@ -6,6 +6,7 @@ import session from 'express-session';
 import passport from "passport";
 import pool from "../db/pool.js";
 import { handleGithubWebhook } from '../webhooks/github.js';
+import { decryptToken, encryptToken, isEncryptedToken } from '../db/tokenEncryption.js';
 
 export const app = express()
 
@@ -104,13 +105,27 @@ passport.deserializeUser(async (id, done) => {
         }
 
         const userRow = result.rows[0];
+        const storedToken = userRow.access_token || null;
+        const accessToken = storedToken ? decryptToken(storedToken) : null;
+
+        // One-time migration: encrypt legacy plaintext tokens at rest so
+        // existing users keep working while their data gets secured.
+        if (storedToken && !isEncryptedToken(storedToken)) {
+            const encrypted = encryptToken(storedToken);
+            if (encrypted !== storedToken) {
+                await pool.query(
+                    "UPDATE users SET access_token = $1 WHERE id = $2",
+                    [encrypted, id]
+                );
+            }
+        }
 
         return done(null, {
             id: userRow.id,
             github_id: userRow.github_id,
             username: userRow.username,
             avatar_url: userRow.avatar_url,
-            accessToken: userRow.access_token
+            accessToken
         });
     } catch (error) {
         return done(error);

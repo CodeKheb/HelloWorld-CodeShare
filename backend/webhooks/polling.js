@@ -1,5 +1,6 @@
 import pool from "../db/pool.js";
 import { generatePollingEventId } from "./github.js";
+import { decryptToken } from "../db/tokenEncryption.js";
 
 async function resolveUserTokenColumn() {
         const result = await pool.query(
@@ -453,7 +454,7 @@ async function pollAllReposWithPolling(io) {
             await pollRepoForEvents({
                 groupId: repo.group_id,
                 repoFullName: repo.repo_full_name,
-                accessToken: repo.access_token,
+                accessToken: decryptToken(repo.access_token),
                 io
             });
         }

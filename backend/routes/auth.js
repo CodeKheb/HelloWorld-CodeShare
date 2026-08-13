@@ -9,6 +9,7 @@ import { Strategy as GitHubStrategy } from "passport-github2";
 import axios from 'axios';
 import { io } from "../server.js";
 import pool from "../db/pool.js";
+import { encryptToken } from "../db/tokenEncryption.js";
 
 const authRouter = Router();
 authRouter.use(cookieParser());
@@ -39,6 +40,7 @@ if (githubAuthEnabled) {
 
                 // Upsert the user into the `users` table using the github_id as the unique key.
                 // This creates the row on first login and updates the access token/username on subsequent logins.
+                // The token is encrypted at rest (AES-256-GCM) before being stored.
                 const result = await pool.query(
                     `INSERT INTO users (github_id, username, avatar_url, access_token)
                      VALUES ($1, $2, $3, $4)
@@ -47,7 +49,7 @@ if (githubAuthEnabled) {
                          username = EXCLUDED.username,
                          avatar_url = EXCLUDED.avatar_url
                      RETURNING *`,
-                    [githubId, username, avatarUrl, accessToken]
+                    [githubId, username, avatarUrl, encryptToken(accessToken)]
                 );
 
                 const userRow = result.rows[0];
