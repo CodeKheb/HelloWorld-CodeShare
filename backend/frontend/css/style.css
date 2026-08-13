@@ -465,9 +465,28 @@ a {
 }
 .contact-card:hover { background: rgba(16,24,40,0.02); }
 .contact-avatar img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-.contact-body { display: flex; flex-direction: column; }
+.contact-body { display: flex; flex-direction: column; min-width: 0; }
 .contact-body strong { font-size: 14px; }
 .contact-body .contact-meta { color: var(--muted); font-size: 12px; }
+
+/* Add button on user search results */
+.contact-add-btn {
+	margin-left: auto;
+	flex-shrink: 0;
+	padding: 6px 14px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-panel);
+	color: var(--text);
+	font: 600 12px/1 Inter, sans-serif;
+	cursor: pointer;
+	transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+.contact-add-btn:hover {
+	background: var(--bg-card);
+	border-color: var(--border-strong);
+	transform: translateY(-1px);
+}
 
 /* ── Repository Card ───────────────────────── */
 
@@ -1015,6 +1034,23 @@ a {
 .btn-primary:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
+}
+
+.btn-secondary {
+	background: var(--bg-panel);
+	color: var(--text);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	padding: 10px 16px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+.btn-secondary:hover {
+	background: var(--bg-card);
+	border-color: var(--border-strong);
+	transform: translateY(-1px);
 }
 
 .btn-cancel {

@@ -22,6 +22,7 @@ import groupsRouter from '../routes/groups.js';
 import reposRouter from '../routes/repos.js';
 import messagesRouter from '../routes/messages.js';
 import dashboardRouter from '../routes/dashboard.js';
+import usersRouter from '../routes/users.js';
 
 const requireAuth = (req, res, next) => {
     if (req.isAuthenticated()) {
@@ -177,3 +178,4 @@ app.use("/api/groups", groupsRouter);
 app.use("/api/repos", reposRouter);
 app.use("/api/messages", messagesRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/users", usersRouter);

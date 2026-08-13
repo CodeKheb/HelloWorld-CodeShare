@@ -31,6 +31,25 @@ let allContacts = [];
 let showAllGroups = false;
 let showAllContacts = false;
 
+// Search state
+let groupSearchQuery = '';
+let userSearchQuery = '';
+let userSearchResults = [];
+let userSearchTimer = null;
+let selectedAddUser = null;
+
+/** Escape HTML special characters to prevent XSS */
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
 // Load groups from backend
 async function loadGroups() {
   try {
@@ -82,14 +101,23 @@ async function loadGroups() {
   }
 }
 
+function getFilteredGroups() {
+  const q = groupSearchQuery.trim().toLowerCase();
+  if (!q) return allGroupCards;
+  return allGroupCards.filter(g => (g.name || '').toLowerCase().includes(q));
+}
+
 function renderGroups(groupsGrid = document.getElementById('groups-grid')) {
   if (!groupsGrid) return;
 
-  const groupsToShow = showAllGroups ? allGroupCards : allGroupCards.slice(0, 4);
+  const filtered = getFilteredGroups();
+  const groupsToShow = showAllGroups ? filtered : filtered.slice(0, 4);
 
   if (groupsToShow.length === 0) {
-    groupsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8b949e;">No groups yet. Create one to get started!</p>';
-    updateGroupToggle();
+    groupsGrid.innerHTML = groupSearchQuery
+      ? '<p style="grid-column: 1/-1; text-align: center; color: #8b949e;">No groups match your search.</p>'
+      : '<p style="grid-column: 1/-1; text-align: center; color: #8b949e;">No groups yet. Create one to get started!</p>';
+    updateGroupToggle(filtered.length);
     return;
   }
 
@@ -166,10 +194,12 @@ function renderGroups(groupsGrid = document.getElementById('groups-grid')) {
       groupsGrid.appendChild(card);
     });
 
-    updateGroupToggle();
+    updateGroupToggle(filtered.length);
   }
 
   function renderContacts() {
+    // Keep search results on screen while a user search is active
+    if (userSearchQuery) return;
     const contactsGrid = document.getElementById('contacts-grid');
     if (!contactsGrid) return;
 
@@ -207,19 +237,19 @@ function renderGroups(groupsGrid = document.getElementById('groups-grid')) {
 
     toggle.addEventListener('click', (e) => {
       e.preventDefault();
-      if (allGroupCards.length <= 4) return;
+      if (getFilteredGroups().length <= 4) return;
       showAllGroups = !showAllGroups;
       renderGroups();
     });
 
-    updateGroupToggle();
+    updateGroupToggle(getFilteredGroups().length);
   }
 
-  function updateGroupToggle() {
+  function updateGroupToggle(filteredCount) {
     const toggle = document.getElementById('groupsViewToggle');
     if (!toggle) return;
 
-    if (allGroupCards.length <= 4) {
+    if (filteredCount <= 4) {
       toggle.style.display = 'none';
       return;
     }
@@ -254,6 +284,230 @@ function renderGroups(groupsGrid = document.getElementById('groups-grid')) {
     toggle.style.display = '';
     toggle.textContent = showAllContacts ? 'Show less' : 'View all';
 }
+
+// ── Group live search ────────────────────────────────
+function setupGroupSearch() {
+    const input    = document.getElementById('groupSearchInput');
+    const clearBtn = document.getElementById('groupSearchClear');
+    if (!input) return;
+
+    function apply() {
+        groupSearchQuery = input.value.trim();
+        showAllGroups = false;
+        renderGroups();
+    }
+
+    input.addEventListener('input', () => {
+        if (clearBtn) clearBtn.hidden = !input.value.trim();
+        apply();
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            apply();
+            input.focus();
+        });
+    }
+}
+
+// ── User search (all registered users) ───────────────
+function setupUserSearch() {
+    const input    = document.getElementById('userSearchInput');
+    const clearBtn = document.getElementById('userSearchClear');
+    if (!input) return;
+
+    function apply() {
+        const q = input.value.trim();
+        userSearchQuery = q;
+        if (clearBtn) clearBtn.hidden = !q;
+
+        if (!q) {
+            userSearchResults = [];
+            renderContacts();
+            return;
+        }
+
+        clearTimeout(userSearchTimer);
+        userSearchTimer = setTimeout(() => fetchUserSearch(q), 200);
+    }
+
+    input.addEventListener('input', apply);
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            apply();
+            input.focus();
+        });
+    }
+}
+
+async function fetchUserSearch(q) {
+    try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Ignore stale responses if the query changed while waiting
+        if (userSearchQuery !== q) return;
+
+        userSearchResults = (data.users || []).sort((a, b) => (b.shared_groups || 0) - (a.shared_groups || 0));
+        renderUserResults();
+    } catch (err) {
+    }
+}
+
+function renderUserResults() {
+    const grid = document.getElementById('contacts-grid');
+    if (!grid) return;
+
+    const toggle = document.getElementById('contactsViewToggle');
+    if (toggle) toggle.style.display = 'none';
+
+    if (userSearchResults.length === 0) {
+        grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:#8b949e">No users match "${escapeHtml(userSearchQuery)}".</p>`;
+        return;
+    }
+
+    grid.innerHTML = '';
+
+    userSearchResults.forEach(u => {
+        const card = document.createElement('article');
+        card.className = 'contact-card';
+
+        const sharedHint = u.shared_groups > 0
+            ? `In ${u.shared_groups} of your group${u.shared_groups > 1 ? 's' : ''} · `
+            : '';
+
+        card.innerHTML = `
+            <div class="contact-avatar"><img src="${u.avatar_url || '/default-avatar.png'}" alt="${escapeHtml(u.username || 'User')}"/></div>
+            <div class="contact-body">
+                <strong>${escapeHtml(u.username || 'Unknown')}</strong>
+                <div class="contact-meta">${sharedHint}@${escapeHtml(u.username || '')}</div>
+            </div>
+            <button type="button" class="contact-add-btn" data-user-id="${u.id}">Add</button>
+        `;
+
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('.contact-add-btn')) return;
+            window.location.href = `/messages?contactId=${encodeURIComponent(u.id)}`;
+        });
+
+        grid.appendChild(card);
+    });
+
+    grid.querySelectorAll('.contact-add-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const user = userSearchResults.find(x => String(x.id) === btn.dataset.userId);
+            if (user) openAddUserModal(user);
+        });
+    });
+}
+
+// ── Add User modal ───────────────────────────────────
+function openAddUserModal(user) {
+    selectedAddUser = user;
+
+    const text = document.getElementById('addUserModalText');
+    if (text) text.innerHTML = `Add <strong>@${escapeHtml(user.username || 'user')}</strong>`;
+
+    const select = document.getElementById('addUserGroupSelect');
+    if (select) {
+        select.innerHTML = '<option value="">Select a group...</option>';
+        allGroupCards.filter(g => !g.is_direct).forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.textContent = g.name || 'Unnamed group';
+            select.appendChild(opt);
+        });
+        select.disabled = allGroupCards.filter(g => !g.is_direct).length === 0;
+    }
+
+    ModalManager.open('addUserModal');
+}
+
+function setupAddUserModal() {
+    const modalId = 'addUserModal';
+    const fieldIds = ['addUserGroupSelect'];
+
+    const closeBtn   = document.getElementById('closeAddUserModal');
+    const cancelBtn  = document.getElementById('cancelAddUserModal');
+    const submitBtn  = document.getElementById('submitAddUserToGroupBtn');
+    const dmBtn      = document.getElementById('startDmFromAddModal');
+    const overlay    = document.getElementById(modalId);
+
+    if (closeBtn) closeBtn.addEventListener('click', () => ModalManager.reset(modalId, fieldIds));
+    if (cancelBtn) cancelBtn.addEventListener('click', () => ModalManager.reset(modalId, fieldIds));
+
+    if (overlay) {
+        overlay.addEventListener('click', (e) => {
+            if (e.target.id === modalId) ModalManager.reset(modalId, fieldIds);
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const el = document.getElementById(modalId);
+        if (el && !el.classList.contains('hidden')) ModalManager.reset(modalId, fieldIds);
+    });
+
+    if (submitBtn) {
+        submitBtn.addEventListener('click', async () => {
+            const select = document.getElementById('addUserGroupSelect');
+            const groupId = select && select.value;
+
+            if (!groupId || !selectedAddUser) {
+                alert('Please select a group');
+                return;
+            }
+
+            ModalManager.setButtonLoading(submitBtn, true, 'Adding...');
+            try {
+                const res = await fetch(`/api/groups/${groupId}/members`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: selectedAddUser.id })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    ModalManager.reset(modalId, fieldIds);
+                    loadGroups();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to add user'));
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                ModalManager.setButtonLoading(submitBtn, false);
+            }
+        });
+    }
+
+    if (dmBtn) {
+        dmBtn.addEventListener('click', () => {
+            if (!selectedAddUser) return;
+            ModalManager.close(modalId);
+            window.location.href = `/messages?contactId=${encodeURIComponent(selectedAddUser.id)}`;
+        });
+    }
+}
+
+// Wire searches once (static HTML inputs exist at parse time)
+setupGroupSearch();
+setupUserSearch();
+
+// The Add User modal lives in modals.html (fetched async) — wire it once it exists
+(function wireAddUserModalWhenReady() {
+    if (document.getElementById('addUserModal')) {
+        setupAddUserModal();
+        return;
+    }
+    setTimeout(wireAddUserModalWhenReady, 300);
+})();
 
 // Load groups on page load
 loadGroups();

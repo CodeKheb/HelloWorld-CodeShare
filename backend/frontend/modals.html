@@ -56,6 +56,30 @@
     </div>
 </div>
 
+<!-- ========== ADD USER MODAL (People & Groups search) ========== -->
+<div id="addUserModal" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Add User</h2>
+            <button id="closeAddUserModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="addUserModalText" style="margin-bottom: 12px;">Add <strong>@user</strong></p>
+
+            <label for="addUserGroupSelect">ADD TO GROUP</label>
+            <select id="addUserGroupSelect">
+                <option value="">Select a group...</option>
+            </select>
+            <small>Pick one of your groups to add this user as a member.</small>
+        </div>
+        <div class="modal-footer">
+            <button id="submitAddUserToGroupBtn" class="btn-primary">ADD TO GROUP</button>
+            <button id="startDmFromAddModal" class="btn-secondary">Message</button>
+            <button id="cancelAddUserModal" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <!-- ========== CREATE REPOSITORY MODAL ========== -->
 <div id="createRepoModal" class="modal-overlay hidden">
     <div class="modal">

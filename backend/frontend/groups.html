@@ -85,7 +85,16 @@
                 <section class="section-block">
                     <div class="section-heading">
                         <h2>Groups</h2>
-                        <a href="#" id="groupsViewToggle">View all</a>
+                        <div class="section-heading__actions">
+                            <div class="repo-search">
+                                <span class="material-symbols-outlined repo-search__icon" aria-hidden="true">search</span>
+                                <input type="text" id="groupSearchInput" placeholder="Search your groups..." aria-label="Search your groups" autocomplete="off" />
+                                <button type="button" id="groupSearchClear" class="repo-search__clear" aria-label="Clear group search" hidden>
+                                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                                </button>
+                            </div>
+                            <a href="#" id="groupsViewToggle">View all</a>
+                        </div>
                     </div>
 
                     <!-- Groups Grid -->
@@ -97,7 +106,16 @@
                     <section class="section-block">
                         <div class="section-heading">
                             <h2>People</h2>
-                            <a href="#" id="contactsViewToggle">View all</a>
+                            <div class="section-heading__actions">
+                                <div class="repo-search">
+                                    <span class="material-symbols-outlined repo-search__icon" aria-hidden="true">search</span>
+                                    <input type="text" id="userSearchInput" placeholder="Search all users..." aria-label="Search all users" autocomplete="off" />
+                                    <button type="button" id="userSearchClear" class="repo-search__clear" aria-label="Clear user search" hidden>
+                                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                                    </button>
+                                </div>
+                                <a href="#" id="contactsViewToggle">View all</a>
+                            </div>
                         </div>
 
                         <!-- Contacts Grid -->

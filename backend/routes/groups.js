@@ -552,6 +552,87 @@ groupsRouter.post("/:groupId/join", async (req, res) => {
     }
 });
 
+// POST /api/groups/:groupId/members - Add a user to a group (any member can add)
+groupsRouter.post("/:groupId/members", async (req, res) => {
+    try {
+        if (!req.isAuthenticated()) {
+            return res.status(401).json({ error: "User not authenticated" });
+        }
+
+        const { groupId } = req.params;
+        const { userId } = req.body;
+        const requesterId = req.user.id;
+
+        if (!userId) {
+            return res.status(400).json({ error: "userId is required" });
+        }
+
+        // Requester must already be a member of the group
+        const memberCheck = await pool.query(
+            `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`,
+            [groupId, requesterId]
+        );
+        if (memberCheck.rows.length === 0) {
+            return res.status(403).json({ error: "You are not a member of this group" });
+        }
+
+        // Target user must exist
+        const userCheck = await pool.query(
+            `SELECT id, username, avatar_url FROM users WHERE id = $1`,
+            [userId]
+        );
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const addedUser = userCheck.rows[0];
+
+        // Add member (idempotent)
+        const insertResult = await pool.query(
+            `INSERT INTO group_members (group_id, user_id)
+             VALUES ($1, $2)
+             ON CONFLICT (group_id, user_id) DO NOTHING
+             RETURNING user_id`,
+            [groupId, userId]
+        );
+
+        const wasAdded = insertResult.rows.length > 0;
+
+        if (wasAdded) {
+            // Notify the group in real time
+            io.to(String(groupId)).emit("server-group-text", {
+                id: null,
+                groupId,
+                senderId: requesterId,
+                text: `${addedUser.username} was added to the group by ${req.user.username}.`,
+                type: "system",
+                timestamp: new Date(),
+                author: "System",
+                authorName: "System",
+                avatar: "/default-avatar.png"
+            });
+            io.to(String(groupId)).emit("member-added", {
+                groupId,
+                user: {
+                    id: addedUser.id,
+                    username: addedUser.username,
+                    avatar_url: addedUser.avatar_url
+                }
+            });
+        }
+
+        return res.status(201).json({
+            success: true,
+            added: wasAdded,
+            groupId,
+            user: { id: addedUser.id, username: addedUser.username, avatar_url: addedUser.avatar_url }
+        });
+    } catch (error) {
+        console.error("Error adding member to group:", error);
+        return res.status(500).json({ error: "Failed to add member", details: error.message });
+    }
+});
+
 // POST /groups/:groupId/regenerate-invite
 groupsRouter.post("/:groupId/regenerate-invite", async (req, res) => {
     try {
