@@ -554,6 +554,10 @@ body.messages-page {
     background: var(--muted);
 }
 
+.messages-page .presence-dot--offline {
+    background: #484f58;
+}
+
 .messages-page .member-muted {
     color: var(--muted);
 }

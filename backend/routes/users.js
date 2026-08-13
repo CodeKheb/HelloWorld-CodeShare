@@ -1,7 +1,20 @@
 import { Router } from "express";
 import pool from "../db/pool.js";
+import { getOnlineUserIds } from "../socket/presence.js";
 
 const usersRouter = Router();
+
+/**
+ * GET /api/users/online
+ * Returns the internal user ids currently online (have an open socket).
+ * Used to seed presence state before the live socket stream takes over.
+ */
+usersRouter.get("/online", (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    return res.json({ success: true, online: getOnlineUserIds() });
+});
 
 /**
  * GET /api/users/search?q=username

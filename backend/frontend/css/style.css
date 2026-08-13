@@ -488,6 +488,36 @@ a {
 	transform: translateY(-1px);
 }
 
+/* ── Presence indicators (generic) ─────────────── */
+.status-avatar {
+	position: relative;
+	flex-shrink: 0;
+}
+.status-avatar img {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+.presence-dot {
+	position: absolute;
+	right: -1px;
+	bottom: -1px;
+	width: 10px;
+	height: 10px;
+	border: 2px solid var(--bg-panel);
+	border-radius: 999px;
+}
+.presence-dot--online {
+	background: var(--brand);
+}
+.presence-dot--away {
+	background: var(--muted);
+}
+.presence-dot--offline {
+	background: #484f58;
+}
+
 /* ── Repository Card ───────────────────────── */
 
 .group-card {

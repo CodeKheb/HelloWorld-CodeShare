@@ -30,7 +30,7 @@ const getSocketUrl = () => {
     return window.location.origin;
 };
 
-const socket = io("https://helloworld-codeshare.onrender.com", {
+const socket = io(getSocketUrl(), {
     withCredentials: true
 });
 
@@ -826,10 +826,11 @@ function renderMemberList(members) {
     membersToShow.forEach((m) => {
         const li = document.createElement('li');
         li.className = 'member-item';
+        const isOnline = typeof window.isUserOnline === 'function' && window.isUserOnline(m.id);
         li.innerHTML = `
             <div class="status-avatar">
                 <img alt="${escapeAttr(m.username || 'Member')}" class="avatar avatar--small" src="${escapeAttr(m.avatar_url || '/default-avatar.png')}"/>
-                <span class="presence-dot presence-dot--online"></span>
+                <span class="presence-dot ${isOnline ? 'presence-dot--online' : 'presence-dot--offline'}" data-presence-user="${escapeAttr(m.id)}"></span>
             </div>
             <span>${escapeHtml(m.username || 'Unknown')}</span>
         `;

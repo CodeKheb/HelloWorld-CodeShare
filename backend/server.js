@@ -41,6 +41,7 @@ import { app, sessionMiddleware } from "./express/express.js";
 import passport from "passport";
 import chatHandler from "./socket/chat.js";
 import { socketMapList, userInit } from "./socket/activeSockets";
+import { registerPresence, unregisterPresence } from "./socket/presence.js";
 import { pollAllReposWithPolling } from "./webhooks/polling.js";
 
 const port = process.env.PORT || 3000;
@@ -76,6 +77,7 @@ io.on("connection", (socket) => {
     if (user) {
         userInit(socket.id, {
             authenticated: true,
+            id: user.id,
             github_id: user.github_id,
             username: user.username,
             avatar_url: user.avatar_url,
@@ -85,7 +87,11 @@ io.on("connection", (socket) => {
         });
 
         socket.userId = user.github_id;
+        socket.dbUserId = user.id;
         socket.username = user.username;
+
+        // Track presence so clients can show online/offline status
+        registerPresence(user.id, socket);
 
         console.log(`User ${user.username} connected with socket ${socket.id}`);
     } else {
@@ -103,6 +109,7 @@ io.on("connection", (socket) => {
     }
 
     socket.on("disconnect", () => {
+        unregisterPresence(socket.dbUserId, socket);
         socketMapList.delete(socket.id);
         console.log('Socket disconnected:', socket.id);
     });

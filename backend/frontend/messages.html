@@ -8,6 +8,7 @@
         <link href="https://fonts.googleapis.com" rel="preconnect"/>
         <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
         <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+        <script src="/js/presence.js"></script>
         <!-- Modal System -->
         <script src="/js/modal.js"></script>
         <script src="/js/emoji-picker.js"></script>
@@ -312,16 +313,22 @@
                     addMemberResults.innerHTML = '<p class="add-member-empty">No users found.</p>';
                     return;
                 }
-                addMemberResults.innerHTML = users.map((u) => `
+                addMemberResults.innerHTML = users.map((u) => {
+                    const online = typeof window.isUserOnline === 'function' && window.isUserOnline(u.id);
+                    return `
                     <div class="add-member-result">
-                        <div class="contact-avatar"><img src="${u.avatar_url || '/default-avatar.png'}" alt="${escapeHtml(u.username || 'User')}"/></div>
+                        <div class="status-avatar">
+                            <img class="avatar avatar--small" src="${u.avatar_url || '/default-avatar.png'}" alt="${escapeHtml(u.username || 'User')}"/>
+                            <span class="presence-dot ${online ? 'presence-dot--online' : 'presence-dot--offline'}" data-presence-user="${u.id}"></span>
+                        </div>
                         <div class="contact-body">
                             <strong>${escapeHtml(u.username || 'Unknown')}</strong>
-                            <div class="contact-meta">@${escapeHtml(u.username || '')}</div>
+                            <div class="contact-meta">@${escapeHtml(u.username || '')}${online ? ' · online' : ''}</div>
                         </div>
                         <button type="button" class="contact-add-btn add-member-add" data-user-id="${u.id}" data-username="${escapeHtml(u.username || '')}">Add</button>
                     </div>
-                `).join('');
+                `;
+                }).join('');
 
                 addMemberResults.querySelectorAll('.add-member-add').forEach((btn) => {
                     btn.addEventListener('click', async () => {

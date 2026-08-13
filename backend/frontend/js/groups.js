@@ -215,11 +215,15 @@ function renderGroups(groupsGrid = document.getElementById('groups-grid')) {
     contactsToShow.forEach(c => {
       const card = document.createElement('article');
       card.className = 'contact-card';
+      const isOnline = typeof window.isUserOnline === 'function' && window.isUserOnline(c.id);
       card.innerHTML = `
-        <div class="contact-avatar"><img src="${c.avatar_url||'/default-avatar.png'}" alt="${c.username||'User'}"/></div>
+        <div class="status-avatar">
+          <img src="${c.avatar_url||'/default-avatar.png'}" alt="${escapeHtml(c.username||'User')}"/>
+          <span class="presence-dot ${isOnline ? 'presence-dot--online' : 'presence-dot--offline'}" data-presence-user="${c.id}"></span>
+        </div>
         <div class="contact-body">
-          <strong>${c.username || 'Unknown'}</strong>
-          <div class="contact-meta">${c.username ? `@${c.username}` : ''}</div>
+          <strong>${escapeHtml(c.username || 'Unknown')}</strong>
+          <div class="contact-meta">${c.username ? `@${escapeHtml(c.username)}` : ''}${isOnline ? ' · online' : ''}</div>
         </div>
       `;
       card.addEventListener('click', () => {
@@ -380,11 +384,15 @@ function renderUserResults() {
             ? `In ${u.shared_groups} of your group${u.shared_groups > 1 ? 's' : ''} · `
             : '';
 
+        const isOnline = typeof window.isUserOnline === 'function' && window.isUserOnline(u.id);
         card.innerHTML = `
-            <div class="contact-avatar"><img src="${u.avatar_url || '/default-avatar.png'}" alt="${escapeHtml(u.username || 'User')}"/></div>
+            <div class="status-avatar">
+                <img src="${u.avatar_url || '/default-avatar.png'}" alt="${escapeHtml(u.username || 'User')}"/>
+                <span class="presence-dot ${isOnline ? 'presence-dot--online' : 'presence-dot--offline'}" data-presence-user="${u.id}"></span>
+            </div>
             <div class="contact-body">
                 <strong>${escapeHtml(u.username || 'Unknown')}</strong>
-                <div class="contact-meta">${sharedHint}@${escapeHtml(u.username || '')}</div>
+                <div class="contact-meta">${sharedHint}@${escapeHtml(u.username || '')}${isOnline ? ' · online' : ''}</div>
             </div>
             <button type="button" class="contact-add-btn" data-user-id="${u.id}">Add</button>
         `;
