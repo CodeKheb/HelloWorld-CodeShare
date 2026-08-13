@@ -1594,6 +1594,67 @@ body.messages-page {
     font-family: 'Courier New', monospace;
 }
 
+/* ── Add Member modal ─────────────────────────── */
+.invite-code-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+}
+.invite-code-row code {
+    flex: 1;
+    color: #58a6ff;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    letter-spacing: 0.04em;
+    font-family: 'Courier New', monospace;
+}
+.invite-code-row .icon-button {
+    width: 28px;
+    height: 28px;
+}
+
+.modal-divider {
+    border: none;
+    border-top: 1px solid #30363d;
+    margin: 14px 0;
+}
+
+.add-member-results {
+    margin-top: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    background: #0d1117;
+}
+.add-member-result {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #21262d;
+}
+.add-member-result:last-child {
+    border-bottom: none;
+}
+.add-member-empty {
+    margin: 0;
+    padding: 14px;
+    text-align: center;
+    color: #8b949e;
+    font-size: 0.8125rem;
+}
+.contact-add-btn.added {
+    background: rgba(63, 185, 80, 0.15);
+    border-color: #3fb950;
+    color: #3fb950;
+}
+
 .skeleton {
     background: linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%);
     background-size: 200% 100%;

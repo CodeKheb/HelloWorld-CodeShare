@@ -133,12 +133,6 @@
                                 <span class="material-symbols-outlined" aria-hidden="true">person_add</span>
                                 Add Member
                             </button>
-                            <div id="groupIdDisplay" class="group-id-display hidden">
-                                Invite Code: <span id="inviteCodeValue">—</span>
-                                <button id="copyInviteBtn" class="icon-button" aria-label="Copy invite code" style="width:24px;height:24px;margin-left:6px;vertical-align:middle;">
-                                    <span style="font-family:'Material Symbols Outlined';font-size:16px;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;line-height:1;">content_copy</span>
-                                </button>
-                            </div>                        
 
                         </section>
 
@@ -170,6 +164,38 @@
 
         <!-- Modal Overlay -->
         <div id="groupPanelOverlay" class="group-panel-overlay hidden"></div>
+
+        <!-- Add Member Modal -->
+        <div id="addMemberModal" class="modal-overlay hidden">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2>Add Member</h2>
+                    <button id="closeAddMemberModal" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <label>INVITE CODE</label>
+                    <div class="invite-code-row">
+                        <code id="addMemberInviteCode">—</code>
+                        <button type="button" id="copyAddMemberInviteBtn" class="icon-button" aria-label="Copy invite code" title="Copy invite code">
+                            <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+                        </button>
+                    </div>
+                    <small>Anyone with this code can join the group.</small>
+
+                    <hr class="modal-divider" />
+
+                    <label for="addMemberSearchInput">ADD SOMEONE DIRECTLY</label>
+                    <div class="repo-input-wrapper">
+                        <span class="material-symbols-outlined repo-search__icon" aria-hidden="true">search</span>
+                        <input type="text" id="addMemberSearchInput" placeholder="Search all users..." autocomplete="off" />
+                    </div>
+                    <div id="addMemberSearchResults" class="add-member-results"></div>
+                </div>
+                <div class="modal-footer">
+                    <button id="closeAddMemberModalFooter" class="btn-cancel">Close</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Commits Modal -->
         <div id="commitsOverlay" class="modal-overlay hidden">
@@ -241,22 +267,111 @@
         </div>
 
         <script>
-            // ── "Add Member" invite code display ────────────────────────
+            // ── "Add Member" modal: invite code + direct add ─────────────
             document.getElementById('showGroupIdBtn')?.addEventListener('click', () => {
-                const display = document.getElementById('groupIdDisplay');
-                const val = document.getElementById('inviteCodeValue');
-                if (val) val.textContent = window.currentInviteCode || 'Code cannot be fetched';
-                display.classList.toggle('hidden');
+                if (!window.currentGroupId) { alert('Select a group first'); return; }
+                const codeEl = document.getElementById('addMemberInviteCode');
+                if (codeEl) codeEl.textContent = window.currentInviteCode || '—';
+                const input = document.getElementById('addMemberSearchInput');
+                if (input) input.value = '';
+                const results = document.getElementById('addMemberSearchResults');
+                if (results) results.innerHTML = '';
+                ModalManager.open('addMemberModal');
             });
 
-            document.getElementById('copyInviteBtn')?.addEventListener('click', () => {
-                const code = document.getElementById('inviteCodeValue')?.textContent;
+            document.getElementById('copyAddMemberInviteBtn')?.addEventListener('click', () => {
+                const code = document.getElementById('addMemberInviteCode')?.textContent;
                 if (!code || code === '—') return;
                 navigator.clipboard.writeText(code).then(() => {
-                    const btn = document.getElementById('copyInviteBtn');
-                    btn.querySelector('.material-symbols-outlined').textContent = 'check';
-                    setTimeout(() => btn.querySelector('.material-symbols-outlined').textContent = 'content_copy', 1500);
+                    const icon = document.querySelector('#copyAddMemberInviteBtn .material-symbols-outlined');
+                    if (icon) icon.textContent = 'check';
+                    setTimeout(() => { if (icon) icon.textContent = 'content_copy'; }, 1500);
                 });
+            });
+
+            const addMemberOverlay = document.getElementById('addMemberModal');
+            document.getElementById('closeAddMemberModal')?.addEventListener('click', () => ModalManager.close('addMemberModal'));
+            document.getElementById('closeAddMemberModalFooter')?.addEventListener('click', () => ModalManager.close('addMemberModal'));
+            addMemberOverlay?.addEventListener('click', (e) => {
+                if (e.target.id === 'addMemberModal') ModalManager.close('addMemberModal');
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && addMemberOverlay && !addMemberOverlay.classList.contains('hidden')) {
+                    ModalManager.close('addMemberModal');
+                }
+            });
+
+            // Search all users and add directly to the current group
+            const addMemberSearchInput = document.getElementById('addMemberSearchInput');
+            const addMemberResults = document.getElementById('addMemberSearchResults');
+            let addMemberSearchTimer = null;
+
+            function renderAddMemberResults(users) {
+                if (!addMemberResults) return;
+                if (!users || users.length === 0) {
+                    addMemberResults.innerHTML = '<p class="add-member-empty">No users found.</p>';
+                    return;
+                }
+                addMemberResults.innerHTML = users.map((u) => `
+                    <div class="add-member-result">
+                        <div class="contact-avatar"><img src="${u.avatar_url || '/default-avatar.png'}" alt="${escapeHtml(u.username || 'User')}"/></div>
+                        <div class="contact-body">
+                            <strong>${escapeHtml(u.username || 'Unknown')}</strong>
+                            <div class="contact-meta">@${escapeHtml(u.username || '')}</div>
+                        </div>
+                        <button type="button" class="contact-add-btn add-member-add" data-user-id="${u.id}" data-username="${escapeHtml(u.username || '')}">Add</button>
+                    </div>
+                `).join('');
+
+                addMemberResults.querySelectorAll('.add-member-add').forEach((btn) => {
+                    btn.addEventListener('click', async () => {
+                        const groupId = window.currentGroupId;
+                        if (!groupId) { alert('Select a group first'); return; }
+                        btn.disabled = true;
+                        btn.textContent = 'Adding...';
+                        try {
+                            const res = await fetch(`/api/groups/${encodeURIComponent(groupId)}/members`, {
+                                method: 'POST',
+                                credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: btn.dataset.userId })
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                                btn.textContent = '✓ Added';
+                                btn.classList.add('added');
+                                btn.disabled = true;
+                                if (typeof refreshCurrentGroupDetails === 'function') refreshCurrentGroupDetails();
+                            } else {
+                                btn.textContent = 'Add';
+                                btn.disabled = false;
+                                alert('Error: ' + (data.error || 'Failed to add user'));
+                            }
+                        } catch (err) {
+                            btn.textContent = 'Add';
+                            btn.disabled = false;
+                            alert('Error: ' + err.message);
+                        }
+                    });
+                });
+            }
+
+            addMemberSearchInput?.addEventListener('input', () => {
+                clearTimeout(addMemberSearchTimer);
+                const q = addMemberSearchInput.value.trim();
+                if (!q) {
+                    if (addMemberResults) addMemberResults.innerHTML = '';
+                    return;
+                }
+                addMemberSearchTimer = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        renderAddMemberResults(data.users || []);
+                    } catch (err) {
+                    }
+                }, 250);
             });
 
             // ── "Attach Repo" header button ──────────────────────────────
