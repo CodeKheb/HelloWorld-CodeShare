@@ -76,7 +76,10 @@ export const sessionMiddleware = session({
         proxy: true,
     cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' ? true : false,
+        // 'auto' sets the Secure flag only when the connection is actually
+        // HTTPS (detected via X-Forwarded-Proto behind Render's proxy), so
+        // sessions also work over plain http://localhost during local dev.
+        secure: 'auto',
         sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }

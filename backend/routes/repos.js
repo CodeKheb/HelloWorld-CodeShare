@@ -158,11 +158,51 @@ router.get("/", async (req, res) => {
 });
 
 //Make sure frontend uses "/search?repo_name=value"
-router.get("/search", (req, res) => {
-    const repoName = req.query.repo_name
-    //TODO: Search in database fo specific reponame
+/**
+ * SEARCH REPOSITORIES
+ * Searches the authenticated user's GitHub repositories by name.
+ * Uses GitHub's search API scoped to the user, so it covers all their
+ * repos (including ones beyond the first page returned by /api/repos).
+ */
+router.get("/search", async (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
 
-})
+    const repoName = String(req.query.repo_name || "").trim();
+
+    if (!repoName) {
+        return res.status(400).json({ error: "repo_name query parameter is required" });
+    }
+
+    try {
+        const response = await axios.get("https://api.github.com/search/repositories", {
+            params: {
+                // Scope the search to the user's own repos (private repos included,
+                // since the request is authenticated with their token)
+                q: `user:${req.user.username} ${repoName} in:name`,
+                per_page: 50
+            },
+            headers: {
+                Authorization: `token ${req.user.accessToken}`,
+                "User-Agent": "CodeShare-App",
+                Accept: "application/vnd.github.v3+json"
+            }
+        });
+
+        res.json({
+            success: true,
+            query: repoName,
+            total_count: response.data.total_count,
+            repos: response.data.items
+        });
+    } catch (error) {
+        console.error("Search Repositories Error:", error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({
+            error: error.response?.data?.message || "Failed to search repositories"
+        });
+    }
+});
 
 /**
  * GET REPOSITORY COMMITS

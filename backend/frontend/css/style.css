@@ -346,6 +346,86 @@ a {
 	text-decoration: underline;
 }
 
+/* ── Repo Search Bar ────────────────────────── */
+.section-heading__actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.repo-search {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	background: var(--bg-card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	padding: 0 8px 0 12px;
+	transition: border-color 160ms ease, box-shadow 160ms ease;
+	min-width: 220px;
+	flex: 1;
+	max-width: 320px;
+}
+
+.repo-search:focus-within {
+	border-color: var(--brand);
+	box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.1);
+}
+
+.repo-search__icon {
+	font-size: 18px;
+	color: var(--muted);
+	flex-shrink: 0;
+}
+
+.repo-search input {
+	border: none;
+	background: none;
+	padding: 9px 0;
+	color: var(--text);
+	font-family: Inter, sans-serif;
+	font-size: 14px;
+	flex: 1;
+	min-width: 0;
+}
+
+.repo-search input:focus {
+	outline: none;
+	border: none;
+	box-shadow: none;
+}
+
+.repo-search input::placeholder {
+	color: var(--muted);
+}
+
+.repo-search__clear {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: none;
+	border: none;
+	color: var(--muted);
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	line-height: 1;
+}
+
+.repo-search__clear .material-symbols-outlined {
+	font-size: 16px;
+}
+
+.repo-search__clear:hover {
+	color: var(--text);
+	background: var(--bg-panel);
+}
+
+.repo-search__btn {
+	white-space: nowrap;
+}
+
 .section-title {
 	font-size: 20px;
 	line-height: 1.4;
@@ -1424,6 +1504,15 @@ a {
 	.section-heading {
 		flex-direction: column;
 		align-items: flex-start;
+	}
+
+	.section-heading__actions {
+		width: 100%;
+	}
+
+	.repo-search {
+		max-width: none;
+		flex: 1;
 	}
 
 	.topbar-tab {

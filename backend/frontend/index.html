@@ -74,7 +74,17 @@
                 <section class="section-block">
                     <div class="section-heading">
                         <h2>Your Repositories</h2>
-                        <a href="#">View all</a>
+                        <div class="section-heading__actions">
+                            <div class="repo-search">
+                                <span class="material-symbols-outlined repo-search__icon" aria-hidden="true">search</span>
+                                <input type="text" id="repoSearchInput" placeholder="Search repositories..." aria-label="Search repositories" autocomplete="off" />
+                                <button type="button" id="repoSearchClear" class="repo-search__clear" aria-label="Clear search" hidden>
+                                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                                </button>
+                            </div>
+                            <button type="button" id="repoSearchBtn" class="secondary-button repo-search__btn">Search</button>
+                            <a href="#" id="repoViewAll">View all</a>
+                        </div>
                     </div>
                     <div class="group-grid" id="repo-grid">
                         <p style="color: var(--muted);">Fetching repositories...</p>

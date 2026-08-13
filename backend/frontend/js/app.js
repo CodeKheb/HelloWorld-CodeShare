@@ -123,6 +123,7 @@ document.querySelectorAll('[data-route]').forEach(link => {
 
 let allRepos   = [];
 let showingAll = false;
+let searchQuery = '';
 let allActivities = [];
 let showingAllActivities = false;
 
@@ -141,13 +142,16 @@ async function initializeDashboard() {
         const repoRes = await fetch('/api/repos', { credentials: 'include' });
         allRepos      = await repoRes.json();
 
-        // 3. Render first 3
+        // 3. Render first 4
         renderRepos(false);
 
-        // 4. "View all" toggle
+        // 4. Repo search
+        setupRepoSearch();
+
+        // 5. "View all" toggle
         setupViewAllHandler();
 
-        // 5. Recent Activity
+        // 6. Recent Activity
         setupRecentActivityToggle();
         loadRecentActivity();
 
@@ -158,10 +162,14 @@ async function initializeDashboard() {
 
 function renderRepos(showAll) {
     const grid        = document.getElementById('repo-grid');
-    const reposToShow = showAll ? allRepos : allRepos.slice(0, 4);
+    const filtered    = getFilteredRepos();
+    const reposToShow = showAll ? filtered : filtered.slice(0, 4);
 
     if (reposToShow.length === 0) {
-        grid.innerHTML = '<p style="color:var(--muted)">No repositories found.</p>';
+        grid.innerHTML = searchQuery
+            ? `<p style="color:var(--muted)">No repositories match "${escapeHtml(searchQuery)}".</p>`
+            : '<p style="color:var(--muted)">No repositories found.</p>';
+        updateViewAllLink(filtered);
         return;
     }
 
@@ -197,22 +205,88 @@ function renderRepos(showAll) {
             </div>
         </article>
     `).join('');
+
+    updateViewAllLink(filtered);
 }
 
-function setupViewAllHandler() {
-    const link = document.querySelector('.section-heading a[href="#"]');
+/**
+ * Return the repositories matching the current search query.
+ * Matches against name, full name, description, language and owner login.
+ */
+function getFilteredRepos() {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return allRepos;
+
+    return allRepos.filter(repo => {
+        const haystack = [
+            repo.name,
+            repo.full_name,
+            repo.description,
+            repo.language,
+            repo.owner && repo.owner.login
+        ].filter(Boolean).join(' ').toLowerCase();
+        return haystack.includes(query);
+    });
+}
+
+/** Show/hide the "View all" toggle based on how many repos are currently visible */
+function updateViewAllLink(filteredCount) {
+    const link = document.getElementById('repoViewAll');
     if (!link) return;
 
-    if (allRepos.length <= 3) {
+    if (filteredCount <= 4) {
         link.style.display = 'none';
         return;
     }
+
+    link.style.display = '';
+    link.textContent = showingAll ? 'Show less' : 'View all';
+}
+
+function setupRepoSearch() {
+    const input     = document.getElementById('repoSearchInput');
+    const searchBtn = document.getElementById('repoSearchBtn');
+    const clearBtn  = document.getElementById('repoSearchClear');
+    if (!input || !searchBtn) return;
+
+    function applySearch() {
+        searchQuery = input.value.trim();
+        showingAll  = false;
+        renderRepos(false);
+    }
+
+    searchBtn.addEventListener('click', applySearch);
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applySearch();
+        }
+    });
+
+    input.addEventListener('input', () => {
+        if (clearBtn) clearBtn.hidden = !input.value.trim();
+        // Live search: filter results on every keystroke
+        applySearch();
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            applySearch();
+            input.focus();
+        });
+    }
+}
+
+function setupViewAllHandler() {
+    const link = document.getElementById('repoViewAll');
+    if (!link) return;
 
     link.addEventListener('click', (e) => {
         e.preventDefault();
         showingAll = !showingAll;
         renderRepos(showingAll);
-        link.textContent = showingAll ? 'Show less' : 'View all';
     });
 }
 
