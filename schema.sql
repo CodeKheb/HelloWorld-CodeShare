@@ -14,6 +14,8 @@ CREATE TABLE users (
   github_id BIGINT UNIQUE NOT NULL,
   username VARCHAR(255) NOT NULL,
   avatar_url TEXT,
+  -- GitHub OAuth access token, encrypted at rest with AES-256-GCM
+  -- (format: v1.<iv>.<authTag>.<ciphertext> — see backend/db/tokenEncryption.js)
   access_token TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
