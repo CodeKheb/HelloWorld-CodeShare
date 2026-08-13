@@ -135,6 +135,13 @@
             <button id="closeAttachRepoModal" class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
+            <label for="attachRepoSearchInput">SEARCH YOUR REPOSITORIES</label>
+            <div class="repo-input-wrapper">
+                <span class="material-symbols-outlined repo-search__icon" aria-hidden="true">search</span>
+                <input type="text" id="attachRepoSearchInput" placeholder="Search your repositories..." autocomplete="off" />
+            </div>
+            <div id="attachRepoSearchResults" class="attach-repo-results" hidden></div>
+
             <label for="attachRepoOwnerInput">OWNER <span class="required">*</span></label>
             <input type="text" id="attachRepoOwnerInput" placeholder="e.g. octocat" autocomplete="off"/>
 
@@ -143,7 +150,8 @@
                 <span class="repo-icon">/</span>
                 <input type="text" id="attachRepoNameInput" placeholder="e.g. my-repo" autocomplete="off"/>
             </div>
-            <small>Attach a GitHub repository to this group.</small>            
+            <small>Attach a GitHub repository to this group. Only repositories that exist on GitHub can be attached.</small>
+            <small id="attachRepoStatus" class="attach-repo-status"></small>
         </div>
         <div class="modal-footer">
             <button id="submitAttachRepoBtn" class="btn-primary">ATTACH REPOSITORY</button>

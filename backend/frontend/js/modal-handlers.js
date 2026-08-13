@@ -352,7 +352,7 @@ document.getElementById('submitGroup')?.addEventListener('click', async () => {
  */
 function initAttachRepoModal(onSuccess) {
     const modalId = 'attachRepoModal';
-    const fieldIds = ['attachRepoOwnerInput', 'attachRepoNameInput'];
+    const fieldIds = ['attachRepoOwnerInput', 'attachRepoNameInput', 'attachRepoSearchInput'];
 
     // Register standard modal controls
     ModalManager.registerModal(
@@ -368,7 +368,93 @@ function initAttachRepoModal(onSuccess) {
         ModalManager.reset(modalId, fieldIds);
     });
 
-    // Handle form submission
+    // ── Repo search (searches the current user's own GitHub repos) ──
+    const searchInput   = document.getElementById('attachRepoSearchInput');
+    const resultsBox    = document.getElementById('attachRepoSearchResults');
+    const ownerInput    = document.getElementById('attachRepoOwnerInput');
+    const repoInput     = document.getElementById('attachRepoNameInput');
+    const statusEl      = document.getElementById('attachRepoStatus');
+    let repoSearchTimer = null;
+
+    function setStatus(message, type) {
+        if (!statusEl) return;
+        statusEl.textContent = message || '';
+        statusEl.className = 'attach-repo-status' + (type ? ` ${type}` : '');
+    }
+
+    function clearStatus() {
+        setStatus('', '');
+    }
+
+    async function runRepoSearch(q) {
+        try {
+            const res = await fetch(`/api/repos/search?repo_name=${encodeURIComponent(q)}`, { credentials: 'include' });
+            if (!res.ok) {
+                if (!resultsBox) return;
+                resultsBox.innerHTML = '<div class="attach-repo-result">Search unavailable. Try typing owner/repo manually.</div>';
+                resultsBox.hidden = false;
+                return;
+            }
+            const data = await res.json();
+            const repos = (data.repos || []).filter(r => r && r.full_name);
+
+            if (!resultsBox) return;
+            if (repos.length === 0) {
+                resultsBox.innerHTML = '<div class="attach-repo-result">No repositories match your search.</div>';
+            } else {
+                resultsBox.innerHTML = repos.map(r => {
+                    const [o, n] = String(r.full_name).split('/');
+                    return `<div class="attach-repo-result" data-owner="${encodeURIComponent(o)}" data-repo="${encodeURIComponent(n)}">
+                        <span class="material-symbols-outlined">folder</span>
+                        <strong>${escapeHtml(r.full_name)}</strong>
+                        ${r.private ? '<span class="badge">Private</span>' : '<span class="badge badge--public">Public</span>'}
+                    </div>`;
+                }).join('');
+            }
+            resultsBox.hidden = false;
+        } catch (err) {
+            if (resultsBox) {
+                resultsBox.innerHTML = '<div class="attach-repo-result">Search unavailable. Try typing owner/repo manually.</div>';
+                resultsBox.hidden = false;
+            }
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(repoSearchTimer);
+            const q = searchInput.value.trim();
+            if (!resultsBox) return;
+            if (!q) {
+                resultsBox.hidden = true;
+                resultsBox.innerHTML = '';
+                return;
+            }
+            repoSearchTimer = setTimeout(() => runRepoSearch(q), 250);
+        });
+    }
+
+    if (resultsBox) {
+        resultsBox.addEventListener('click', (e) => {
+            const item = e.target.closest('.attach-repo-result');
+            if (!item || !item.dataset.owner) return;
+            if (ownerInput) ownerInput.value = decodeURIComponent(item.dataset.owner);
+            if (repoInput) repoInput.value = decodeURIComponent(item.dataset.repo);
+            resultsBox.hidden = true;
+            resultsBox.innerHTML = '';
+            setStatus(`✓ ${decodeURIComponent(item.dataset.owner)}/${decodeURIComponent(item.dataset.repo)} verified`, 'ok');
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && resultsBox) {
+                resultsBox.hidden = true;
+            }
+        });
+    }
+
+    // ── Handle form submission ──
     document.getElementById('submitAttachRepoBtn')?.addEventListener('click', async () => {
         const submitBtn = document.getElementById('submitAttachRepoBtn');
         const owner = document.getElementById('attachRepoOwnerInput').value.trim();
@@ -379,7 +465,7 @@ function initAttachRepoModal(onSuccess) {
         if (!owner || !repo) {
             alert('Owner and repository name are both required');
             return;
-        }        
+        }
 
         // Get current group ID (should be set globally or passed via data attribute)
         const groupId = window.currentGroupId;
@@ -390,6 +476,7 @@ function initAttachRepoModal(onSuccess) {
 
         // Show loading state
         ModalManager.setButtonLoading(submitBtn, true, 'Attaching...');
+        clearStatus();
 
         try {
             const res = await fetch(`/api/groups/${encodeURIComponent(groupId)}/repos`, {
@@ -402,21 +489,36 @@ function initAttachRepoModal(onSuccess) {
             const data = await res.json();
 
             if (res.ok) {
+                setStatus(`✓ ${repoFullName} attached successfully`, 'ok');
                 alert('Repository attached successfully!');
                 ModalManager.reset(modalId, fieldIds);
                 
                 // Call success callback if provided
                 if (onSuccess) onSuccess(data);
             } else {
-                alert('Error: ' + (data.error || 'Failed to attach repository'));
+                const message = data.error || 'Failed to attach repository';
+                setStatus(message, 'error');
+                alert('Error: ' + message);
             }
         } catch (err) {
+            setStatus('Error: ' + err.message, 'error');
             alert('Error: ' + err.message);
         } finally {
             ModalManager.setButtonLoading(submitBtn, false);
         }
     });
-    
+}
+
+/** Escape HTML special characters to prevent XSS */
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 // ── Auto-initialize all modals ────────────────────────────────
 

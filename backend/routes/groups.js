@@ -329,6 +329,51 @@ groupsRouter.post("/:groupId/repos", async (req, res) => {
             return res.status(403).json({ error: "You are not a member of this group" });
         }
 
+        // Edge case: only attach repositories that actually exist on GitHub.
+        // Reject fake/nonexistent repos instead of silently attaching them.
+        const [repoOwner, repoName] = String(repoFullName).split("/");
+        if (!repoOwner || !repoName) {
+            return res.status(400).json({ error: "Repository name must be in owner/repo format" });
+        }
+
+        let repoExists = false;
+        let repoCheckError = null;
+        try {
+            const repoCheck = await fetch(
+                `https://api.github.com/repos/${encodeURIComponent(repoOwner)}/${encodeURIComponent(repoName)}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        Accept: "application/vnd.github+json",
+                        "User-Agent": "CodeShare-App"
+                    }
+                }
+            );
+            repoExists = repoCheck.ok;
+            if (!repoCheck.ok) {
+                repoCheckError = repoCheck.status;
+            }
+        } catch (checkErr) {
+            repoCheckError = checkErr;
+        }
+
+        if (!repoExists) {
+            if (repoCheckError === 404) {
+                return res.status(404).json({
+                    error: `Repository "${repoFullName}" does not exist or you don't have access to it.`
+                });
+            }
+            if (repoCheckError === 403) {
+                return res.status(403).json({
+                    error: "GitHub rejected the repository check (rate limit or permissions). Please try again."
+                });
+            }
+            console.error("[GROUPS] Repo existence check failed:", repoCheckError?.message || repoCheckError);
+            return res.status(502).json({
+                error: `Could not verify that "${repoFullName}" exists on GitHub. Please try again.`
+            });
+        }
+
         const client = await pool.connect();
         let repoRow;
         try {
