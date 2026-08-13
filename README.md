@@ -56,6 +56,21 @@ One-on-one conversations between team members for private discussions.
 ### 📊 **Dashboard**
 Central overview of all your groups and cross-repo GitHub activity in one unified feed.
 
+### 🔎 **Live Repository Search**
+Find any of your repositories instantly from the dashboard — search as you type across names, descriptions, languages, and owners.
+
+### 👥 **People & Groups Search**
+Search every registered user and add them straight to any of your groups, or jump into a direct message. Your own groups are searchable too.
+
+### 🧲 **Verified Repo Attach**
+The attach-repository modal only attaches repositories that actually exist on GitHub — no more ghost repos — with a built-in search of your own repositories to pick from.
+
+### ➕ **Add Member with Invite Code**
+Invite teammates to any group chat two ways: share the group's invite code, or search all users and add them directly to the conversation.
+
+### 🟢 **Live Presence**
+See who's online in real time — presence dots light up across group member lists, the People & Groups page, and search results the moment someone connects.
+
 ---
 
 ## 🛠️ Built With
