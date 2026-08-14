@@ -28,11 +28,12 @@ function groupModalSwitchTab(tab) {
 
 function initCreateGroupModal(onSuccess) {
     const modalId = 'createGroupModal';
-    const fieldIds = ['groupNameInput', 'groupRepoInput'];
+    const fieldIds = ['groupNameInput', 'groupRepoInput', 'groupRepoSearchInput'];
 
     // Replace the registerOpenButton line inside registerModal with manual wiring:
     document.getElementById('newGroupSidebarBtn')?.addEventListener('click', () => {
         groupModalSwitchTab('create');
+        clearGroupRepoSearch();
         ModalManager.open('createGroupModal');
     });
     ModalManager.registerCloseButton('closeCreateGroupModal', 'createGroupModal', fieldIds);
@@ -44,6 +45,89 @@ function initCreateGroupModal(onSuccess) {
         e.preventDefault();
         ModalManager.reset(modalId, fieldIds);
     });
+
+    // ── Repo search (searches the current user's own GitHub repos) ──
+    const repoSearchInput = document.getElementById('groupRepoSearchInput');
+    const repoResultsBox  = document.getElementById('groupRepoSearchResults');
+    const repoInput       = document.getElementById('groupRepoInput');
+    const repoStatusEl    = document.getElementById('groupRepoStatus');
+    let repoSearchTimer   = null;
+
+    function setRepoStatus(message, type) {
+        if (!repoStatusEl) return;
+        repoStatusEl.textContent = message || '';
+        repoStatusEl.className = 'attach-repo-status' + (type ? ` ${type}` : '');
+    }
+
+    function clearGroupRepoSearch() {
+        if (repoSearchInput) repoSearchInput.value = '';
+        if (repoResultsBox) { repoResultsBox.hidden = true; repoResultsBox.innerHTML = ''; }
+        setRepoStatus('', '');
+    }
+
+    async function runRepoSearch(q) {
+        try {
+            const res = await fetch(`/api/repos/search?repo_name=${encodeURIComponent(q)}`, { credentials: 'include' });
+            if (!res.ok) {
+                if (repoResultsBox) {
+                    repoResultsBox.innerHTML = '<div class="attach-repo-result">Search unavailable. Try typing owner/repo manually.</div>';
+                    repoResultsBox.hidden = false;
+                }
+                return;
+            }
+            const data = await res.json();
+            const repos = (data.repos || []).filter(r => r && r.full_name);
+
+            if (!repoResultsBox) return;
+            if (repos.length === 0) {
+                repoResultsBox.innerHTML = '<div class="attach-repo-result">No repositories match your search.</div>';
+            } else {
+                repoResultsBox.innerHTML = repos.map(r => {
+                    const [o, n] = String(r.full_name).split('/');
+                    return `<div class="attach-repo-result" data-owner="${encodeURIComponent(o)}" data-repo="${encodeURIComponent(n)}">
+                        <span class="material-symbols-outlined">folder</span>
+                        <strong>${escapeHtml(r.full_name)}</strong>
+                        ${r.private ? '<span class="badge">Private</span>' : '<span class="badge badge--public">Public</span>'}
+                    </div>`;
+                }).join('');
+            }
+            repoResultsBox.hidden = false;
+        } catch (err) {
+            if (repoResultsBox) {
+                repoResultsBox.innerHTML = '<div class="attach-repo-result">Search unavailable. Try typing owner/repo manually.</div>';
+                repoResultsBox.hidden = false;
+            }
+        }
+    }
+
+    if (repoSearchInput) {
+        repoSearchInput.addEventListener('input', () => {
+            clearTimeout(repoSearchTimer);
+            const q = repoSearchInput.value.trim();
+            if (!repoResultsBox) return;
+            if (!q) {
+                repoResultsBox.hidden = true;
+                repoResultsBox.innerHTML = '';
+                return;
+            }
+            repoSearchTimer = setTimeout(() => runRepoSearch(q), 250);
+        });
+        repoSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && repoResultsBox) repoResultsBox.hidden = true;
+        });
+    }
+
+    if (repoResultsBox) {
+        repoResultsBox.addEventListener('click', (e) => {
+            const item = e.target.closest('.attach-repo-result');
+            if (!item || !item.dataset.owner) return;
+            const fullName = `${decodeURIComponent(item.dataset.owner)}/${decodeURIComponent(item.dataset.repo)}`;
+            if (repoInput) repoInput.value = fullName;
+            repoResultsBox.hidden = true;
+            repoResultsBox.innerHTML = '';
+            setRepoStatus(`✓ ${fullName} verified`, 'ok');
+        });
+    }
 
     // Handle form submission
     document.getElementById('submitCreateGroupBtn')?.addEventListener('click', async () => {
@@ -81,7 +165,9 @@ function initCreateGroupModal(onSuccess) {
                 // Call success callback if provided
                 if (onSuccess) onSuccess(data.group);
             } else {
-                alert('Error: ' + (data.error || 'Failed to create group'));
+                const message = data.error || 'Failed to create group';
+                setRepoStatus(message, 'error');
+                alert('Error: ' + message);
             }
         } catch (err) {
             alert('Error: ' + err.message);

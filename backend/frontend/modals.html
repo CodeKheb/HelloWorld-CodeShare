@@ -34,9 +34,20 @@
             <label for="groupNameInput">GROUP NAME <span class="required">*</span></label>
             <input type="text" id="groupNameInput" placeholder="e.g. Project Discussion" />
 
+            <label for="groupRepoSearchInput">SEARCH YOUR REPOSITORIES</label>
+            <div class="repo-input-wrapper">
+                <span class="material-symbols-outlined repo-search__icon" aria-hidden="true">search</span>
+                <input type="text" id="groupRepoSearchInput" placeholder="Search your repositories..." autocomplete="off" />
+            </div>
+            <div id="groupRepoSearchResults" class="attach-repo-results" hidden></div>
+
             <label for="groupRepoInput">REPOSITORY (optional)</label>
-            <input type="text" id="groupRepoInput" placeholder="owner/repo" />
-            <small>Add a repository to the group upon creation.</small>
+            <div class="repo-input-wrapper">
+                <span class="repo-icon">/</span>
+                <input type="text" id="groupRepoInput" placeholder="owner/repo" autocomplete="off" />
+            </div>
+            <small>Attach a repository to the group upon creation. Only repositories that exist on GitHub are accepted.</small>
+            <small id="groupRepoStatus" class="attach-repo-status"></small>
         </div>
         <div id="groupPaneCreateFooter" class="modal-footer">
             <button id="submitCreateGroupBtn" class="btn-primary">CREATE GROUP</button>

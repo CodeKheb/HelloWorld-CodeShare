@@ -99,6 +99,59 @@ groupsRouter.post("/create", async (req, res) => {
             return res.status(400).json({ error: "Group name is required" });
         }
 
+        // Edge case: only attach repositories that actually exist on GitHub.
+        // Reject fake/nonexistent repos instead of silently attaching them.
+        const repoProvided = repoFullName && repoFullName.trim() !== "";
+        if (repoProvided) {
+            const [repoOwner, repoName] = String(repoFullName).split("/");
+            if (!repoOwner || !repoName) {
+                return res.status(400).json({ error: "Repository name must be in owner/repo format" });
+            }
+
+            const accessToken = req.user.accessToken;
+            if (!accessToken) {
+                return res.status(401).json({ error: "Missing GitHub access token. Please log in again." });
+            }
+
+            let repoExists = false;
+            let repoCheckError = null;
+            try {
+                const repoCheck = await fetch(
+                    `https://api.github.com/repos/${encodeURIComponent(repoOwner)}/${encodeURIComponent(repoName)}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/vnd.github+json",
+                            "User-Agent": "CodeShare-App"
+                        }
+                    }
+                );
+                repoExists = repoCheck.ok;
+                if (!repoCheck.ok) {
+                    repoCheckError = repoCheck.status;
+                }
+            } catch (checkErr) {
+                repoCheckError = checkErr;
+            }
+
+            if (!repoExists) {
+                if (repoCheckError === 404) {
+                    return res.status(404).json({
+                        error: `Repository "${repoFullName}" does not exist or you don't have access to it.`
+                    });
+                }
+                if (repoCheckError === 403) {
+                    return res.status(403).json({
+                        error: "GitHub rejected the repository check (rate limit or permissions). Please try again."
+                    });
+                }
+                console.error("[GROUPS] Repo existence check failed during group creation:", repoCheckError?.message || repoCheckError);
+                return res.status(502).json({
+                    error: `Could not verify that "${repoFullName}" exists on GitHub. Please try again.`
+                });
+            }
+        }
+
         // Start a transaction to insert group, add creator as member, and optionally add repo
         const client = await pool.connect();
 
