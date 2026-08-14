@@ -628,6 +628,18 @@ body.messages-page {
     flex-shrink: 0;
 }
 
+.messages-page .repo-card--empty {
+    cursor: pointer;
+    border-style: dashed;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+}
+
+.messages-page .repo-card--empty:hover {
+    border-color: var(--brand);
+}
+
 .messages-page .repo-card__download {
     width: 40px;
     height: 40px;

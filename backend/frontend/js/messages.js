@@ -615,6 +615,34 @@ async function fetchAndRenderSidebar() {
     }
 }
 
+// Renders the "No attached repositories" placeholder as a clickable card
+// that opens the Attach Repository modal (same behavior as the header button).
+function showNoReposCard(list) {
+    if (!list) return;
+    list.innerHTML = `
+        <article class="repo-card repo-card--empty" role="button" tabindex="0" title="Attach a repository">
+            <div class="repo-card__title">
+                <span class="material-symbols-outlined" aria-hidden="true">folder_off</span>
+                <span>No attached repositories</span>
+            </div>
+            <div class="repo-card__meta">Click to attach a repository</div>
+        </article>`;
+    const card = list.querySelector('.repo-card--empty');
+    card?.addEventListener('click', openAttachRepoModalForCurrentGroup);
+    card?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openAttachRepoModalForCurrentGroup();
+        }
+    });
+}
+
+function openAttachRepoModalForCurrentGroup() {
+    if (typeof ModalManager === 'undefined') return;
+    if (!window.currentGroupId) { alert('Select a group first'); return; }
+    ModalManager.open('attachRepoModal');
+}
+
 function showNoGroupsView() {
     // Message feed
     const messageFeed = document.querySelector('.message-feed');
@@ -634,7 +662,7 @@ function showNoGroupsView() {
 
     // Repo list fallback
     const repoList = document.getElementById('group-repo-list') || document.querySelector('.repo-list');
-    if (repoList) repoList.innerHTML = '<article class="repo-card"><div class="repo-card__title"><span class="material-symbols-outlined">folder_off</span><span>No attached repositories</span></div><div class="repo-card__meta">Attach one from the header button</div></article>';
+    showNoReposCard(repoList);
 }
 
 function showNoConversationSelected() {
@@ -874,7 +902,7 @@ function renderRepoList(repos) {
     list.innerHTML = '';
 
     if (!repos || repos.length === 0) {
-        list.innerHTML = '<article class="repo-card"><div class="repo-card__title"><span class="material-symbols-outlined" aria-hidden="true">folder_off</span><span>No attached repositories</span></div><div class="repo-card__meta">Attach one from the header button</div></article>';
+        showNoReposCard(list);
         return;
     }
 
