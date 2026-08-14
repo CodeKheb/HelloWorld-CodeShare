@@ -43,9 +43,11 @@ usersRouter.get("/search", async (req, res) => {
                     COALESCE((
                         SELECT COUNT(*)
                         FROM group_members mine
+                        JOIN group_chats gc ON gc.id = mine.group_id
                         JOIN group_members theirs ON theirs.group_id = mine.group_id
                         WHERE mine.user_id = $1
                           AND theirs.user_id = u.id
+                          AND gc.is_direct = FALSE
                     ), 0)::int AS shared_groups
              FROM users u
              WHERE u.id <> $1
